@@ -103,14 +103,23 @@ F --> G[Healthcare Intelligence OS]
 # ✦ Repository
 
 ```text
-NeuroOne
-├── ai/
+NeuroOne/
 ├── backend/
-├── frontend/
-├── database/
-├── docker/
+│   ├── alembic/
+│   ├── app/
+│   │   ├── auth/
+│   │   ├── database/
+│   │   ├── patients/
+│   │   ├── users/
+│   │   ├── dependencies.py
+│   │   └── main.py
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   └── requirements.txt
 ├── docs/
+├── frontend/
 └── assets/
+
 ```
 
 ---
