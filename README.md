@@ -1,137 +1,168 @@
-# NeuroOne
 
-> An AI-powered healthcare platform for multimodal medical analysis, beginning with neurodegenerative disease diagnosis using MRI scans and clinical reports.
+<div align="center">
 
----
 
-## Overview
 
-NeuroOne is an AI-assisted healthcare platform designed to support clinicians and researchers by analyzing multiple forms of medical data. The project begins with neurodegenerative disease analysis using brain MRI scans and clinical reports, with the long-term vision of expanding into a comprehensive multimodal medical AI platform.
 
-The platform is being developed as a modular system where new diseases, imaging modalities, and AI models can be integrated without redesigning the application.
 
----
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=260&color=0:00F7FF,35:6A5CFF,70:B026FF,100:00F7FF&text=NeuroOne&fontSize=62&fontColor=ffffff&animation=twinkling&fontAlignY=38"/>
 
-## Vision
+<img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&weight=700&size=24&duration=3000&pause=900&color=00F7FF&center=true&vCenter=true&width=900&lines=Autonomous+Medical+Intelligence;Building+the+Future+of+Healthcare;AI+that+Detects.+Predicts.+Assists.;From+Neurodegeneration+to+General+Healthcare"/>
 
-Healthcare AI is often limited to solving one specific problem.
+<p>
+<img src="https://img.shields.io/badge/AI-FIRST-00F7FF?style=for-the-badge"/>
+<img src="https://img.shields.io/badge/STATUS-IN%20ACTIVE%20DEVELOPMENT-7B61FF?style=for-the-badge"/>
+<img src="https://img.shields.io/badge/FUTURE-HEALTHCARE%20OS-FF00CC?style=for-the-badge"/>
+</p>
 
-NeuroOne aims to become a unified platform capable of assisting in medical diagnosis by combining:
-
-- Medical Imaging
-- Clinical Reports
-- Patient History
-- AI-assisted Decision Support
-
-The first milestone focuses on neurodegenerative diseases such as Alzheimer's disease and Parkinson's disease.
+</div>
 
 ---
 
-## Version 1 Scope
+# ✦ The Vision
 
-The initial release will support:
+> **NeuroOne** isn't just another medical AI project.
 
-- User Authentication
-- Patient Management
-- MRI Upload
-- Clinical Report Upload
-- AI-based MRI Analysis
-- Report Processing
-- Confidence Scores
-- Prediction History
-- Explainable AI Results
+It is an attempt to build a modular intelligence platform capable of assisting clinicians, researchers and patients through explainable artificial intelligence.
 
----
+Today it starts with **MRI-based neurodegenerative disease analysis**.
 
-## Future Roadmap
+Tomorrow it grows into a complete **Healthcare Intelligence Platform**.
 
-Planned future expansions include:
+<p align="center">
+<img width="90%" src="https://capsule-render.vercel.app/api?type=rect&height=3&color=0:00F7FF,100:B026FF"/>
+</p>
 
-- Brain Tumor Detection
-- Stroke Analysis
-- Multiple Sclerosis
-- Epilepsy
-- General Radiology Support
-- Multimodal AI Diagnosis
-- Cloud Deployment
-- Hospital Integration
+# ✦ Ecosystem
+
+<div align="center">
+
+<img src="https://skillicons.dev/icons?i=python,fastapi,nextjs,postgres,docker,redis,pytorch,git,vscode"/>
+
+</div>
 
 ---
 
-## Technology Stack
+# ✦ Platform Evolution
 
-### Frontend
-
-- React
-- TypeScript
-- Tailwind CSS
-
-### Backend
-
-- FastAPI
-- Python
-
-### Database
-
-- PostgreSQL
-- SQLAlchemy
-
-### AI / Machine Learning
-
-- PyTorch
-- MONAI
-- Hugging Face
-
-### Development
-
-- Git
-- GitHub
-- Docker (planned)
-
----
-
-## Project Structure
-
-```text
-NeuroOne/
-
-├── frontend/
-├── backend/
-├── ai/
-├── database/
-├── docs/
-├── docker/
-
-├── README.md
-├── LICENSE
-└── .gitignore
+```mermaid
+flowchart LR
+A[MRI Images] --> B[AI Vision]
+B --> C[Diagnosis]
+C --> D[Explainability]
+D --> E[Clinical Reports]
+E --> F[NeuroOne Platform]
+F --> G[Healthcare Intelligence OS]
 ```
 
 ---
 
-## Development Status
+# ✦ System Architecture
 
-Current Phase:
+<p align="center">
 
-Project Initialization
+```text
+                ┌───────────────────────────────┐
+                │        NeuroOne Core          │
+                └──────────────┬────────────────┘
+                               │
+      ┌────────────────────────┼────────────────────────┐
+      │                        │                        │
+ AI Services              Backend APIs          Authentication
+      │                        │                        │
+      └──────────────┬─────────┴──────────┬─────────────┘
+                     │                    │
+               PostgreSQL             Medical AI
+                     │                    │
+                     └───────────┬────────┘
+                                 │
+                          Doctor Dashboard
+```
 
-Upcoming Milestones:
-
-- Repository Setup
-- Frontend Development
-- Backend Development
-- Database Integration
-- AI Integration
-- Version 1 MVP
+</p>
 
 ---
 
-## Contributors
+# ✦ Current Development
 
-Team NeuroOne
+<div align="center">
+
+| Module | Progress |
+|:--|:--:|
+| 🔐 Authentication | 🟢 Complete |
+| ⚙️ Backend APIs | 🟢 Complete |
+| 🧠 AI Pipeline | 🟡 In Progress |
+| 🖥️ Dashboard | 🟡 In Progress |
+| 📊 Explainable AI | 🔵 Planned |
+| ☁️ Deployment | ⚪ Planned |
+
+</div>
 
 ---
 
-## License
+# ✦ Repository
 
-This project is licensed under the MIT License.
+```text
+NeuroOne
+├── ai/
+├── backend/
+├── frontend/
+├── database/
+├── docker/
+├── docs/
+└── assets/
+```
+
+---
+
+# ✦ Design Principles
+
+- 🧠 AI First
+- 🔒 Privacy by Design
+- ⚡ Fast & Modular
+- 📈 Scalable Architecture
+- 🩺 Built for Real Clinical Workflows
+
+---
+
+# ✦ Live Metrics
+
+<div align="center">
+
+<img height="170" src="https://github-readme-stats.vercel.app/api?username=YOUR_USERNAME&theme=tokyonight&show_icons=true&hide_border=true"/>
+
+<img height="170" src="https://github-readme-streak-stats.herokuapp.com/?user=YOUR_USERNAME&theme=tokyonight&hide_border=true"/>
+
+</div>
+
+<div align="center">
+
+<img width="95%" src="https://github-readme-activity-graph.vercel.app/graph?username=YOUR_USERNAME&theme=tokyo-night"/>
+
+</div>
+
+---
+
+# ✦ Roadmap
+
+```mermaid
+timeline
+title NeuroOne Journey
+2026 : Foundation
+2026 : Authentication
+2026 : Backend
+2027 : MRI Intelligence
+2027 : Explainable AI
+2028 : Multi-Disease Support
+Future : Healthcare Operating System
+```
+
+---
+
+<div align="center">
+
+### Building the Future of Medical Intelligence
+
+<img src="https://capsule-render.vercel.app/api?type=waving&section=footer&height=160&color=0:00F7FF,40:6A5CFF,100:B026FF"/>
+
+</div>
