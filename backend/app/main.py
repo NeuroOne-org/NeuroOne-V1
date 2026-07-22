@@ -1,21 +1,19 @@
 from fastapi import FastAPI
 
+from app.core.config import settings
+
 app = FastAPI(
-    title="NeuroOne API",
-    version="1.0.0",
-    description="Backend API for NeuroOne"
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    description="Backend API for NeuroOne",
 )
 
 
 @app.get("/")
 async def root():
-    return {
-        "message": "Welcome to NeuroOne API"
-    }
+    return {"message": f"Welcome to {settings.APP_NAME}"}
 
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "healthy"
-    }
+    return {"status": "healthy"}
