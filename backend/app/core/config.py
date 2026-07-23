@@ -1,9 +1,8 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 class Settings(BaseSettings):
-    APP_NAME: str
-    APP_VERSION: str
+    APP_NAME: str = "NeuroONE"
+    APP_VERSION: str = "1.0.0"
 
     DATABASE_URL: str
 
@@ -18,3 +17,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
