@@ -1,5 +1,2 @@
-from app.models.user import User
-from app.models.patient import  Patient
-from app.models.visit import Visit
-from app.models.diagnosis import Diagnosis
-from app.models.report import Report
+from .user import User
+from .patient import Patient, PhoneNumber

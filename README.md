@@ -105,21 +105,43 @@ F --> G[Healthcare Intelligence OS]
 ```text
 NeuroOne/
 ├── backend/
-│   ├── alembic/
 │   ├── app/
-│   │   ├── auth/
-│   │   ├── database/
-│   │   ├── patients/
-│   │   ├── users/
-│   │   ├── dependencies.py
+│   │   ├── api/
+│   │   │   ├── v1/
+│   │   │   ├── dependencies.py
+│   │   │   └── router.py
+│   │   ├── core/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── ai/
+│   │   ├── rag/
+│   │   ├── reports/
+│   │   ├── utils/
+│   │   ├── tests/
 │   │   └── main.py
-│   ├── docker-compose.yml
+│   ├── migrations/
 │   ├── Dockerfile
 │   └── requirements.txt
-├── docs/
 ├── frontend/
-└── assets/
-
+│   ├── app/
+│   ├── components/
+│   ├── hooks/
+│   ├── lib/
+│   ├── services/
+│   ├── store/
+│   ├── types/
+│   ├── styles/
+│   └── public/
+├── vector_db/
+├── medical_corpus/
+├── docs/
+├── scripts/
+├── .env.example
+├── docker-compose.yml
+├── README.md
+└── LICENSE
 ```
 
 ---
