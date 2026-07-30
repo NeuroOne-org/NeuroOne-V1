@@ -5,6 +5,7 @@ from sqlalchemy import UUID, String, Date, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from . import User
 from .base import BaseModel, Base
 
 """
@@ -40,8 +41,8 @@ class Patient(BaseModel):
         ),
     )
 
-    created_by = relationship(
-        "users",back_populates="patients", )
+    doctor: Mapped[list[User]] = relationship(
+        "User",back_populates="patients", )
 
     # ForeignKey
     doctor_id : Mapped[uuid.UUID] = mapped_column(

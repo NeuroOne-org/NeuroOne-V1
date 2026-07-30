@@ -1,2 +1,2 @@
-from .user import User
-from .patient import Patient, PhoneNumber
+from user import User
+from patient import Patient, PhoneNumber

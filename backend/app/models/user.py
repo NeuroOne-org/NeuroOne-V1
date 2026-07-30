@@ -1,8 +1,10 @@
 from enum import Enum
 from sqlalchemy import Enum as SQLEnum
+
+from app.models import Patient
 from app.models.base import BaseModel
 
-from sqlalchemy.orm import Mapped, mapped_column, relationships
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import (
     Boolean,
     String,
@@ -43,7 +45,7 @@ class User(BaseModel):
             "first_name",
         ),
     )
-    patients = relationship("Patient", back_populates="users")
+    patients: Mapped[list[Patient]] = relationship("Patient", back_populates="doctor")
     # Authentication
     username: Mapped[str] = mapped_column(
         String(50),

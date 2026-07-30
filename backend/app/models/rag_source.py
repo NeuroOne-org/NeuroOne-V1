@@ -14,7 +14,7 @@ from base import BaseModel
 +----------------------+
 """
 
-class Rag(Base):
+class Rag(BaseModel):
     """Rag model definitions."""
     __tablename__ = "Rag"
     pass
