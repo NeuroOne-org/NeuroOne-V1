@@ -1,7 +1,8 @@
 from enum import Enum
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Enum as SQLEnum
 
-from app.models import Patient
 from app.models.base import BaseModel
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,6 +11,9 @@ from sqlalchemy import (
     String,
     Index,
 )
+
+if TYPE_CHECKING:
+    from app.models.patient import Patient
 
 
 """
@@ -45,7 +49,7 @@ class User(BaseModel):
             "first_name",
         ),
     )
-    patients: Mapped[list[Patient]] = relationship("Patient", back_populates="doctor")
+    patients: Mapped[list["Patient"]] = relationship("Patient", back_populates="doctor")
     # Authentication
     username: Mapped[str] = mapped_column(
         String(50),
@@ -90,7 +94,6 @@ class User(BaseModel):
         default=False,
         nullable=False,
     )
-
 
 
 
