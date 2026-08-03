@@ -1,7 +1,7 @@
 """Database engine and session configuration."""
 
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from app.models.base import Base
 from sqlalchemy import create_engine
 from app.core.config import settings
 
@@ -13,13 +13,3 @@ SessionLocal = sessionmaker(
     autoflush=False,
     )
 
-Base = declarative_base()
-
-
-#dependencies
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
