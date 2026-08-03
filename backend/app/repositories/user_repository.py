@@ -1,3 +1,4 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -17,21 +18,18 @@ class UserRepository(BaseRepository[User]):
         db: Session,
         email: str,
     ) -> User | None:
-        return (
-            db.query(User).filter(
-
-                User.email == email,
-                User.is_deleted == False,
-            ).first()
+        statement = select(User).where(
+            User.email == email,
+            User.is_deleted.is_(False),
         )
+        return db.scalar(statement)
 
     def get_by_username(self, db: Session, username: str) -> User | None:
-        return (
-            db.query(User).filter(
-                User.username == username,
-                User.is_deleted == False,
-            ).first()
+        statement = select(User).where(
+            User.username == username,
+            User.is_deleted.is_(False),
         )
+        return db.scalar(statement)
 
     def exists_email(self, db:Session, email:str) -> bool:
         return (
@@ -49,10 +47,19 @@ class UserRepository(BaseRepository[User]):
         ).first() is not None
         )
 
-    def get_active_users(self, db: Session, skip: int = 0, limit: int = 100) -> list[User]:
-        return (
-            db.query(User).filter(
-                User.is_deleted == False,
-                User.is_active == True,
-            ).all()
+    def get_active_users(
+        self,
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[User]:
+        statement = (
+            select(User)
+            .where(
+                User.is_deleted.is_(False),
+                User.is_active.is_(True),
+            )
+            .offset(skip)
+            .limit(limit)
         )
+        return list(db.scalars(statement).all())

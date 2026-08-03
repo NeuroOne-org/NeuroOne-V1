@@ -1,7 +1,7 @@
 """Patient persistence operations."""
 from uuid import UUID
 
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.patient import Patient, PhoneNumber
@@ -14,15 +14,23 @@ class PatientRepository(BaseRepository[Patient]):
     def __init__(self):
         super().__init__(model=Patient)
 
-    def get_by_doctor(self, db: Session, pid: UUID) -> list[Patient]:
-        return (
-            db.query(Patient)
-            .filter(
+    def get_by_doctor(
+        self,
+        db: Session,
+        pid: UUID,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Patient]:
+        statement = (
+            select(Patient)
+            .where(
                 Patient.doctor_id == pid,
                 Patient.is_deleted.is_(False),
             )
-            .all()
+            .offset(skip)
+            .limit(limit)
         )
+        return list(db.scalars(statement).all())
 
     def search(
         self,
@@ -33,11 +41,11 @@ class PatientRepository(BaseRepository[Patient]):
     ) -> list[Patient]:
         """Search active patients by name, email, or phone number."""
         term = search_term.strip()
-        query = db.query(Patient).filter(Patient.is_deleted.is_(False))
+        statement = select(Patient).where(Patient.is_deleted.is_(False))
 
         if term:
             pattern = f"%{term}%"
-            query = query.filter(
+            statement = statement.where(
                 or_(
                     Patient.first_name.ilike(pattern),
                     Patient.last_name.ilike(pattern),
@@ -46,7 +54,8 @@ class PatientRepository(BaseRepository[Patient]):
                 )
             )
 
-        return query.offset(skip).limit(limit).all()
+        statement = statement.offset(skip).limit(limit)
+        return list(db.scalars(statement).all())
 
     def get_by_phone(
         self,
@@ -54,25 +63,19 @@ class PatientRepository(BaseRepository[Patient]):
         phone_number: str,
     ) -> Patient | None:
         """Return the active patient with the given phone number, if any."""
-        return (
-            db.query(Patient)
-            .filter(
-                Patient.phone.any(PhoneNumber.phone_number == phone_number),
-                Patient.is_deleted.is_(False),
-            )
-            .first()
+        statement = select(Patient).where(
+            Patient.phone.any(PhoneNumber.phone_number == phone_number),
+            Patient.is_deleted.is_(False),
         )
+        return db.scalar(statement)
 
     def get_by_email(self, db: Session, email: str) -> Patient | None:
         """Return the active patient with the given email address, if any."""
-        return (
-            db.query(Patient)
-            .filter(
-                Patient.email == email,
-                Patient.is_deleted.is_(False),
-            )
-            .first()
+        statement = select(Patient).where(
+            Patient.email == email,
+            Patient.is_deleted.is_(False),
         )
+        return db.scalar(statement)
 
     def get_active_patients(
         self,
@@ -81,10 +84,10 @@ class PatientRepository(BaseRepository[Patient]):
         limit: int = 100,
     ) -> list[Patient]:
         """Return patients that have not been soft-deleted."""
-        return (
-            db.query(Patient)
-            .filter(Patient.is_deleted.is_(False))
+        statement = (
+            select(Patient)
+            .where(Patient.is_deleted.is_(False))
             .offset(skip)
             .limit(limit)
-            .all()
         )
+        return list(db.scalars(statement).all())

@@ -12,13 +12,10 @@ from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from app.models.base import BaseModel
+from app.utils.exceptions import EntityNotFoundError
 
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
-
-
-class EntityNotFoundError(Exception):
-    pass
 
 
 class BaseRepository(Generic[ModelType]):
@@ -49,7 +46,7 @@ class BaseRepository(Generic[ModelType]):
     def get_or_404(self, db: Session, obj_id: UUID) -> ModelType:
         obj = self.get_by_id(db, obj_id)
         if obj is None:
-            raise EntityNotFoundError(...)
+            raise EntityNotFoundError(self.model.__name__, obj_id)
         return obj
 
     def get_all(self, db:Session, skip:int = 0, limit:int = 100) -> list[ModelType]:
@@ -93,4 +90,3 @@ class BaseRepository(Generic[ModelType]):
         return db.query(
             exists().where(self.model.id == obj_id)
         ).scalar()
-
