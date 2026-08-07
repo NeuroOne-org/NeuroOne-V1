@@ -1,5 +1,3 @@
-"""Authentication business logic."""
-
 from jose import JWTError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -46,13 +44,16 @@ class AuthService:
 
         return UserResponse.model_validate(user)
 
-    def login(
+    def verify_credentials(
         self,
         db: Session,
         username_or_email: str,
         password: str,
-    ) -> Token:
-        """Authenticate a user and issue an access token."""
+    ) -> User:
+        """
+        Validates username/email + password and returns the User, without
+        issuing a token. Used by the OTP flow.
+        """
 
         if "@" in username_or_email:
             user = self.user_service.get_user_by_email(db, username_or_email)
@@ -71,6 +72,17 @@ class AuthService:
         if not user.is_active:
             raise InvalidCredentialsError("Invalid username/email or password.")
 
+        return user
+
+    def login(
+        self,
+        db: Session,
+        username_or_email: str,
+        password: str,
+    ) -> Token:
+        """Authenticate a user and issue an access token directly (no OTP step)."""
+
+        user = self.verify_credentials(db, username_or_email, password)
         return Token(access_token=self.create_access_token(user))
 
     def verify_password(
