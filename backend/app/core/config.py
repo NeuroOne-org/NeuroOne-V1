@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     APP_NAME: str = "NeuroONE"
     APP_VERSION: str = "1.0.0"
@@ -10,6 +11,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
+    GMAIL_ADDRESS: str
+    GMAIL_APP_PASSWORD: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True
@@ -17,4 +21,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
