@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-// A short list of common disposable/throwaway email providers. This is a
-// light frontend nicety, not real verification — actual "genuine email"
-// checking happens via the OTP step, which proves the person can receive
-// mail at the address they entered.
 const DISPOSABLE_DOMAINS = new Set([
   "mailinator.com",
   "tempmail.com",
@@ -21,8 +17,12 @@ const emailSchema = z
     message: "Please use a permanent email address, not a disposable one",
   });
 
-// Strong password: 8+ chars, at least one uppercase, one lowercase, one
-// digit, and one special character.
+const usernameSchema = z
+  .string()
+  .min(3, "At least 3 characters")
+  .max(50, "50 characters max")
+  .regex(/^[a-zA-Z0-9_.]+$/, "Letters, numbers, dots, and underscores only");
+
 const strongPasswordSchema = z
   .string()
   .min(8, "At least 8 characters")
@@ -32,14 +32,15 @@ const strongPasswordSchema = z
   .regex(/[^A-Za-z0-9]/, "Add a special character");
 
 export const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().min(1, "Enter your username or email"),
+  password: z.string().min(1, "Enter your password"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const signupSchema = z
   .object({
     full_name: z.string().min(2, "Enter your full name"),
+    username: usernameSchema,
     email: emailSchema,
     role: z.enum(["doctor", "researcher"], {
       required_error: "Select a role",
@@ -57,6 +58,23 @@ export const otpSchema = z.object({
   otp: z.string().length(6, "Enter the 6-digit code").regex(/^\d+$/, "Digits only"),
 });
 export type OtpInput = z.infer<typeof otpSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    otp: z.string().length(6, "Enter the 6-digit code").regex(/^\d+$/, "Digits only"),
+    new_password: strongPasswordSchema,
+    confirm_new_password: z.string(),
+  })
+  .refine((data) => data.new_password === data.confirm_new_password, {
+    message: "Passwords do not match",
+    path: ["confirm_new_password"],
+  });
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const patientIntakeSchema = z.object({
   full_name: z.string().min(2, "Enter the patient's full name"),
