@@ -1,41 +1,45 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.user import UserRole
 
 
 class LoginRequest(BaseModel):
-    """Credentials submitted to obtain an access token."""
-
     username: str = Field(min_length=1, max_length=50)
     password: str = Field(min_length=1, max_length=128)
 
 
 class OtpVerifyRequest(BaseModel):
-    """Username/email plus the 6-digit code emailed to the user."""
-
     username: str = Field(min_length=1, max_length=50)
     otp: str = Field(min_length=6, max_length=6)
 
 
 class OtpRequiredResponse(BaseModel):
-    """Returned by /login on success, before the JWT is issued."""
-
     otp_required: bool = True
     message: str = "Verification code sent to your email."
 
 
-class Token(BaseModel):
-    """Bearer token returned after successful authentication."""
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
+
+class ForgotPasswordResponse(BaseModel):
+    message: str = "If an account exists for that email, a reset code has been sent."
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
 
 class TokenPayload(BaseModel):
-    """Claims read from a validated access token."""
-
     sub: UUID
     username: str
     role: UserRole
@@ -46,6 +50,9 @@ __all__ = [
     "LoginRequest",
     "OtpVerifyRequest",
     "OtpRequiredResponse",
+    "ForgotPasswordRequest",
+    "ForgotPasswordResponse",
+    "ResetPasswordRequest",
     "Token",
     "TokenPayload",
 ]

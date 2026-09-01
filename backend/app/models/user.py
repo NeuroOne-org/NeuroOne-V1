@@ -2,7 +2,6 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum as SQLEnum
-
 from app.models.base import BaseModel
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -16,27 +15,11 @@ if TYPE_CHECKING:
     from app.models.patient import Patient
 
 
-"""
-+----------------------+
-|        USER          |
-+----------------------+
-| PK id (UUID)         |
-| full_name            |
-| username             |
-| email                |
-| hashed_password      |
-| role                 |
-| is_active            |
-| is_verified          |
-| created_at           |
-| updated_at           |
-+----------------------+
-"""
-
 class UserRole(str, Enum):
     DOCTOR = "doctor"
     ADMIN = "admin"
     RECEPTIONIST = "receptionist"
+    RESEARCHER = "researcher"
 
 class User(BaseModel):
     """User model definitions."""
@@ -50,7 +33,6 @@ class User(BaseModel):
         ),
     )
     patients: Mapped[list["Patient"]] = relationship("Patient", back_populates="doctor")
-    # Authentication
     username: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
@@ -70,18 +52,14 @@ class User(BaseModel):
         nullable=False,
     )
 
-    # personal
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-
-    # authorization
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole),
         default=UserRole.DOCTOR,
         nullable=False,
     )
-
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -94,8 +72,3 @@ class User(BaseModel):
         default=False,
         nullable=False,
     )
-
-
-
-
-
