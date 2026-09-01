@@ -33,7 +33,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
     try {
       await signup(values);
-      router.push(`/verify-otp?email=${encodeURIComponent(values.email)}`);
+      router.push(`/login?registered=1`);
     } catch (err) {
       setServerError((err as Error).message);
     } finally {
@@ -56,6 +56,17 @@ export default function SignupPage() {
             {...register("full_name")}
           />
           <FieldError message={errors.full_name?.message} />
+        </div>
+
+        <div>
+          <Label htmlFor="username">Username</Label>
+          <Input
+            id="username"
+            placeholder="asha.verma"
+            error={errors.username?.message}
+            {...register("username")}
+          />
+          <FieldError message={errors.username?.message} />
         </div>
 
         <div>

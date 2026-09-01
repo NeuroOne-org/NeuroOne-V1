@@ -1,17 +1,25 @@
 export type DiseaseLabel = "healthy" | "alzheimers" | "parkinsons";
 
 export type DiseaseStage =
-  | "CN" // cognitively normal
-  | "MCI" // mild cognitive impairment
+  | "CN"
+  | "MCI"
   | "MILD"
   | "MODERATE"
   | "SEVERE";
 
+export type UserRole = "doctor" | "admin" | "receptionist" | "researcher";
+
 export interface User {
   id: string;
-  full_name: string;
+  username: string;
   email: string;
-  role: "doctor" | "researcher" | "admin";
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuthTokens {
@@ -33,7 +41,7 @@ export interface Patient {
 
 export interface PredictionRegion {
   label: string;
-  contribution: number; // 0-1, how much this region influenced the prediction
+  contribution: number;
 }
 
 export interface PredictionResult {
@@ -41,7 +49,7 @@ export interface PredictionResult {
   patient_id: string;
   label: DiseaseLabel;
   stage: DiseaseStage;
-  confidence: number; // 0-1
+  confidence: number;
   regions: PredictionRegion[];
   heatmap_url: string | null;
   created_at: string;

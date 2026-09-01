@@ -10,7 +10,7 @@ import {
 import Cookies from "js-cookie";
 import { api, TOKEN_COOKIE, extractApiError } from "@/lib/api";
 import type { User } from "@/lib/types";
-import type { LoginInput } from "@/lib/validation";
+import type { LoginInput, SignupInput } from "@/lib/validation";
 
 interface AuthTokens {
   access_token: string;
@@ -22,6 +22,13 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (input: LoginInput) => Promise<void>;
   verifyLoginOtp: (username: string, otp: string) => Promise<void>;
+  signup: (input: SignupInput) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (
+    email: string,
+    otp: string,
+    newPassword: string
+  ) => Promise<void>;
   logout: () => void;
 }
 
@@ -83,6 +90,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [fetchCurrentUser]
   );
 
+  const signup = useCallback(async (input: SignupInput) => {
+    try {
+      const spaceIndex = input.full_name.trim().indexOf(" ");
+      const first_name =
+        spaceIndex === -1 ? input.full_name.trim() : input.full_name.slice(0, spaceIndex);
+      const last_name =
+        spaceIndex === -1 ? "" : input.full_name.slice(spaceIndex + 1).trim();
+
+      await api.post("/auth/register", {
+        username: input.username,
+        email: input.email,
+        password: input.password,
+        first_name: first_name || input.full_name.trim(),
+        last_name: last_name || first_name,
+        role: input.role,
+      });
+    } catch (error) {
+      throw new Error(extractApiError(error));
+    }
+  }, []);
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    try {
+      await api.post("/auth/forgot-password", { email });
+    } catch (error) {
+      throw new Error(extractApiError(error));
+    }
+  }, []);
+
+  const resetPassword = useCallback(
+    async (email: string, otp: string, newPassword: string) => {
+      try {
+        const { data } = await api.post<AuthTokens>("/auth/reset-password", {
+          email,
+          otp,
+          new_password: newPassword,
+        });
+        Cookies.set(TOKEN_COOKIE, data.access_token, {
+          expires: 1,
+          sameSite: "strict",
+        });
+        await fetchCurrentUser();
+      } catch (error) {
+        throw new Error(extractApiError(error));
+      }
+    },
+    [fetchCurrentUser]
+  );
+
   const logout = useCallback(() => {
     Cookies.remove(TOKEN_COOKIE);
     setUser(null);
@@ -96,6 +152,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         verifyLoginOtp,
+        signup,
+        requestPasswordReset,
+        resetPassword,
         logout,
       }}
     >
