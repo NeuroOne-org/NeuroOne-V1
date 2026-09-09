@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.repositories.base_repository import BaseRepository
 
 """Repository for user-related database operations.
@@ -63,3 +63,10 @@ class UserRepository(BaseRepository[User]):
             .limit(limit)
         )
         return list(db.scalars(statement).all())
+
+    def get_first_by_role(self, db: Session, role: UserRole) -> User | None:
+        statement = select(User).where(
+            User.role == role,
+            User.is_deleted.is_(False),
+        )
+        return db.scalar(statement)

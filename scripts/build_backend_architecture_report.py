@@ -615,15 +615,16 @@ def build_report():
         add_figure(doc, layer_diagram, "Figure 2. Layered backend architecture and cross-cutting infrastructure.")
 
         doc.add_heading("1.1 Directory map", level=2)
-        add_code(doc, """backend/app/
-|-- api/             routers and reusable request dependencies
-|-- core/            configuration, database engine and security helpers
-|-- models/          SQLAlchemy mapped entities
-|-- repositories/    database access and feature-specific queries
-|-- schemas/         Pydantic request/response contracts
-|-- services/        business rules and orchestration
-|-- utils/           domain exceptions and HTTP exception handlers
-`-- main.py          FastAPI application composition""")
+        add_code(doc, """backend/
+|-- app/
+|   |-- api/          routers and reusable request dependencies
+|   |-- core/         configuration, database engine and security helpers
+|   |-- models/       SQLAlchemy mapped entities
+|   |-- repositories/ database access and feature-specific queries
+|   |-- schemas/      Pydantic request/response contracts
+|   |-- services/     business rules and orchestration
+|   `-- utils/        domain exceptions and HTTP exception handlers
+`-- main.py           FastAPI application composition""")
 
         doc.add_heading("1.2 The layers on their own", level=2)
         add_table(doc, ["Layer", "Owns", "Must not own"], [
@@ -668,7 +669,7 @@ class BaseModel(Base):
         doc.add_heading("2.2 User model", level=2)
         add_body(doc, "User represents staff identities. username and email are unique and indexed; hashed_password stores the password verifier, never plaintext. UserRole is a Python string enum exposed to application code and a PostgreSQL enum in the physical schema. is_active controls login/access, while is_verified records a separate verification state.")
         add_bullets(doc, [
-            "Roles: doctor, admin and receptionist in Python; the migration stores enum member names DOCTOR, ADMIN and RECEPTIONIST.",
+            "MVP roles are clinician and admin; PostgreSQL stores enum member names CLINICIAN and ADMIN.",
             "Composite index ix_users_name supports surname/given-name lookup ordering.",
             "The patients relationship is the parent side of the doctor-to-patient association.",
         ])
@@ -701,10 +702,10 @@ class BaseModel(Base):
             ["email", "varchar(255)", "Required, unique and indexed identity/contact field"],
             ["hashed_password", "varchar(255)", "Required password hash; excluded from response schemas"],
             ["first_name, last_name", "varchar(100)", "Required personal-name fields; composite name index"],
-            ["role", "userrole enum", "Authorization category: DOCTOR, ADMIN or RECEPTIONIST"],
+            ["role", "userrole enum", "Authorization category: CLINICIAN or ADMIN"],
             ["is_active, is_verified", "boolean", "Operational account states"],
             ["created_at, updated_at", "timestamp with time zone", "Server-generated audit timestamps"],
-            ["is_deleted, deleted_at", "boolean, timestamp", "Logical deletion state; deleted_at is currently not populated"],
+            ["is_deleted, deleted_at", "boolean, timestamp", "Logical deletion state and deletion timestamp"],
         ], [2000, 2250, 5110], font_size=8.3)
 
         doc.add_heading("3.2 patients table", level=2)
@@ -892,7 +893,7 @@ for field, value in update_data.items():
         add_code(doc, """@router.get("/patients")
 def list_patients(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_doctor),
+    current_user: User = Depends(get_current_clinician),
 ):
     ...""")
 
@@ -980,7 +981,7 @@ def list_patients(
         doc.add_heading("10.3 Recommended delivery sequence", level=2)
         add_numbers(doc, [
             "Add focused unit tests for AuthService, UserService, PatientService and repository filters using injected mocks and a test database.",
-            "Implement auth routes for register, login and me using the existing schemas, services, dependencies and handlers.",
+            "Maintain public login, authenticated identity, and ADMIN-only user-provisioning routes.",
             "Implement user/patient routes with response models, pagination and doctor/admin access rules.",
             "Correct generic soft-delete filtering, set deleted_at, and align get_all with skip/limit.",
             "Move transaction control to services or introduce a unit-of-work abstraction with rollback behavior.",
