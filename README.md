@@ -119,8 +119,8 @@ NeuroOne/
 │   │   ├── rag/
 │   │   ├── reports/
 │   │   ├── utils/
-│   │   ├── tests/
-│   │   └── main.py
+│   │   └── tests/
+│   ├── main.py
 │   ├── migrations/
 │   ├── Dockerfile
 │   └── requirements.txt

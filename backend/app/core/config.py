@@ -1,4 +1,9 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -10,13 +15,12 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
-
-    GMAIL_ADDRESS: str
-    GMAIL_APP_PASSWORD: str
+    SQL_ECHO: bool = False
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True
+        env_file=ENV_FILE,
+        case_sensitive=True,
+        extra="ignore",
     )
 
 

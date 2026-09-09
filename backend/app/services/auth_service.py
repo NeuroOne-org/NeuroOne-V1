@@ -4,11 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.core import security
 from app.models import User
+from app.models.user import UserRole
 from app.schemas.auth import Token, TokenPayload
 from app.schemas.user import UserCreate, UserResponse
 from app.services.user_service import UserService
 from app.utils.exceptions import (
     AuthenticationError,
+    AuthorizationError,
     InvalidCredentialsError,
     UserAlreadyExistsError,
 )
@@ -20,12 +22,41 @@ class AuthService:
     def __init__(self, user_service: UserService):
         self.user_service = user_service
 
-    def register(
+    def provision_user(
+        self,
+        db: Session,
+        user_data: UserCreate,
+        *,
+        requested_by: User,
+    ) -> UserResponse:
+        """Provision a staff user after enforcing the ADMIN boundary."""
+
+        if requested_by.role is not UserRole.ADMIN:
+            raise AuthorizationError(
+                "You do not have permission to perform this action."
+            )
+
+        return self._create_user(db, user_data)
+
+    def bootstrap_admin(self, db: Session, user_data: UserCreate) -> UserResponse:
+        """Create the first administrator, and only when none exists."""
+
+        if user_data.role is not UserRole.ADMIN:
+            raise ValueError("Bootstrap account must have the ADMIN role.")
+        existing_admin = self.user_service.repository.get_first_by_role(
+            db,
+            UserRole.ADMIN,
+        )
+        if existing_admin is not None:
+            raise UserAlreadyExistsError("An administrator already exists.")
+        return self._create_user(db, user_data)
+
+    def _create_user(
         self,
         db: Session,
         user_data: UserCreate,
     ) -> UserResponse:
-        """Register a new user."""
+        """Create a user after uniqueness checks and password hashing."""
 
         if self.user_service.get_user_by_email(db, str(user_data.email)):
             raise UserAlreadyExistsError("A user with this email already exists.")

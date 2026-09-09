@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.router import api_router
@@ -29,14 +30,19 @@ app.include_router(api_router, prefix="/api/v1")
 async def root():
     return {"message": f"Welcome to {settings.APP_NAME}"}
 
+
 @app.get("/health")
 def health():
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {"database": "connected"}
-    except Exception as e:
-        return {"database": "error", "details": str(e)}
+        return {"status": "healthy"}
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy"},
+        )
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

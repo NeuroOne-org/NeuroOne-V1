@@ -92,7 +92,7 @@ def require_roles(*allowed_roles: UserRole) -> Callable[..., User]:
 
 
 get_current_admin = require_roles(UserRole.ADMIN)
-get_current_doctor = require_roles(UserRole.DOCTOR)
+get_current_clinician = require_roles(UserRole.CLINICIAN)
 
 
 def require_admin(
@@ -103,10 +103,10 @@ def require_admin(
     return current_user
 
 
-def require_doctor(
-    current_user: Annotated[User, Depends(get_current_doctor)],
+def require_clinician(
+    current_user: Annotated[User, Depends(get_current_clinician)],
 ) -> User:
-    """Require the current user to have the doctor role."""
+    """Require the current user to have the clinician role."""
 
     return current_user
 
@@ -115,12 +115,12 @@ __all__ = [
     "get_auth_service",
     "get_current_active_user",
     "get_current_admin",
-    "get_current_doctor",
+    "get_current_clinician",
     "get_current_user",
     "get_db",
     "get_user_service",
     "oauth2_scheme",
     "require_admin",
-    "require_doctor",
+    "require_clinician",
     "require_roles",
 ]

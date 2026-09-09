@@ -16,10 +16,8 @@ if TYPE_CHECKING:
 
 
 class UserRole(str, Enum):
-    DOCTOR = "doctor"
     ADMIN = "admin"
-    RECEPTIONIST = "receptionist"
-    RESEARCHER = "researcher"
+    CLINICIAN = "clinician"
 
 class User(BaseModel):
     """User model definitions."""
@@ -57,7 +55,7 @@ class User(BaseModel):
 
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole),
-        default=UserRole.DOCTOR,
+        default=UserRole.CLINICIAN,
         nullable=False,
     )
 
