@@ -125,6 +125,43 @@ class AnalysisOrchestrator:
 
         return result
 
+    def _resolve_evidence(
+        self,
+        candidates: list[DiagnosisCandidate],
+        retrieved: list[RetrievedDocument],
+    ) -> list[DiagnosisCandidate]:
+        """Re-attach evidence from the orchestrator's own retrieved set.
+
+        A provider names its evidence by ``document_id``; the orchestrator,
+        not the provider, is the source of truth for what that id actually
+        contains (AGENTS.md section 8.4.4: source metadata must be
+        preserved, not merely echoed back). This also rejects a document_id
+        the provider invented rather than selected from what retrieval
+        actually returned -- exactly the untraceable output section 18
+        forbids.
+        """
+
+        retrieved_by_id = {
+            document.document_id: document for document in retrieved
+        }
+
+        resolved = []
+        for candidate in candidates:
+            try:
+                evidence = [
+                    retrieved_by_id[item.document_id]
+                    for item in candidate.evidence
+                ]
+            except KeyError as exc:
+                raise AIError(
+                    "The analysis model cited evidence that was not "
+                    "retrieved for this case. The clinical record was not "
+                    "modified.",
+                    error_code="ai_contract_error",
+                ) from exc
+            resolved.append(candidate.model_copy(update={"evidence": evidence}))
+        return resolved
+
     def _finalize(
         self,
         candidates: list[DiagnosisCandidate],
@@ -149,7 +186,8 @@ class AnalysisOrchestrator:
 
         evidence = self._retrieve(context)
         reasoning = self._reason(context, evidence)
-        candidates = self._finalize(list(reasoning.candidates))
+        resolved = self._resolve_evidence(list(reasoning.candidates), evidence)
+        candidates = self._finalize(resolved)
 
         if not candidates:
             raise AIError(

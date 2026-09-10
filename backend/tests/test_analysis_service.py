@@ -21,7 +21,7 @@ from app.schemas.analysis import (
     DiagnosisCandidate,
     TrendBasisRef,
 )
-from app.schemas.evidence import EvidenceRef
+from app.schemas.evidence import RetrievedDocument
 from app.services.analysis_service import AnalysisService
 from app.utils.exceptions import AIError, EntityNotFoundError
 
@@ -57,11 +57,16 @@ def _visit(patient_id=None) -> Visit:
     return visit
 
 
-def _evidence() -> EvidenceRef:
-    return EvidenceRef(
+def _evidence() -> RetrievedDocument:
+    return RetrievedDocument(
         source="Simulated Source",
         citation="Illustrative reference (simulated corpus), 2024.",
         relevant_passage="A passage.",
+        document_id="doc-1",
+        chunk_id="doc-1#c1",
+        source_tier="guideline",
+        published_year=2024,
+        relevance_score=1.0,
     )
 
 
@@ -228,6 +233,23 @@ def test_candidates_are_persisted_in_rank_order_with_their_citations() -> None:
     assert [f.rank for f in analysis.findings] == [0, 1]
     assert [f.condition_name for f in analysis.findings] == ["First", "Second"]
     assert all(f.evidence for f in analysis.findings)
+
+
+def test_evidence_provenance_metadata_is_persisted() -> None:
+    """AGENTS.md 8.4.4: source metadata must survive to persistence."""
+    service, repository, visit_service, patient_service, orchestrator = _service()
+    visit = _visit()
+    _wire_happy_path(visit_service, patient_service, orchestrator, visit)
+    repository.create_with_status.side_effect = lambda db, analysis, v: analysis
+
+    analysis = service.analyze_visit(Mock(), visit.id, _user())
+
+    evidence = analysis.findings[0].evidence[0]
+    assert evidence.document_id == "doc-1"
+    assert evidence.chunk_id == "doc-1#c1"
+    assert evidence.source_tier == "guideline"
+    assert evidence.published_year == 2024
+    assert evidence.relevance_score == 1.0
 
 
 def test_an_early_watch_candidate_persists_its_trend_basis_as_json() -> None:

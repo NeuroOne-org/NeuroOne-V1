@@ -95,7 +95,13 @@ class DiagnosisCandidate(BaseModel):
     # Every ranked condition carries at least one citation. An uncited
     # recommendation is exactly the untraceable output AGENTS.md section 18
     # forbids, so this is enforced at the type level rather than by convention.
-    evidence: list[EvidenceRef] = Field(min_length=1)
+    #
+    # Typed as the full RetrievedDocument, not the 3-field EvidenceRef: a
+    # provider names evidence by document_id, but the orchestrator resolves
+    # that id back against its own retrieved set and overwrites the content
+    # (AGENTS.md section 8.4.4 -- source metadata must be preserved end to
+    # end, not narrowed away at the point a candidate is built).
+    evidence: list[RetrievedDocument] = Field(min_length=1)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -200,9 +206,12 @@ class EvidenceResponse(EvidenceRef):
 
     model_config = ConfigDict(from_attributes=True)
 
+    document_id: str | None = None
+    chunk_id: str | None = None
     source_url: str | None = None
     source_tier: str | None = None
     published_year: int | None = None
+    relevance_score: float | None = None
 
 
 class FindingResponse(BaseModel):

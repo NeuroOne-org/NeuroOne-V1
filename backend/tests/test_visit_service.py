@@ -405,6 +405,27 @@ def test_add_symptom_binds_it_to_the_authorized_visit() -> None:
     assert symptom.duration_days == 30
 
 
+def test_add_symptom_persists_a_clinician_observation() -> None:
+    """FR-03: observation is a structured field, distinct from severity/onset."""
+    service, repository, symptom_repository, _ = _service()
+    visit = _visit()
+    repository.get_with_symptoms.return_value = visit
+    symptom_repository.create.side_effect = lambda db, obj: obj
+
+    symptom = service.add_symptom(
+        Mock(),
+        visit.id,
+        SymptomCreate(
+            symptom_name="tremor",
+            severity=5,
+            observation="worse with intention, resolves at rest",
+        ),
+        _user(),
+    )
+
+    assert symptom.observation == "worse with intention, resolves at rest"
+
+
 def test_add_symptom_on_a_non_owned_visit_is_refused() -> None:
     service, repository, symptom_repository, patient_service = _service()
     repository.get_with_symptoms.return_value = _visit()
@@ -433,6 +454,25 @@ def test_update_symptom_applies_only_the_set_fields() -> None:
 
     assert result.severity == 8
     assert result.symptom_name == "tremor"
+
+
+def test_update_symptom_can_set_the_observation() -> None:
+    service, repository, symptom_repository, _ = _service()
+    visit = _visit()
+    symptom = _symptom(visit_id=visit.id, name="tremor", severity=3)
+    repository.get_with_symptoms.return_value = visit
+    symptom_repository.get_by_id.return_value = symptom
+    symptom_repository.update.side_effect = lambda db, obj: obj
+
+    result = service.update_symptom(
+        Mock(),
+        visit.id,
+        symptom.id,
+        SymptomUpdate(observation="new onset since last visit"),
+        _user(),
+    )
+
+    assert result.observation == "new onset since last visit"
 
 
 # --------------------------------------------------------------------------

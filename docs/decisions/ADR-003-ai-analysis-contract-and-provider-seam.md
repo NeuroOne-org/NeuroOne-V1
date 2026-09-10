@@ -130,3 +130,17 @@ One migration creates `analyses`, `analysis_findings`, and `analysis_evidence`, 
 **Merge-order dependency:** this migration chains off `b8d41e2f7c53` (the `deleted_at` timezone fix, shipped in parallel). `AI-01` must not merge into any branch lacking that revision, or Alembic fails with "Can't locate revision". The test suite never runs Alembic, so tests are unaffected either way.
 
 Rollback is clean: no existing table is altered and no existing row is touched.
+
+## Addendum: evidence-resolution correction (pre-`REPORT-01`)
+
+**Context.** Inspection ahead of `REPORT-01` found that `DiagnosisCandidate.evidence` was typed `list[EvidenceRef]` — the 3-field wire shape — and `mock_llm.py` narrowed each selected document to it with `EvidenceRef.model_validate(...)` before a candidate was even built. `document_id`, `chunk_id`, `source_tier`, `published_year`, and `relevance_score` were discarded at that point, before `AnalysisService` ever ran. `AnalysisEvidence` already carried nullable columns for all of them, so the loss was silent: nothing failed, the columns were simply always `NULL`. This violates §8.4.4 ("preserve source metadata") and would have made `REPORT-01`'s citation-level traceability requirement (FR-05/06, FR-07) impossible to satisfy without re-deriving evidence metadata from nothing.
+
+**Decision.** `DiagnosisCandidate.evidence` is now typed `list[RetrievedDocument]` — the full retrieved record, not the narrowed wire shape. The orchestrator gains a `_resolve_evidence` stage, run after `_reason()` and before `_finalize()`: for every candidate, each evidence item's `document_id` is looked up against the orchestrator's own `_retrieve()` output, and the **retrieved copy replaces whatever the provider attached**. A `document_id` that does not resolve raises `AIError(error_code="ai_contract_error")`.
+
+**Why re-resolve rather than trust the provider's copy.** A provider (mock today, a real LLM under `AI-02`) is only trusted to *select* evidence by id; it is not the source of truth for that evidence's content. Re-resolving against the retrieved set means a future real LLM cannot alter or fabricate citation metadata even if it echoes a document back with different field values — only `document_id` is load-bearing. This is a direct extension of the existing "reject an uncited candidate" rule in §18: an evidence reference to a document retrieval never returned is exactly the same class of untraceable output.
+
+**Consequences.**
+- `EvidenceResponse` gains `document_id`, `chunk_id`, and `relevance_score` (additive; `source_url`/`source_tier`/`published_year` were already present).
+- `AnalysisService._to_finding` now copies every `RetrievedDocument` field into `AnalysisEvidence`, populating the columns that already existed but were previously always `NULL`.
+- No migration is required for this addendum — the `analysis_evidence` columns were already nullable and already present.
+- `AI-02` inherits `_resolve_evidence` unchanged: a real `LLMClient` must still name evidence by `document_id` from what `EvidenceRetriever.retrieve()` actually returned, which is a stronger, not weaker, constraint than before.
