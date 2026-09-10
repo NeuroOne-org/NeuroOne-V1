@@ -8,7 +8,7 @@ this class and extend it with custom query methods.
 from typing import Generic, TypeVar, Type
 from uuid import UUID
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -84,6 +84,13 @@ class BaseRepository(Generic[ModelType]):
             statement = statement.where(self.model.is_deleted.is_(False))
         statement = statement.offset(skip).limit(limit)
         return list(db.scalars(statement).all())
+
+    def count(self, db: Session, *, include_deleted: bool = False) -> int:
+        """Count records, excluding soft-deleted rows by default."""
+        statement = select(func.count()).select_from(self.model)
+        if not include_deleted:
+            statement = statement.where(self.model.is_deleted.is_(False))
+        return db.scalar(statement) or 0
 
     def update(self,db:Session, obj: ModelType) -> ModelType:
         """Persist changes made to an existing entity.

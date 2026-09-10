@@ -1,7 +1,7 @@
 """Patient persistence operations."""
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.patient import Patient, PhoneNumber
@@ -32,16 +32,12 @@ class PatientRepository(BaseRepository[Patient]):
         )
         return list(db.scalars(statement).all())
 
-    def search(
-        self,
-        db: Session,
-        search_term: str = "",
-        skip: int = 0,
-        limit: int = 100,
-    ) -> list[Patient]:
-        """Search active patients by name, email, or phone number."""
+    def _search_statement(self, search_term: str, doctor_id: UUID | None):
         term = search_term.strip()
         statement = select(Patient).where(Patient.is_deleted.is_(False))
+
+        if doctor_id is not None:
+            statement = statement.where(Patient.doctor_id == doctor_id)
 
         if term:
             pattern = f"%{term}%"
@@ -54,8 +50,46 @@ class PatientRepository(BaseRepository[Patient]):
                 )
             )
 
+        return statement
+
+    def search(
+        self,
+        db: Session,
+        search_term: str = "",
+        skip: int = 0,
+        limit: int = 100,
+        doctor_id: UUID | None = None,
+    ) -> list[Patient]:
+        """Search active patients by name, email, or phone number.
+
+        When ``doctor_id`` is given, results are scoped to that doctor.
+        """
+        statement = self._search_statement(search_term, doctor_id)
         statement = statement.offset(skip).limit(limit)
         return list(db.scalars(statement).all())
+
+    def count_search(
+        self,
+        db: Session,
+        search_term: str = "",
+        doctor_id: UUID | None = None,
+    ) -> int:
+        """Count patients matching a search, optionally scoped to a doctor."""
+        statement = self._search_statement(search_term, doctor_id)
+        count_statement = select(func.count()).select_from(statement.subquery())
+        return db.scalar(count_statement) or 0
+
+    def count_by_doctor(self, db: Session, doctor_id: UUID) -> int:
+        """Count active patients assigned to a doctor."""
+        statement = (
+            select(func.count())
+            .select_from(Patient)
+            .where(
+                Patient.doctor_id == doctor_id,
+                Patient.is_deleted.is_(False),
+            )
+        )
+        return db.scalar(statement) or 0
 
     def get_by_phone(
         self,

@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models import User
 from app.models.user import UserRole
+from app.repositories.patient_repository import PatientRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from app.services.patient_service import PatientService
 from app.services.user_service import UserService
 from app.utils.exceptions import AuthenticationError, AuthorizationError
 
@@ -19,6 +21,7 @@ from app.utils.exceptions import AuthenticationError, AuthorizationError
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 _user_service = UserService(UserRepository())
+_patient_service = PatientService(PatientRepository(), UserRepository())
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -35,6 +38,12 @@ def get_user_service() -> UserService:
     """Provide the configured user service."""
 
     return _user_service
+
+
+def get_patient_service() -> PatientService:
+    """Provide the configured patient service."""
+
+    return _patient_service
 
 
 def get_auth_service(
@@ -118,6 +127,7 @@ __all__ = [
     "get_current_clinician",
     "get_current_user",
     "get_db",
+    "get_patient_service",
     "get_user_service",
     "oauth2_scheme",
     "require_admin",

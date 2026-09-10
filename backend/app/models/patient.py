@@ -6,7 +6,7 @@ from sqlalchemy import UUID, String, Date, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import BaseModel, Base
+from .base import BaseModel
 
 if TYPE_CHECKING:
     from .user import User
@@ -77,7 +77,7 @@ class Patient(BaseModel):
 
     # | email |
     email : Mapped[str] = mapped_column(
-        String(20),
+        String(255),
         unique=True,
         nullable= False,
         index=True
@@ -102,10 +102,9 @@ class Patient(BaseModel):
 """
 
 
-class PhoneNumber(Base):
+class PhoneNumber(BaseModel):
     __tablename__ = "patient_phones"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     phone_number: Mapped[str] = mapped_column(String(15))
     patient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

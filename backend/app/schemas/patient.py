@@ -25,7 +25,7 @@ class PatientBase(BaseModel):
     gender: str = Field(min_length=1, max_length=1)
     dob: date
     phone: list[PhoneNumber] = Field(min_length=1)
-    email: EmailStr = Field(max_length=20)
+    email: EmailStr = Field(max_length=255)
     address: str = Field(min_length=1, max_length=100)
     blood_group: str = Field(min_length=1, max_length=4)
     allergies: list[str]
@@ -35,7 +35,7 @@ class PatientBase(BaseModel):
 class PatientCreate(PatientBase):
     """Payload used to create a patient."""
 
-    doctor_id: UUID
+    doctor_id: UUID | None = None
 
 
 class PatientUpdate(BaseModel):
@@ -46,7 +46,7 @@ class PatientUpdate(BaseModel):
     gender: str | None = Field(default=None, min_length=1, max_length=1)
     dob: date | None = None
     phone: list[PhoneNumber] | None = Field(default=None, min_length=1)
-    email: EmailStr | None = Field(default=None, max_length=20)
+    email: EmailStr | None = Field(default=None, max_length=255)
     address: str | None = Field(default=None, min_length=1, max_length=100)
     blood_group: str | None = Field(default=None, min_length=1, max_length=4)
     allergies: list[str] | None = None
