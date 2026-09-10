@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-09-10T13:35:01.270076+00:00",
+  "nodes": {
+    "backend_alembic_versions_b8d41e2f7c53_make_deleted_at_timezone_aware": {
+      "code_fingerprint": "a8392131764c175688c367c235f078ba659730729d6ea2c1f871d5d3d31f7787",
+      "label": "b8d41e2f7c53_make_deleted_at_timezone_aware.py",
+      "last": "2026-09-10T13:07:46.702176+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-10T13:07:46.702176+00:00",
+          "outcome": "useful",
+          "q": "How are Alembic migrations and backend tests configured, and where should PR CI run pytest?"
+        }
+      ],
+      "score": 0.999562983,
+      "source_file": "backend/alembic/versions/b8d41e2f7c53_make_deleted_at_timezone_aware.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_requirements_dev": {
+      "code_fingerprint": "bd064a3bafa3c356f8a13c329a9e6a92ef72aea7c899354ff5be5c630d983d0a",
+      "label": "backend/requirements-dev.txt — Test Dependencies (pytest, pytest-asyncio, httpx)",
+      "last": "2026-09-10T13:07:46.702176+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-10T13:07:46.702176+00:00",
+          "outcome": "useful",
+          "q": "How are Alembic migrations and backend tests configured, and where should PR CI run pytest?"
+        }
+      ],
+      "score": 0.999562983,
+      "source_file": "backend/requirements-dev.txt",
+      "status": "tentative",
+      "uses": 1
+    },
+    "contributing_alembic_migration_policy": {
+      "code_fingerprint": "ea404dda08aed57fba95674dcc1135b05a69fb05e3e199034da696c40128be9a",
+      "label": "Alembic Migration Policy",
+      "last": "2026-09-10T13:07:46.702176+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-10T13:07:46.702176+00:00",
+          "outcome": "useful",
+          "q": "How are Alembic migrations and backend tests configured, and where should PR CI run pytest?"
+        }
+      ],
+      "score": 0.999562983,
+      "source_file": "CONTRIBUTING.md",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
+  "version": 1
+}
