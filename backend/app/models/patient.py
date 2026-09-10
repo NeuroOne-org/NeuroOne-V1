@@ -10,6 +10,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .user import User
+    from .visit import Visit
 
 """
 +----------------------+
@@ -91,12 +92,18 @@ class Patient(BaseModel):
     # | emergency_contact |
     emergency_contact : Mapped[str] = mapped_column(String(15), nullable= False)
 
+    # | visits |  (clinical cases; symptoms hang off visits, not patients)
+    visits: Mapped[list["Visit"]] = relationship(
+        "Visit",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
+
 """
     Missing relationships
     -> appointments
     -> medical_records
     -> diagnoses
-    -> symptoms
     -> reports
     -> prescriptions
 """
