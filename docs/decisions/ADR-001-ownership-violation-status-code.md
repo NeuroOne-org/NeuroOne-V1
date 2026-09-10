@@ -1,6 +1,4 @@
-# ADR-XXX: Ownership Violations Return 404, Not 403
-
-> Renumber `XXX` to the next available ADR number in `docs/decisions/` before committing.
+# ADR-001: Ownership Violations Return 404, Not 403
 
 ## Status
 Accepted
