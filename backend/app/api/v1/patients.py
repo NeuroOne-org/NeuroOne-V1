@@ -1,6 +1,5 @@
 """Patient endpoints."""
 
-import math
 from typing import Annotated
 from uuid import UUID
 
@@ -10,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_active_user, get_db, get_patient_service
 from app.models.patient import Patient
 from app.models.user import User
-from app.schemas.common import Pagination
 from app.schemas.patient import (
     PatientCreate,
     PatientListResponse,
@@ -18,6 +16,7 @@ from app.schemas.patient import (
     PatientUpdate,
 )
 from app.services.patient_service import PatientService
+from app.utils.responses import build_pagination
 
 router = APIRouter()
 
@@ -28,15 +27,9 @@ def _paginated_response(
     page: int,
     page_size: int,
 ) -> PatientListResponse:
-    total_pages = math.ceil(total / page_size) if page_size else 0
     return PatientListResponse(
         items=[PatientResponse.model_validate(item) for item in items],
-        pagination=Pagination(
-            page=page,
-            page_size=page_size,
-            total_records=total,
-            total_pages=total_pages,
-        ),
+        pagination=build_pagination(total, page, page_size),
     )
 
 

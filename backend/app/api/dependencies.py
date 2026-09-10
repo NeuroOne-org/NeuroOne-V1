@@ -11,10 +11,13 @@ from app.core.database import SessionLocal
 from app.models import User
 from app.models.user import UserRole
 from app.repositories.patient_repository import PatientRepository
+from app.repositories.symptom_repository import SymptomRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.visit_repository import VisitRepository
 from app.services.auth_service import AuthService
 from app.services.patient_service import PatientService
 from app.services.user_service import UserService
+from app.services.visit_service import VisitService
 from app.utils.exceptions import AuthenticationError, AuthorizationError
 
 
@@ -22,6 +25,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 _user_service = UserService(UserRepository())
 _patient_service = PatientService(PatientRepository(), UserRepository())
+_visit_service = VisitService(
+    VisitRepository(),
+    SymptomRepository(),
+    _patient_service,
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -44,6 +52,12 @@ def get_patient_service() -> PatientService:
     """Provide the configured patient service."""
 
     return _patient_service
+
+
+def get_visit_service() -> VisitService:
+    """Provide the configured visit service."""
+
+    return _visit_service
 
 
 def get_auth_service(
@@ -129,6 +143,7 @@ __all__ = [
     "get_db",
     "get_patient_service",
     "get_user_service",
+    "get_visit_service",
     "oauth2_scheme",
     "require_admin",
     "require_clinician",
