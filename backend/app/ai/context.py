@@ -53,6 +53,7 @@ def _to_context_visit(visit: Visit) -> ContextVisit:
                 severity=symptom.severity,
                 duration_days=symptom.duration_days,
                 onset=symptom.onset,
+                observation=symptom.observation,
             )
             for symptom in visit.symptoms
             if not symptom.is_deleted

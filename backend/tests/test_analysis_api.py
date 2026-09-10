@@ -147,6 +147,8 @@ def test_triggering_analysis_returns_201_with_findings_and_citations() -> None:
     assert body["visit_id"] == str(visit_id)
     assert body["findings"][0]["name"] == "Parkinsonian syndrome"
     assert body["findings"][0]["evidence"][0]["citation"]
+    assert body["findings"][0]["evidence"][0]["document_id"] == "doc-1"
+    assert body["findings"][0]["evidence"][0]["chunk_id"] == "doc-1#c1"
     assert body["findings"][0]["likelihood_band"] == "moderate"
 
 

@@ -25,6 +25,7 @@ def _symptom(name="tremor", severity=5, *, deleted=False):
         severity=severity,
         duration_days=30,
         onset="gradual",
+        observation="worse at night, resolves with rest",
     )
     symptom.is_deleted = deleted
     return symptom
@@ -78,6 +79,10 @@ def test_current_visit_is_mapped_field_for_field() -> None:
     assert context.current_visit.symptoms[0].symptom_name == "tremor"
     assert context.current_visit.symptoms[0].duration_days == 30
     assert context.current_visit.symptoms[0].onset == "gradual"
+    assert (
+        context.current_visit.symptoms[0].observation
+        == "worse at night, resolves with rest"
+    )
 
 
 def test_prior_visits_stay_oldest_first_and_exclude_the_current_one() -> None:

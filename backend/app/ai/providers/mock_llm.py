@@ -28,7 +28,7 @@ from app.schemas.analysis import (
     TrendBasisRef,
 )
 from app.schemas.clinical_context import ClinicalContext, SymptomTrend
-from app.schemas.evidence import EvidenceRef, RetrievedDocument
+from app.schemas.evidence import RetrievedDocument
 
 
 class MockLLMClient:
@@ -142,9 +142,12 @@ class MockLLMClient:
 
         # Citations are attached from what retrieval actually returned -- a
         # condition whose supporting documents were not retrieved gets none,
-        # and the orchestrator drops it.
+        # and the orchestrator drops it. The full retrieved record is kept
+        # (not narrowed to the 3-field wire shape) so source metadata
+        # survives; the orchestrator re-resolves it against its own
+        # retrieved set regardless (AGENTS.md section 8.4.4).
         evidence = [
-            EvidenceRef.model_validate(evidence_by_id[document_id])
+            evidence_by_id[document_id]
             for document_id in condition.document_ids
             if document_id in evidence_by_id
         ]

@@ -528,6 +528,36 @@ def test_unknown_onset_value_is_rejected() -> None:
     assert response.status_code == 422
 
 
+def test_a_whitespace_only_observation_is_rejected() -> None:
+    clinician = _user()
+
+    class ServiceStub:
+        def add_symptom(self, db, vid, symptom_data, current_user):
+            raise AssertionError("service must not be reached")
+
+    response = _client(clinician, ServiceStub()).post(
+        f"/api/v1/visits/{uuid4()}/symptoms",
+        json={"symptom_name": "tremor", "severity": 5, "observation": "   "},
+    )
+
+    assert response.status_code == 422
+
+
+def test_an_oversized_observation_is_rejected() -> None:
+    clinician = _user()
+
+    class ServiceStub:
+        def add_symptom(self, db, vid, symptom_data, current_user):
+            raise AssertionError("service must not be reached")
+
+    response = _client(clinician, ServiceStub()).post(
+        f"/api/v1/visits/{uuid4()}/symptoms",
+        json={"symptom_name": "tremor", "severity": 5, "observation": "x" * 2001},
+    )
+
+    assert response.status_code == 422
+
+
 def test_unknown_vitals_field_is_rejected() -> None:
     clinician = _user()
 

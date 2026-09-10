@@ -25,7 +25,7 @@ from app.schemas.clinical_context import (
     ContextSymptom,
     ContextVisit,
 )
-from app.schemas.evidence import EvidenceRef, RetrievedDocument
+from app.schemas.evidence import RetrievedDocument
 from app.utils.exceptions import AIError
 
 
@@ -127,7 +127,7 @@ def _candidate(**overrides) -> DiagnosisCandidate:
         "contradicting_findings": [],
         "explanation": "an explanation",
         "trend_basis": [],
-        "evidence": [EvidenceRef.model_validate(_document())],
+        "evidence": [_document()],
     }
     payload.update(overrides)
     return DiagnosisCandidate(**payload)
@@ -172,6 +172,54 @@ def test_every_candidate_carries_at_least_one_citation() -> None:
             assert evidence.source.strip()
             assert evidence.citation.strip()
             assert evidence.relevant_passage.strip()
+
+
+def test_evidence_content_is_resolved_from_the_retrieved_set_not_the_provider() -> None:
+    """The orchestrator, not the provider, is authoritative for evidence content.
+
+    AGENTS.md 8.4.4: source metadata must be preserved end to end. A
+    provider names evidence by document_id; whatever content it attaches is
+    advisory and must be overwritten by the orchestrator's own retrieved copy.
+    """
+    document = _document()
+    fabricated = document.model_copy(
+        update={"citation": "a citation the provider invented"}
+    )
+    orchestrator = AnalysisOrchestrator(
+        _StubRetriever([document]),
+        _StubLLM(
+            ReasoningResult(
+                model_name="stub",
+                provider_mode="simulated",
+                candidates=[_candidate(evidence=[fabricated])],
+            )
+        ),
+    )
+
+    result = orchestrator.run(_context())
+
+    assert result.candidates[0].evidence[0].citation == document.citation
+
+
+def test_evidence_citing_an_unretrieved_document_is_a_contract_error() -> None:
+    """AGENTS.md 18: a candidate cannot cite a document retrieval never returned."""
+    document = _document()
+    unretrieved = _document(document_id="doc-not-retrieved")
+    orchestrator = AnalysisOrchestrator(
+        _StubRetriever([document]),
+        _StubLLM(
+            ReasoningResult(
+                model_name="stub",
+                provider_mode="simulated",
+                candidates=[_candidate(evidence=[unretrieved])],
+            )
+        ),
+    )
+
+    with pytest.raises(AIError) as exc_info:
+        orchestrator.run(_context())
+
+    assert exc_info.value.error_code == "ai_contract_error"
 
 
 def test_no_candidate_expresses_certainty() -> None:
