@@ -12,10 +12,21 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_active_user, get_db, get_visit_service
+from app.api.dependencies import (
+    get_analysis_service,
+    get_current_active_user,
+    get_db,
+    get_visit_service,
+)
+from app.models.analysis import Analysis
 from app.models.symptom import Symptom
 from app.models.user import User
 from app.models.visit import Visit
+from app.schemas.analysis import (
+    AnalysisCreateRequest,
+    AnalysisListResponse,
+    AnalysisResponse,
+)
 from app.schemas.symptom import (
     SymptomCreate,
     SymptomListResponse,
@@ -23,10 +34,23 @@ from app.schemas.symptom import (
     SymptomUpdate,
 )
 from app.schemas.visit import VisitResponse, VisitUpdate
+from app.services.analysis_service import AnalysisService
 from app.services.visit_service import VisitService
 from app.utils.responses import build_pagination
 
 router = APIRouter()
+
+
+def _analysis_page(
+    items: list[Analysis],
+    total: int,
+    page: int,
+    page_size: int,
+) -> AnalysisListResponse:
+    return AnalysisListResponse(
+        items=[AnalysisResponse.model_validate(item) for item in items],
+        pagination=build_pagination(total, page, page_size),
+    )
 
 
 def _symptom_page(
@@ -143,3 +167,61 @@ def delete_symptom(
     """Soft-delete a symptom. A symptom on another visit reads as 404."""
 
     visit_service.delete_symptom(db, visit_id, symptom_id, current_user)
+
+
+# --------------------------------------------------------------------------
+# Analysis (AI-01)
+# --------------------------------------------------------------------------
+
+
+@router.post(
+    "/{visit_id}/analyses",
+    response_model=AnalysisResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_analysis(
+    visit_id: UUID,
+    payload: AnalysisCreateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    analysis_service: Annotated[AnalysisService, Depends(get_analysis_service)],
+) -> Analysis:
+    """Run the AI pipeline for a case and store the ranked result.
+
+    Decision support only. An AI or retrieval failure returns 502 and leaves the
+    clinical record untouched (AGENTS.md section 8.5).
+    """
+
+    return analysis_service.analyze_visit(
+        db, visit_id, current_user, history_limit=payload.history_limit
+    )
+
+
+@router.get("/{visit_id}/analyses/latest", response_model=AnalysisResponse)
+def get_latest_analysis(
+    visit_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    analysis_service: Annotated[AnalysisService, Depends(get_analysis_service)],
+) -> Analysis:
+    """Return the most recent analysis for a case."""
+
+    return analysis_service.get_latest_for_visit(db, visit_id, current_user)
+
+
+@router.get("/{visit_id}/analyses", response_model=AnalysisListResponse)
+def list_analyses(
+    visit_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    analysis_service: Annotated[AnalysisService, Depends(get_analysis_service)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> AnalysisListResponse:
+    """List a case's analyses, newest first."""
+
+    skip = (page - 1) * page_size
+    items, total = analysis_service.list_visit_analyses(
+        db, visit_id, current_user, skip, page_size
+    )
+    return _analysis_page(items, total, page, page_size)

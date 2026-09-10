@@ -7,13 +7,18 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.ai.orchestrator import AnalysisOrchestrator
+from app.ai.providers import build_providers
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models import User
 from app.models.user import UserRole
+from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.patient_repository import PatientRepository
 from app.repositories.symptom_repository import SymptomRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.visit_repository import VisitRepository
+from app.services.analysis_service import AnalysisService
 from app.services.auth_service import AuthService
 from app.services.patient_service import PatientService
 from app.services.user_service import UserService
@@ -29,6 +34,19 @@ _visit_service = VisitService(
     VisitRepository(),
     SymptomRepository(),
     _patient_service,
+)
+
+_retriever, _llm = build_providers(settings)
+_analysis_service = AnalysisService(
+    AnalysisRepository(),
+    _visit_service,
+    _patient_service,
+    AnalysisOrchestrator(
+        _retriever,
+        _llm,
+        max_candidates=settings.AI_MAX_CANDIDATES,
+        evidence_per_candidate=settings.AI_EVIDENCE_PER_CANDIDATE,
+    ),
 )
 
 
@@ -58,6 +76,12 @@ def get_visit_service() -> VisitService:
     """Provide the configured visit service."""
 
     return _visit_service
+
+
+def get_analysis_service() -> AnalysisService:
+    """Provide the configured analysis service."""
+
+    return _analysis_service
 
 
 def get_auth_service(
@@ -135,6 +159,7 @@ def require_clinician(
 
 
 __all__ = [
+    "get_analysis_service",
     "get_auth_service",
     "get_current_active_user",
     "get_current_admin",

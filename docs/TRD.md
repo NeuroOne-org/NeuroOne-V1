@@ -124,15 +124,24 @@ Conceptual structure:
 ```text
 Diagnosis
 ├── name
+├── category                 # differential_diagnosis | early_watch
 ├── likelihood/confidence
 ├── supporting_findings
 ├── contradicting_findings
 ├── explanation
+├── trend_basis[]            # prior visits/findings driving an early_watch flag
 └── evidence[]
     ├── source
     ├── citation
     └── relevant_passage
 ```
+
+`trend_basis` traces to the patient's own visit history; `evidence[]` traces to
+external literature. They are distinct and must not be conflated.
+
+`category` and `trend_basis[]` were added by the early-detection design decision
+in `NEUROONE-MVP-SCOPE.md` and are implemented by `AI-01`. See
+`decisions/ADR-003-ai-analysis-contract-and-provider-seam.md`.
 
 ## 10. RAG Rules
 1. Accept clinical context.
