@@ -16,7 +16,7 @@ Two HTTP semantics are both technically correct for "you may not access this res
 Patient records sit adjacent to PHI. Which response the API gives is itself a small information disclosure: 403 confirms the record's existence to a caller who has no legitimate claim to know that.
 
 ## Constraints
-- Patient data is sensitive (AGENTS.md §16); minimize unnecessary exposure.
+- Patient data is sensitive (AGENTS.md §12); minimize unnecessary exposure.
 - The codebase already uses 403-style signaling elsewhere via `require_roles(*roles)` for role-exclusion (e.g., admin-only endpoints) — a different situation from per-record ownership.
 - Enumeration resistance matters more for a resource keyed by UUID that's still tied to a real patient than it might for a low-sensitivity resource.
 
