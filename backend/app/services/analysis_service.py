@@ -71,6 +71,12 @@ class AnalysisService(BaseService[AnalysisRepository]):
                     source=evidence.source,
                     citation=evidence.citation,
                     relevant_passage=evidence.relevant_passage,
+                    document_id=evidence.document_id,
+                    chunk_id=evidence.chunk_id,
+                    source_url=evidence.source_url,
+                    source_tier=evidence.source_tier,
+                    published_year=evidence.published_year,
+                    relevance_score=evidence.relevance_score,
                 )
                 for index, evidence in enumerate(candidate.evidence)
             ],

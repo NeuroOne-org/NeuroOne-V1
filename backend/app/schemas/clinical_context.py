@@ -29,6 +29,7 @@ class ContextSymptom(BaseModel):
     severity: int = Field(ge=1, le=10)
     duration_days: int | None = Field(default=None, ge=0)
     onset: SymptomOnset | None = None
+    observation: str | None = None
 
 
 class ContextVisit(BaseModel):

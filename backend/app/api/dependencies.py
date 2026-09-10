@@ -15,12 +15,14 @@ from app.models import User
 from app.models.user import UserRole
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.patient_repository import PatientRepository
+from app.repositories.report_repository import ReportRepository
 from app.repositories.symptom_repository import SymptomRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.visit_repository import VisitRepository
 from app.services.analysis_service import AnalysisService
 from app.services.auth_service import AuthService
 from app.services.patient_service import PatientService
+from app.services.report_service import ReportService
 from app.services.user_service import UserService
 from app.services.visit_service import VisitService
 from app.utils.exceptions import AuthenticationError, AuthorizationError
@@ -47,6 +49,12 @@ _analysis_service = AnalysisService(
         max_candidates=settings.AI_MAX_CANDIDATES,
         evidence_per_candidate=settings.AI_EVIDENCE_PER_CANDIDATE,
     ),
+)
+_report_service = ReportService(
+    ReportRepository(),
+    _analysis_service,
+    _visit_service,
+    _patient_service,
 )
 
 
@@ -82,6 +90,12 @@ def get_analysis_service() -> AnalysisService:
     """Provide the configured analysis service."""
 
     return _analysis_service
+
+
+def get_report_service() -> ReportService:
+    """Provide the configured report service."""
+
+    return _report_service
 
 
 def get_auth_service(
@@ -167,6 +181,7 @@ __all__ = [
     "get_current_user",
     "get_db",
     "get_patient_service",
+    "get_report_service",
     "get_user_service",
     "get_visit_service",
     "oauth2_scheme",

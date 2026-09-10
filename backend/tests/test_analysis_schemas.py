@@ -20,20 +20,23 @@ from app.schemas.analysis import (
     ReasoningResult,
     TrendBasisRef,
 )
-from app.schemas.evidence import EvidenceRef
+from app.schemas.evidence import RetrievedDocument
 
 
 NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
 
 
-def _evidence(**overrides) -> EvidenceRef:
+def _evidence(**overrides) -> RetrievedDocument:
     payload = {
         "source": "Journal of Neurology",
         "citation": "Doe J et al. Early motor signs. J Neurol. 2024;271(3):112-120.",
         "relevant_passage": "Progressive resting tremor is an early motor sign.",
+        "document_id": "doc-1",
+        "chunk_id": "doc-1#c1",
+        "source_tier": "guideline",
     }
     payload.update(overrides)
-    return EvidenceRef(**payload)
+    return RetrievedDocument(**payload)
 
 
 def _trend_ref(**overrides) -> TrendBasisRef:
