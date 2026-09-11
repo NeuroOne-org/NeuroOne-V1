@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     AI_MAX_CANDIDATES: int = 5
     AI_EVIDENCE_PER_CANDIDATE: int = 3
 
+    # A third seam alongside AI_PROVIDER (ADR-006 decision 4): provenance is
+    # now three-dimensional -- simulated retrieval, live-or-simulated
+    # reasoning, simulated staging -- so a single literal no longer stretches
+    # to cover it. "mock" is the only value until a live staging model exists.
+    AI_STAGING_PROVIDER: Literal["mock"] = "mock"
+
     # Any OpenAI-compatible /chat/completions endpoint. Provider choice is
     # configuration rather than a code branch (ADR-005), so Groq, Gemini's
     # compatibility endpoint, OpenRouter and a local Ollama all work here.

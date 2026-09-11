@@ -9,7 +9,12 @@ output, which is what AGENTS.md section 8.1 requires of a mock provider.
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from app.ai.corpus.mock_corpus import DOCUMENTS_BY_ID, MOCK_CONDITIONS, MOCK_DOCUMENTS
+from app.ai.corpus.mock_corpus import (
+    DOCUMENTS_BY_ID,
+    MOCK_CONDITIONS,
+    MOCK_DOCUMENTS,
+    STAGE_CONDITIONS,
+)
 from app.ai.providers import build_providers
 from app.ai.providers.mock_llm import MockLLMClient
 from app.ai.providers.mock_retriever import MockEvidenceRetriever
@@ -95,6 +100,14 @@ def test_every_document_carries_a_citation_and_a_passage() -> None:
         assert document.citation.strip()
         assert document.relevant_passage.strip()
         assert document.keywords
+
+
+def test_every_stage_label_can_cite_at_least_one_real_document() -> None:
+    """A stage estimate with no resolvable citation would be silently dropped."""
+    for stage, condition in STAGE_CONDITIONS.items():
+        assert condition.document_ids, stage
+        for document_id in condition.document_ids:
+            assert document_id in DOCUMENTS_BY_ID, (stage, document_id)
 
 
 def test_document_ids_are_unique() -> None:
@@ -241,7 +254,8 @@ def test_reasoner_is_deterministic() -> None:
 
 
 def test_registry_builds_the_mock_pair() -> None:
-    retriever, llm = build_providers()
+    retriever, llm, stager = build_providers()
 
     assert retriever.provenance == "simulated"
     assert llm.provenance == "simulated"
+    assert stager.provenance == "simulated"

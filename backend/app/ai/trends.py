@@ -10,14 +10,19 @@ Pure: no database, no ORM, no I/O.
 """
 
 from collections.abc import Collection, Sequence
+from datetime import datetime
+from uuid import UUID
 
 from app.schemas.analysis import TrendBasisRef
 from app.schemas.clinical_context import (
     ContextVisit,
+    ScanTrend,
+    ScanTrendPoint,
     SymptomTrend,
     TrendDirection,
     TrendPoint,
 )
+from app.schemas.imaging import STAGE_ORDER, StagingResult
 
 
 # A symptom seen once is a snapshot, not a direction.
@@ -155,10 +160,80 @@ def trend_basis_refs(
     return refs
 
 
+def detect_stage_trend(
+    observations: Sequence[tuple[UUID, datetime, StagingResult]],
+) -> ScanTrend | None:
+    """Detect how an imaging-derived stage moved across a patient's visits.
+
+    Mirrors ``detect_trends``, but over the ordinal ``STAGE_ORDER`` scale
+    rather than a clinician-entered severity (ADR-006 consequence: without
+    this, the scan contributes nothing to trend-aware early detection).
+
+    Deliberately takes already-staged results rather than scans: staging is a
+    provider call, and this module stays pure (no database, no ORM, no I/O).
+    The caller -- the orchestrator, which already holds the stager -- is
+    responsible for staging every scanned visit first.
+
+    ``observations`` must be ordered oldest-first and contain only visits
+    that actually had a scan. Fewer than two produces no trend, same as a
+    symptom observed once.
+    """
+
+    distinct_visits = {visit_id for visit_id, _, _ in observations}
+    if len(distinct_visits) < MIN_VISITS_FOR_TREND:
+        return None
+
+    ordinals = [STAGE_ORDER[result.stage] for _, _, result in observations]
+
+    return ScanTrend(
+        direction=_direction(ordinals),
+        first_stage=observations[0][2].stage,
+        latest_stage=observations[-1][2].stage,
+        visit_span=len(distinct_visits),
+        points=[
+            ScanTrendPoint(visit_id=visit_id, visit_date=visit_date, stage=result.stage)
+            for visit_id, visit_date, result in observations
+        ],
+    )
+
+
+def stage_trend_basis_ref(trend: ScanTrend | None) -> list[TrendBasisRef]:
+    """Build history references for a worsening imaging-derived stage trend.
+
+    Mirrors ``trend_basis_refs``, but for the scan rather than a symptom. Used
+    to attach traceable trend history to the staged candidate (ADR-006);
+    unlike a symptom's trend_basis, this never changes the candidate's
+    category -- the stage estimate stays a differential_diagnosis regardless
+    (ADR-006 decision 3), and the reference only enriches its traceability.
+    """
+
+    if trend is None or trend.direction != "worsening":
+        return []
+
+    observation = (
+        f"MRI-derived stage {trend.first_stage} -> {trend.latest_stage} "
+        f"across {trend.visit_span} visits"
+    )
+
+    return [
+        TrendBasisRef(
+            visit_id=point.visit_id,
+            symptom_id=None,
+            symptom_name="MRI-derived stage",
+            visit_date=point.visit_date,
+            severity=STAGE_ORDER[point.stage] + 1,
+            observation=observation,
+        )
+        for point in trend.points
+    ]
+
+
 __all__ = [
     "MIN_VISITS_FOR_TREND",
+    "detect_stage_trend",
     "detect_trends",
     "normalize_symptom_name",
+    "stage_trend_basis_ref",
     "trend_basis_refs",
     "worsening_symptom_names",
 ]

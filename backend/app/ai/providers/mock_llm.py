@@ -15,11 +15,13 @@ from app.ai.corpus.mock_corpus import (
     CONTRADICTION_WEIGHT,
     MIN_CONFIDENCE,
     MOCK_CONDITIONS,
+    STAGE_CONDITIONS,
     TREND_WEIGHT,
     MockCondition,
 )
 from app.ai.trends import (
     normalize_symptom_name,
+    stage_trend_basis_ref,
     trend_basis_refs,
     worsening_symptom_names,
 )
@@ -30,8 +32,9 @@ from app.schemas.analysis import (
     ReasoningRequest,
     ReasoningResult,
 )
-from app.schemas.clinical_context import ClinicalContext
+from app.schemas.clinical_context import ClinicalContext, ScanTrend
 from app.schemas.evidence import RetrievedDocument
+from app.schemas.imaging import StagingResult
 
 
 class MockLLMClient:
@@ -141,6 +144,57 @@ class MockLLMClient:
             evidence=evidence,
         )
 
+    def _stage_finding(
+        self,
+        imaging: StagingResult,
+        scan_trend: ScanTrend | None,
+        evidence_by_id: dict[str, RetrievedDocument],
+    ) -> DiagnosisCandidate | None:
+        """Fold a staging estimate into the same cited candidate shape.
+
+        The stage never gets its own field on the wire (ADR-006 decision 3):
+        it is one more ``DiagnosisCandidate``, ranked and cited exactly like a
+        symptom-derived one, so it can lose to a stronger symptom-based
+        candidate or sit beside it in the differential.
+
+        A worsening cross-visit imaging trend enriches this candidate's
+        traceability (trend_basis) but never changes its category: staging
+        confidence never dips low enough to qualify as early_watch, and
+        decision 3 keeps the stage a differential candidate regardless.
+        """
+
+        condition = STAGE_CONDITIONS[imaging.stage]
+
+        evidence = [
+            evidence_by_id[document_id]
+            for document_id in condition.document_ids
+            if document_id in evidence_by_id
+        ]
+        if not evidence:
+            return None
+
+        supporting = [
+            f"{region.region} contribution {region.contribution:.2f}"
+            for region in imaging.contributing_regions
+        ] or ["MRI-derived stage estimate"]
+
+        trend_basis = stage_trend_basis_ref(scan_trend)
+        if trend_basis:
+            supporting.append(
+                f"MRI-derived stage worsening across {scan_trend.visit_span} visits"
+            )
+
+        return DiagnosisCandidate(
+            name=condition.name,
+            category="differential_diagnosis",
+            confidence=imaging.confidence,
+            supporting_findings=supporting,
+            contradicting_findings=[],
+            explanation=condition.explanation_template,
+            trend_basis=trend_basis,
+            evidence=evidence,
+        )
+
     # -- provider interface ----------------------------------------------
 
     def generate_analysis(self, request: ReasoningRequest) -> ReasoningResult:
@@ -163,6 +217,13 @@ class MockLLMClient:
             )
             if candidate is not None
         ]
+
+        if request.imaging is not None:
+            stage_finding = self._stage_finding(
+                request.imaging, request.scan_trend, evidence_by_id
+            )
+            if stage_finding is not None:
+                candidates.append(stage_finding)
 
         # Name as secondary key makes the ordering total, so ties are stable.
         candidates.sort(key=lambda candidate: (-candidate.confidence, candidate.name))

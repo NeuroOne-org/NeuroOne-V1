@@ -38,7 +38,7 @@ _visit_service = VisitService(
     _patient_service,
 )
 
-_retriever, _llm = build_providers(settings)
+_retriever, _llm, _stager = build_providers(settings)
 _analysis_service = AnalysisService(
     AnalysisRepository(),
     _visit_service,
@@ -46,6 +46,7 @@ _analysis_service = AnalysisService(
     AnalysisOrchestrator(
         _retriever,
         _llm,
+        _stager,
         max_candidates=settings.AI_MAX_CANDIDATES,
         evidence_per_candidate=settings.AI_EVIDENCE_PER_CANDIDATE,
     ),

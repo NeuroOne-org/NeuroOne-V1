@@ -13,6 +13,7 @@ from typing import Literal, Protocol, runtime_checkable
 
 from app.schemas.analysis import ReasoningRequest, ReasoningResult
 from app.schemas.evidence import RetrievalQuery, RetrievedDocument
+from app.schemas.imaging import StagingRequest, StagingResult
 
 
 ProviderMode = Literal["simulated", "live"]
@@ -56,4 +57,23 @@ class LLMClient(Protocol):
         ...
 
 
-__all__ = ["EvidenceRetriever", "LLMClient", "ProviderMode"]
+@runtime_checkable
+class ImagingStager(Protocol):
+    """Produces a dementia-stage estimate from one MRI scan's metadata.
+
+    The third seam ADR-006 adds alongside retrieval and reasoning. A staging
+    provider never has direct clinical authority -- its output becomes one
+    candidate inside the same cited, ranked differential everything else in
+    the pipeline already produces (ADR-006 decision 3), not a field of its
+    own on the wire.
+    """
+
+    name: str
+    provenance: ProviderMode
+
+    def stage(self, request: StagingRequest) -> StagingResult:
+        """Return a stage estimate for the supplied scan metadata."""
+        ...
+
+
+__all__ = ["EvidenceRetriever", "ImagingStager", "LLMClient", "ProviderMode"]

@@ -18,8 +18,9 @@ from datetime import datetime, timezone
 
 from pydantic import ValidationError
 
-from app.ai.providers.base import EvidenceRetriever, LLMClient
+from app.ai.providers.base import EvidenceRetriever, ImagingStager, LLMClient
 from app.ai.ranking import cap_evidence_per_candidate, rank_candidates, rank_evidence
+from app.ai.trends import detect_stage_trend
 from app.schemas.analysis import (
     DISCLAIMER,
     SIMULATED_PIPELINE_NOTE,
@@ -28,8 +29,9 @@ from app.schemas.analysis import (
     ReasoningRequest,
     ReasoningResult,
 )
-from app.schemas.clinical_context import ClinicalContext
+from app.schemas.clinical_context import ClinicalContext, ScanSummary, ScanTrend
 from app.schemas.evidence import RetrievalQuery, RetrievedDocument
+from app.schemas.imaging import STAGE_LABELS, StagingRequest, StagingResult
 from app.utils.exceptions import AIError
 
 
@@ -51,18 +53,90 @@ class AnalysisOrchestrator:
         self,
         retriever: EvidenceRetriever,
         llm: LLMClient,
+        stager: ImagingStager | None = None,
         *,
         max_candidates: int = 5,
         evidence_per_candidate: int = 3,
     ):
         self.retriever = retriever
         self.llm = llm
+        self.stager = stager
         self.max_candidates = max_candidates
         self.evidence_per_candidate = evidence_per_candidate
 
     # -- stages ----------------------------------------------------------
 
-    def _build_query(self, context: ClinicalContext) -> RetrievalQuery:
+    def _run_stager(self, scan: ScanSummary) -> StagingResult:
+        request = StagingRequest(
+            checksum=scan.checksum,
+            content_type=scan.content_type,
+            dimensions=scan.dimensions,
+        )
+
+        try:
+            result = self.stager.stage(request)
+        except Exception as exc:  # provider failure, not a contract failure
+            raise AIError(
+                "The imaging staging model is unavailable. The clinical "
+                "record was not modified; the analysis can be retried.",
+                error_code="staging_error",
+            ) from exc
+
+        if not isinstance(result, StagingResult):
+            raise AIError(
+                "The imaging staging provider returned an unrecognized "
+                "result type.",
+                error_code="staging_contract_error",
+            )
+
+        return result
+
+    def _stage(
+        self, context: ClinicalContext
+    ) -> tuple[StagingResult | None, ScanTrend | None]:
+        """Run imaging staging for the current visit, and a trend across it.
+
+        Symptoms alone must still produce an analysis (ADR-006 decision 1), so
+        a visit with no scan skips this stage entirely rather than failing.
+
+        Every prior visit that also has a scan gets staged too, purely to
+        feed ``detect_stage_trend`` (ADR-006 consequence: without this, the
+        scan contributes nothing to trend-aware early detection). A prior
+        visit's own persisted analysis, if any, is not reused -- staging is
+        deterministic, so re-running it here costs nothing and keeps this
+        module the only place that talks to the provider.
+        """
+
+        scan = context.current_visit.scan
+        if scan is None:
+            return None, None
+
+        if self.stager is None:
+            raise AIError(
+                "An MRI scan is attached to this visit but no imaging "
+                "staging provider is configured. The clinical record was "
+                "not modified.",
+                error_code="staging_error",
+            )
+
+        current_result = self._run_stager(scan)
+
+        observations = [
+            (visit.id, visit.visit_date, self._run_stager(visit.scan))
+            for visit in context.prior_visits
+            if visit.scan is not None
+        ]
+        observations.append(
+            (context.current_visit.id, context.current_visit.visit_date, current_result)
+        )
+
+        return current_result, detect_stage_trend(observations)
+
+    def _build_query(
+        self,
+        context: ClinicalContext,
+        imaging: StagingResult | None,
+    ) -> RetrievalQuery:
         symptom_names = sorted(
             {
                 symptom.symptom_name
@@ -70,7 +144,13 @@ class AnalysisOrchestrator:
                 for symptom in visit.symptoms
             }
         )
+        # A stage estimate needs its own citations, resolved the same way a
+        # symptom-derived candidate's are: by naming the condition and
+        # letting retrieval find literature that matches it (ADR-006
+        # decision 3 -- a stage is never surfaced without a citation).
+        condition_names = [STAGE_LABELS[imaging.stage]] if imaging else []
         return RetrievalQuery(
+            condition_names=condition_names,
             symptom_names=symptom_names,
             chief_complaint=context.current_visit.chief_complaint,
             max_results=min(
@@ -78,9 +158,15 @@ class AnalysisOrchestrator:
             ),
         )
 
-    def _retrieve(self, context: ClinicalContext) -> list[RetrievedDocument]:
+    def _retrieve(
+        self,
+        context: ClinicalContext,
+        imaging: StagingResult | None,
+    ) -> list[RetrievedDocument]:
         try:
-            documents = self.retriever.retrieve(self._build_query(context))
+            documents = self.retriever.retrieve(
+                self._build_query(context, imaging)
+            )
         except Exception as exc:  # provider failure, not a contract failure
             raise AIError(
                 "Evidence retrieval is unavailable. The clinical record was "
@@ -102,11 +188,15 @@ class AnalysisOrchestrator:
         self,
         context: ClinicalContext,
         evidence: list[RetrievedDocument],
+        imaging: StagingResult | None,
+        scan_trend: ScanTrend | None,
     ) -> ReasoningResult:
         request = ReasoningRequest(
             context=context,
             evidence=evidence,
             max_candidates=self.max_candidates,
+            imaging=imaging,
+            scan_trend=scan_trend,
         )
 
         try:
@@ -187,28 +277,46 @@ class AnalysisOrchestrator:
             ranked, limit=self.evidence_per_candidate
         )
 
-    def _pipeline_note(self, provider_mode: str) -> str:
+    def _pipeline_note(
+        self,
+        provider_mode: str,
+        imaging: StagingResult | None,
+    ) -> str:
         """Describe what actually produced this analysis.
 
-        Derived from both providers rather than the model alone, because the
-        two are swapped independently: live reasoning over a simulated corpus
-        is a real state, and it must not be described as live evidence
-        (ADR-005).
+        Derived from every provider that ran rather than the reasoning model
+        alone, because each is swapped independently: live reasoning over a
+        simulated corpus is a real state, and it must not be described as
+        live evidence (ADR-005). Provenance is now three-dimensional --
+        retrieval, reasoning, and imaging staging (ADR-006 decision 4) -- so
+        a scanned visit's note says so explicitly rather than only covering
+        the two dimensions that predate MRI intake.
         """
 
         if provider_mode == "simulated":
-            return SIMULATED_PIPELINE_NOTE
-        if self.retriever.provenance == "simulated":
-            return HYBRID_PIPELINE_NOTE
-        return LIVE_PIPELINE_NOTE
+            note = SIMULATED_PIPELINE_NOTE
+        elif self.retriever.provenance == "simulated":
+            note = HYBRID_PIPELINE_NOTE
+        else:
+            note = LIVE_PIPELINE_NOTE
+
+        if imaging is not None:
+            note += (
+                ", imaging staging simulated"
+                if imaging.provenance == "simulated"
+                else ", imaging staging live"
+            )
+
+        return note
 
     # -- pipeline --------------------------------------------------------
 
     def run(self, context: ClinicalContext) -> AnalysisResult:
         """Execute the pipeline and return validated, ranked output."""
 
-        evidence = self._retrieve(context)
-        reasoning = self._reason(context, evidence)
+        imaging, scan_trend = self._stage(context)
+        evidence = self._retrieve(context, imaging)
+        reasoning = self._reason(context, evidence, imaging, scan_trend)
         resolved = self._resolve_evidence(list(reasoning.candidates), evidence)
         candidates = self._finalize(resolved)
 
@@ -229,7 +337,7 @@ class AnalysisOrchestrator:
                 # truth about retrieval (ADR-005).
                 provider_mode=reasoning.provider_mode,
                 # Section 8.1: mock-sourced output stays labelled as simulated.
-                pipeline_note=self._pipeline_note(reasoning.provider_mode),
+                pipeline_note=self._pipeline_note(reasoning.provider_mode, imaging),
                 disclaimer=DISCLAIMER,
                 generated_at=datetime.now(timezone.utc),
                 candidates=candidates,

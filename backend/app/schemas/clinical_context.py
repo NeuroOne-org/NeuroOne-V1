@@ -13,6 +13,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.imaging import StageLabel
 from app.schemas.symptom import SymptomOnset
 
 
@@ -32,6 +33,21 @@ class ContextSymptom(BaseModel):
     observation: str | None = None
 
 
+class ScanSummary(BaseModel):
+    """The MRI scan attached to a visit, as the AI layer sees it.
+
+    PHI-minimal like the rest of this module: no storage_key and no filename
+    reach the AI layer, only what a staging provider needs to reason over
+    (ADR-006).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    checksum: str = Field(min_length=1, max_length=64)
+    content_type: str = Field(min_length=1, max_length=100)
+    dimensions: dict[str, Any] = Field(default_factory=dict)
+
+
 class ContextVisit(BaseModel):
     """A clinical case as the AI layer sees it."""
 
@@ -44,6 +60,10 @@ class ContextVisit(BaseModel):
     vitals: dict[str, Any] = Field(default_factory=dict)
     notes: str | None = None
     symptoms: list[ContextSymptom] = Field(default_factory=list)
+
+    # MRI is a primary input but optional (ADR-006): an analysis can still
+    # run on symptoms alone when a visit has no scan.
+    scan: ScanSummary | None = None
 
 
 class TrendPoint(BaseModel):
@@ -74,6 +94,34 @@ class SymptomTrend(BaseModel):
     points: list[TrendPoint] = Field(min_length=2)
 
 
+class ScanTrendPoint(BaseModel):
+    """One visit's imaging-derived stage observation.
+
+    Carries the real visits.id, mirroring TrendPoint, so a scan-derived trend
+    stays traceable back to the visit it was staged from (ADR-006).
+    """
+
+    visit_id: UUID
+    visit_date: datetime
+    stage: StageLabel
+
+
+class ScanTrend(BaseModel):
+    """How the imaging-derived stage moved across a patient's scanned visits.
+
+    Mirrors SymptomTrend, but over the ordinal STAGE_ORDER scale rather than
+    a clinician-entered severity. Only visits that actually had a scan
+    contribute a point -- a patient with one scan among several visits gets
+    no trend, same as a symptom observed only once.
+    """
+
+    direction: TrendDirection
+    first_stage: StageLabel
+    latest_stage: StageLabel
+    visit_span: int = Field(ge=2)
+    points: list[ScanTrendPoint] = Field(min_length=2)
+
+
 class ClinicalContext(BaseModel):
     """Everything the AI pipeline is allowed to reason over.
 
@@ -102,6 +150,9 @@ __all__ = [
     "ClinicalContext",
     "ContextSymptom",
     "ContextVisit",
+    "ScanSummary",
+    "ScanTrend",
+    "ScanTrendPoint",
     "SymptomTrend",
     "TrendDirection",
     "TrendPoint",

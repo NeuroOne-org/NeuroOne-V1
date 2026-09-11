@@ -7,24 +7,38 @@ seam changes (ADR-003, ADR-005).
 
 import httpx
 
-from app.ai.providers.base import EvidenceRetriever, LLMClient
+from app.ai.providers.base import EvidenceRetriever, ImagingStager, LLMClient
 from app.ai.providers.live_llm import LiveLLMClient
 from app.ai.providers.mock_llm import MockLLMClient
 from app.ai.providers.mock_retriever import MockEvidenceRetriever
+from app.ai.providers.mock_staging import MockImagingStager
 from app.core.config import Settings, settings
+
+
+def _build_stager(config: Settings) -> ImagingStager:
+    if config.AI_STAGING_PROVIDER == "mock":
+        return MockImagingStager()
+
+    raise ValueError(f"Unknown AI staging provider: {config.AI_STAGING_PROVIDER!r}")
 
 
 def build_providers(
     config: Settings | None = None,
     *,
     http_client: httpx.Client | None = None,
-) -> tuple[EvidenceRetriever, LLMClient]:
-    """Return the (retriever, llm) pair for the configured provider."""
+) -> tuple[EvidenceRetriever, LLMClient, ImagingStager]:
+    """Return the (retriever, llm, stager) triple for the configured providers.
+
+    A third element, not a third setting layered onto the same tuple shape as
+    an afterthought: provenance is three-dimensional now (ADR-006 decision
+    4), and every caller of this function was already updated to unpack it.
+    """
 
     config = config or settings
+    stager = _build_stager(config)
 
     if config.AI_PROVIDER == "mock":
-        return MockEvidenceRetriever(), MockLLMClient()
+        return MockEvidenceRetriever(), MockLLMClient(), stager
 
     if config.AI_PROVIDER == "live-llm":
         if not config.AI_LLM_API_KEY:
@@ -40,6 +54,7 @@ def build_providers(
         return (
             MockEvidenceRetriever(),
             LiveLLMClient(config, client=http_client),
+            stager,
         )
 
     raise ValueError(f"Unknown AI provider: {config.AI_PROVIDER!r}")
