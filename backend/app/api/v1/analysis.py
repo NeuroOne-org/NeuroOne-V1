@@ -45,6 +45,18 @@ def get_analysis(
     return analysis_service.get_analysis(db, analysis_id, current_user)
 
 
+@router.post("/{analysis_id}/review", response_model=AnalysisResponse)
+def sign_off_analysis(
+    analysis_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    analysis_service: Annotated[AnalysisService, Depends(get_analysis_service)],
+) -> Analysis:
+    """Record clinician sign-off. Gates report generation (ADR-006)."""
+
+    return analysis_service.sign_off_analysis(db, analysis_id, current_user)
+
+
 # --------------------------------------------------------------------------
 # Reports (REPORT-01)
 # --------------------------------------------------------------------------

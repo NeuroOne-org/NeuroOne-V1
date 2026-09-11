@@ -25,7 +25,11 @@ from app.models.user import User, UserRole
 from app.models.visit import Visit, VisitStatus
 from app.schemas.analysis import DISCLAIMER, SIMULATED_PIPELINE_NOTE
 from app.services.report_service import ReportService
-from app.utils.exceptions import EntityNotFoundError, InternalServerError
+from app.utils.exceptions import (
+    AnalysisNotReviewedError,
+    EntityNotFoundError,
+    InternalServerError,
+)
 
 
 NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
@@ -128,7 +132,15 @@ def _finding(**overrides) -> AnalysisFinding:
     return finding
 
 
-def _analysis(visit_id=None, *, findings=None) -> Analysis:
+def _analysis(
+    visit_id=None,
+    *,
+    findings=None,
+    reviewed_by_id=...,
+    reviewed_at=...,
+) -> Analysis:
+    # Reviewed by default: most tests here exercise report generation, not
+    # the sign-off gate (ADR-006 decision 6), which has its own tests below.
     analysis = Analysis(
         id=uuid4(),
         visit_id=visit_id or uuid4(),
@@ -139,6 +151,8 @@ def _analysis(visit_id=None, *, findings=None) -> Analysis:
         disclaimer=DISCLAIMER,
         generated_at=NOW,
         context_snapshot={},
+        reviewed_by_id=uuid4() if reviewed_by_id is ... else reviewed_by_id,
+        reviewed_at=NOW if reviewed_at is ... else reviewed_at,
     )
     analysis.findings = findings if findings is not None else [_finding()]
     return analysis
@@ -186,6 +200,35 @@ def test_generating_a_report_persists_a_snapshot() -> None:
     assert report.filename == f"neuroone-report-{report.id}.pdf"
     assert report.snapshot["patient"]["full_name"] == "Ada Lovelace"
     assert report.snapshot["findings"][0]["condition_name"] == "Parkinsonian syndrome"
+
+
+def test_an_unreviewed_analysis_refuses_report_generation() -> None:
+    """ADR-006 decision 6: sign-off gates the report."""
+    service, repository, analysis_service, visit_service, patient_service = (
+        _service()
+    )
+    unreviewed = _analysis(reviewed_by_id=None, reviewed_at=None)
+    analysis_service.get_analysis.return_value = unreviewed
+
+    with pytest.raises(AnalysisNotReviewedError):
+        service.generate_report(Mock(), unreviewed.id, _user())
+
+    repository.create.assert_not_called()
+    visit_service.get_visit.assert_not_called()
+
+
+def test_a_reviewed_analysis_may_generate_a_report() -> None:
+    service, repository, analysis_service, visit_service, patient_service = (
+        _service()
+    )
+    analysis, visit, patient = _wire_happy_path(
+        analysis_service, visit_service, patient_service
+    )
+    repository.create.side_effect = lambda db, obj: obj
+
+    report = service.generate_report(Mock(), analysis.id, _user())
+
+    assert report.analysis_id == analysis.id
 
 
 def test_a_rendering_failure_never_reaches_the_database() -> None:

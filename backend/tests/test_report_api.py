@@ -18,7 +18,11 @@ from app.api.dependencies import (
 from app.models.report import Report
 from app.models.user import User, UserRole
 from app.schemas.analysis import DISCLAIMER
-from app.utils.exceptions import EntityNotFoundError, InternalServerError
+from app.utils.exceptions import (
+    AnalysisNotReviewedError,
+    EntityNotFoundError,
+    InternalServerError,
+)
 from main import app
 
 
@@ -150,6 +154,24 @@ def test_generating_on_another_clinicians_analysis_is_404() -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_generating_for_an_unreviewed_analysis_is_a_409() -> None:
+    """ADR-006 decision 6: sign-off gates the report."""
+    clinician = _user()
+
+    class ServiceStub:
+        def generate_report(self, db, aid, current_user):
+            raise AnalysisNotReviewedError(
+                "This analysis has not been signed off by a clinician yet."
+            )
+
+    response = _client(clinician, ServiceStub()).post(
+        f"/api/v1/analyses/{uuid4()}/reports"
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error_code"] == "analysis_not_reviewed"
 
 
 def test_a_rendering_failure_is_a_controlled_500() -> None:

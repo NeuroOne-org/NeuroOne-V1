@@ -353,6 +353,60 @@ def test_owned_analysis_is_returned() -> None:
     assert service.get_analysis(Mock(), uuid4(), _user()) is analysis
 
 
+# --------------------------------------------------------------------------
+# Sign-off (ADR-006 decision 6)
+# --------------------------------------------------------------------------
+
+
+def test_signing_off_records_the_reviewer_and_timestamp() -> None:
+    service, repository, visit_service, _, _ = _service()
+    visit = _visit()
+    analysis = Mock(visit_id=visit.id, reviewed_by_id=None, reviewed_at=None)
+    repository.get_with_graph.return_value = analysis
+    visit_service.get_visit.return_value = visit
+    repository.update.side_effect = lambda db, obj: obj
+    clinician = _user()
+
+    reviewed = service.sign_off_analysis(Mock(), uuid4(), clinician)
+
+    assert reviewed.reviewed_by_id == clinician.id
+    assert reviewed.reviewed_at is not None
+    repository.update.assert_called_once()
+
+
+def test_signing_off_a_foreign_analysis_reads_as_a_missing_analysis() -> None:
+    service, repository, visit_service, _, _ = _service()
+    visit = _visit()
+    analysis = Mock(visit_id=visit.id)
+    repository.get_with_graph.return_value = analysis
+    _deny_visit(visit_service)
+
+    with pytest.raises(EntityNotFoundError) as exc_info:
+        service.sign_off_analysis(Mock(), uuid4(), _user())
+
+    assert exc_info.value.entity == "Analysis"
+    repository.update.assert_not_called()
+
+
+def test_signing_off_twice_updates_the_reviewer_rather_than_erroring() -> None:
+    """Idempotent: no amendment flow exists yet to revoke a prior sign-off."""
+    service, repository, visit_service, _, _ = _service()
+    visit = _visit()
+    first_reviewer = _user()
+    analysis = Mock(
+        visit_id=visit.id, reviewed_by_id=first_reviewer.id, reviewed_at=NOW
+    )
+    repository.get_with_graph.return_value = analysis
+    visit_service.get_visit.return_value = visit
+    repository.update.side_effect = lambda db, obj: obj
+    second_reviewer = _user()
+
+    reviewed = service.sign_off_analysis(Mock(), uuid4(), second_reviewer)
+
+    assert reviewed.reviewed_by_id == second_reviewer.id
+    assert reviewed.reviewed_at > NOW
+
+
 def test_listing_a_foreign_visits_analyses_is_refused() -> None:
     service, repository, visit_service, _, _ = _service()
     _deny_visit(visit_service)

@@ -81,8 +81,19 @@ class EntityNotFoundError(NotFoundError):
         super().__init__(message)
 
 
+class AnalysisNotReviewedError(ConflictError):
+    """Raised when a report is requested for an unreviewed analysis.
+
+    ADR-006 decision 6: sign-off gates the report, structurally rather than
+    as a disclaimer.
+    """
+
+    default_error_code = "analysis_not_reviewed"
+
+
 __all__ = [
     "AIError",
+    "AnalysisNotReviewedError",
     "ApplicationError",
     "AuthenticationError",
     "AuthorizationError",
