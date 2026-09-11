@@ -22,6 +22,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .patient import Patient
+    from .scan import Scan
     from .symptom import Symptom
 
 
@@ -114,4 +115,14 @@ class Visit(BaseModel):
         back_populates="visit",
         cascade="all, delete-orphan",
         order_by="Symptom.created_at",
+    )
+
+    # MRI is a primary input, but optional: an analysis can still run on
+    # symptoms alone (ADR-006). One scan per visit -- a follow-up scan
+    # belongs to a new visit, not a replacement of this one.
+    scan: Mapped["Scan | None"] = relationship(
+        "Scan",
+        back_populates="visit",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
