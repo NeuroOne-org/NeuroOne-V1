@@ -353,7 +353,10 @@ Per `NEUROONE-MVP-SCOPE.md`, the `AI-01` phase is deliberately split. (`AI-01` i
 **Mocked now, swapped later (`AI-02`):**
 
 - the retrieval corpus — still mocked (`AI-02b`, deferred),
-- the LLM call — **swapped** (`AI-02a`, done; see [ADR-005](docs/decisions/ADR-005-live-llm-provider.md)).
+- the LLM call — **swapped** (`AI-02a`, done; see [ADR-005](docs/decisions/ADR-005-live-llm-provider.md)),
+- the scan staging model — mocked behind its own seam (`SCAN-02`; see [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md)).
+
+Staging is a **third** seam, not a variant of the other two, so provenance is three-dimensional and `AI_PROVIDER` as a single literal does not stretch to cover it — staging carries its own setting. A stage estimate enters the contract as the top-ranked `DiagnosisCandidate`, subject to every rule below: the `MAX_CONFIDENCE` ceiling, likelihood rather than certainty, and citations. It is never a standalone verdict, in the schema or in UI copy.
 
 Mock providers return **schema-valid deterministic results** and sit **behind the same interface** the real providers will use. Fixing the contract first is the entire point, and it held: `AI-02a` changed `app/ai/providers/` and the `pipeline_note` derivation, and nothing else.
 
@@ -751,14 +754,20 @@ CASE-01       clinical case / symptom domain (currently a broken stub; must supp
 AI-01 (mock)  structured AI contract + mocked retriever/LLM + evidence/citation shape
 REPORT-01     PDF assembly — full acceptance journey becomes demoable end-to-end
 AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-005)
+SCAN-01       scan per visit: entity, storage, checksum, ownership via ADR-002
+SCAN-02       mocked staging provider behind its own seam + trend extension
+REVIEW-01     clinician sign-off state, gating the report endpoint
+DASH-01       triage queue endpoint, dashboard, intake split (patient / visit)
 AI-02b        real RAG corpus behind the same interface (deferred)
 ```
+
+`SCAN-01` through `DASH-01` come from [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md). `SCAN-01` precedes `SCAN-02` because a staging provider needs something to stage, and `REVIEW-01` precedes `DASH-01` because the queue sorts partly on review state.
 
 This ordering supersedes the generic sequence in `TRD.md` §13 for the current phase. Do not start a downstream item while an upstream contract it depends on is unimplemented.
 
 ### Demo-ready definition
 
-The full PRD §8 journey works end-to-end through the actual API/UI with synthetic data: a clinician logs in, creates a patient and case, enters symptoms, triggers analysis, sees a ranked differential diagnosis with schema-correct mock-sourced evidence and citations — including at least one `early_watch` flag traced to a simulated prior-visit trend — reviews it, and downloads a PDF report. **No real LLM/RAG call is required to hit this milestone.**
+The full PRD §8 journey works end-to-end through the actual API/UI with synthetic data: a clinician logs in, sees a triage queue, creates a patient and opens a visit, attaches a scan and enters symptoms, triggers analysis, sees a ranked differential diagnosis — stage estimate as the top-ranked candidate, never a lone badge — with schema-correct mock-sourced evidence and citations, including at least one `early_watch` flag traced to a prior-visit trend, signs off on it, and downloads a PDF report. **No real LLM/RAG call and no real staging model are required to hit this milestone**, but every analysis must state which of its components were simulated (ADR-006).
 
 ---
 
@@ -828,9 +837,10 @@ A feature is not complete because code exists. A task is complete only when ever
 
 ## 19. V1 Scope Guard
 
+**Revised out of the exclusion list.** `MRI / image analysis` was a hard exclusion and is now a primary input, per [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md) — the deliberate revision this section requires. Scan intake and staging are in scope. The revision is specific to MRI: it is not a precedent, and the exclusions below are untouched by it.
+
 **Hard exclusions (PRD §7)** — out of V1 unless the product documents are deliberately revised:
 
-- MRI / image analysis,
 - uploaded diagnostic-report analysis,
 - autonomous diagnosis,
 - automated treatment decisions.

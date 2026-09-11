@@ -10,9 +10,13 @@ Investor/stakeholder demo. The bar is "demonstrates the full product concept con
 Full PRD §8 acceptance journey, unphased at the product level:
 
 ```
-Login → Patient → Case → Symptoms → AI Analysis →
-Differential Diagnosis + Evidence/Citations → Clinician Review → PDF Report
+Login → Triage Queue → Patient → Visit (Scan + Symptoms) → AI Analysis →
+Ranked Differential + Evidence/Citations → Clinician Sign-off → PDF Report
 ```
+
+Revised by [ADR-006](decisions/ADR-006-mri-primary-with-symptoms-as-context.md): the MRI
+scan is a primary input attached to a visit, the stage estimate is the top-ranked candidate
+rather than a verdict, and sign-off gates the report.
 
 All of FR-01 through FR-07 are in scope for this MVP. Nothing is cut — but FR-04/05/06 (the AI/RAG requirements) are phased at the *implementation* level, described below.
 
@@ -33,11 +37,17 @@ Live reasoning over a still-simulated corpus is a real state and is labelled as 
 ## Roles (confirmed)
 `ADMIN`, `CLINICIAN`. `RECEPTIONIST` deferred — not in MVP, and not yet defined in PRD §4 (Users) if it returns later.
 
-## Exclusions (confirmed, unchanged from PRD §7)
-No MRI/image analysis, no autonomous-diagnosis framing, no automated treatment decisions. This holds independently of any future roadmap conversation about the README's language — that conversation is still parked.
+## Exclusions (revised — see PRD §7)
+No uploaded diagnostic-report analysis, no autonomous-diagnosis framing, no automated treatment decisions. This holds independently of any future roadmap conversation about the README's language — that conversation is still parked.
+
+**MRI/image analysis is no longer excluded** ([ADR-006](decisions/ADR-006-mri-primary-with-symptoms-as-context.md)). Scan intake and staging are in scope as a primary input. The autonomous-diagnosis exclusion is *not* relaxed by this: a stage estimate is the top-ranked candidate in a ranked differential, with likelihood and citations, and never a lone verdict.
 
 ## Assumption flagged for confirmation
 **Demo data:** assuming synthetic/seed patient and case data for the demo environment, not real PHI — the system hasn't been through a security review and shouldn't hold real patient records yet. Flagging this as an assumption rather than deciding it silently.
+
+This assumption now costs more if violated. ADR-006 admits MRI scans, which are imaging PHI
+and are retained as source data rather than discarded after analysis. It should be confirmed
+explicitly before any non-synthetic scan is loaded.
 
 ## Risk to carry forward
 A mocked AI backend that returns schema-valid diagnoses will *look* real in a demo. Internally this needs to stay clearly labeled as "pipeline complete, evidence retrieval simulated" — not presented as clinically validated output. This is a credibility/optics risk with an investor audience as much as a technical footnote, and should be reflected in how the demo is narrated, not just in code comments.
@@ -58,7 +68,7 @@ AI-02b        real RAG corpus behind the same interface (deferred)
 
 **USP framing:** "Deep learning + ML + LLM enabled system detects neurodegenerative diseases in initial stages so they can be treated before it's too late" is confirmed as **vision/marketing narrative wrapping a clinician-assist tool**, not a literal autonomous-diagnosis claim. The safety boundary (assists, does not autonomously diagnose) stays intact.
 
-**Mechanism for this MVP:** trend-aware reasoning over clinician-entered data across a patient's visit history, plus confidence-tiered output — not imaging/biomarkers. Imaging/biomarker analysis is confirmed out of scope for MVP ("both, eventually" — imaging is a later, separate phase, consistent with PRD §7's existing MRI exclusion).
+**Mechanism for this MVP:** trend-aware reasoning across a patient's visit history, plus confidence-tiered output. Originally this meant clinician-entered data only, with imaging deferred to a later phase; [ADR-006](decisions/ADR-006-mri-primary-with-symptoms-as-context.md) brought imaging forward as a primary input, so a visit now contributes both a scan and clinician-entered findings to the same analysis. **Biomarker analysis remains out of scope** — the "both, eventually" note applied to imaging and biomarkers together, and only imaging has moved.
 
 **Design:**
 1. Clinical context building (TRD §8) uses the patient's prior visits/cases, not just the currently open case. APP-FLOW §3 already models "Patient Profile → Cases / History" — this uses data that was always intended to exist.
