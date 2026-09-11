@@ -91,7 +91,7 @@
   "89": "BaseModel",
   "90": ".create_with_status",
   "91": "patient_service.py",
-  "92": "ADR-004: Live LLM Provider Behind the AI-01 Seam",
+  "92": "ADR-005: Live LLM Provider Behind the AI-01 Seam",
   "93": "Security and Privacy Rules",
   "94": "ADR-004: Clinical Report Snapshot and Rendering",
   "95": "NeuroOne — Design System",

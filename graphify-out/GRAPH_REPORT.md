@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `089cc111`
+- Built from commit: `116aecbe`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -102,7 +102,7 @@
 - BaseModel
 - .create_with_status
 - patient_service.py
-- ADR-004: Live LLM Provider Behind the AI-01 Seam
+- ADR-005: Live LLM Provider Behind the AI-01 Seam
 - Security and Privacy Rules
 - ADR-004: Clinical Report Snapshot and Rendering
 - NeuroOne — Design System
@@ -278,7 +278,7 @@ Nodes (11): Alembic Migration Policy, Team Repository Ownership Matrix, api serv
 
 ### Community 31 - "test_ai_live_llm.py"
 Cohesion: 0.10
-Nodes (64): _analyze(), _candidates(), _context(), _evidence(), _llm(), Tests for the live reasoning provider (AI-02 slice 1, ADR-004). A live model is…, A client whose model always answers with ``content``., One well-formed candidate payload, JSON-encoded as a model would. (+56 more)
+Nodes (64): _analyze(), _candidates(), _context(), _evidence(), _llm(), Tests for the live reasoning provider (AI-02 slice 1, ADR-005). A live model is…, A client whose model always answers with ``content``., One well-formed candidate payload, JSON-encoded as a model would. (+56 more)
 
 ### Community 32 - "FR-01 Authentication"
 Cohesion: 0.33
@@ -428,9 +428,9 @@ Nodes (8): Session, UUID, Return the most recent analysis for a visit, if any., 
 Cohesion: 0.19
 Nodes (8): Enum, BaseService, Shared service-layer infrastructure., Base service providing access to the repository., Public service-layer exports., Business logic for patient management., Business logic for user management., RepositoryType
 
-### Community 92 - "ADR-004: Live LLM Provider Behind the AI-01 Seam"
+### Community 92 - "ADR-005: Live LLM Provider Behind the AI-01 Seam"
 Cohesion: 0.15
-Nodes (13): ADR-004: Live LLM Provider Behind the AI-01 Seam, Alternatives Rejected, Consequences, Constraints, Context, Decision, Migration / Rollback Impact, Options Considered (+5 more)
+Nodes (13): ADR-005: Live LLM Provider Behind the AI-01 Seam, Alternatives Rejected, Consequences, Constraints, Context, Decision, Migration / Rollback Impact, Options Considered (+5 more)
 
 ### Community 93 - "Security and Privacy Rules"
 Cohesion: 0.20
