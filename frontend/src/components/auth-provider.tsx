@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import Cookies from "js-cookie";
@@ -20,8 +21,14 @@ interface AuthTokens {
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
+  /** Password only. Signs in and returns; no second factor. */
   login: (input: LoginInput) => Promise<void>;
-  verifyLoginOtp: (username: string, otp: string) => Promise<void>;
+  /** Opt-in second factor: emails a code and remembers the credentials. */
+  beginOtpLogin: (input: LoginInput) => Promise<void>;
+  completeOtpLogin: (otp: string) => Promise<void>;
+  cancelOtpLogin: () => void;
+  /** The address a code was sent to, or null if no OTP sign-in is in flight. */
+  pendingOtpEmail: string | null;
   signup: (input: SignupInput) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   resetPassword: (
@@ -34,9 +41,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function persistToken(token: string) {
+  Cookies.set(TOKEN_COOKIE, token, { expires: 1, sameSite: "strict" });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingOtpEmail, setPendingOtpEmail] = useState<string | null>(null);
+
+  // Kept in memory only. /auth/verify-otp checks password and code together,
+  // so the OTP step needs the password a second time -- and a password must
+  // never travel in a URL or sit in storage to get there. A refresh clears
+  // this, which the verify screen reports as an expired attempt.
+  const pendingLogin = useRef<{ email: string; password: string } | null>(null);
 
   const fetchCurrentUser = useCallback(async () => {
     const token = Cookies.get(TOKEN_COOKIE);
@@ -60,28 +78,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
-  const login = useCallback(async (input: LoginInput) => {
-    try {
-      await api.post("/auth/login", {
-        username: input.email,
-        password: input.password,
-      });
-    } catch (error) {
-      throw new Error(extractApiError(error));
-    }
-  }, []);
-
-  const verifyLoginOtp = useCallback(
-    async (username: string, otp: string) => {
+  const login = useCallback(
+    async (input: LoginInput) => {
       try {
-        const { data } = await api.post<AuthTokens>("/auth/verify-otp", {
-          username,
-          otp,
+        const { data } = await api.post<AuthTokens>("/auth/login", {
+          username: input.email,
+          password: input.password,
         });
-        Cookies.set(TOKEN_COOKIE, data.access_token, {
-          expires: 1,
-          sameSite: "strict",
-        });
+        persistToken(data.access_token);
         await fetchCurrentUser();
       } catch (error) {
         throw new Error(extractApiError(error));
@@ -89,6 +93,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     [fetchCurrentUser]
   );
+
+  const beginOtpLogin = useCallback(async (input: LoginInput) => {
+    try {
+      await api.post("/auth/request-otp", { email: input.email });
+      pendingLogin.current = { email: input.email, password: input.password };
+      setPendingOtpEmail(input.email);
+    } catch (error) {
+      throw new Error(extractApiError(error));
+    }
+  }, []);
+
+  const completeOtpLogin = useCallback(
+    async (otp: string) => {
+      const pending = pendingLogin.current;
+      if (!pending) {
+        throw new Error(
+          "This sign-in attempt expired. Start again from the sign-in page."
+        );
+      }
+      try {
+        const { data } = await api.post<AuthTokens>("/auth/verify-otp", {
+          email: pending.email,
+          otp,
+          password: pending.password,
+        });
+        persistToken(data.access_token);
+        pendingLogin.current = null;
+        setPendingOtpEmail(null);
+        await fetchCurrentUser();
+      } catch (error) {
+        throw new Error(extractApiError(error));
+      }
+    },
+    [fetchCurrentUser]
+  );
+
+  const cancelOtpLogin = useCallback(() => {
+    pendingLogin.current = null;
+    setPendingOtpEmail(null);
+  }, []);
 
   const signup = useCallback(async (input: SignupInput) => {
     try {
@@ -122,21 +166,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = useCallback(
     async (email: string, otp: string, newPassword: string) => {
       try {
-        const { data } = await api.post<AuthTokens>("/auth/reset-password", {
+        // Returns a confirmation message, not a token: resetting a password
+        // does not sign you in, so the caller sends the user to sign in with
+        // the password they just chose.
+        await api.post("/auth/reset-password", {
           email,
           otp,
           new_password: newPassword,
         });
-        Cookies.set(TOKEN_COOKIE, data.access_token, {
-          expires: 1,
-          sameSite: "strict",
-        });
-        await fetchCurrentUser();
       } catch (error) {
         throw new Error(extractApiError(error));
       }
     },
-    [fetchCurrentUser]
+    []
   );
 
   const logout = useCallback(() => {
@@ -151,7 +193,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         login,
-        verifyLoginOtp,
+        beginOtpLogin,
+        completeOtpLogin,
+        cancelOtpLogin,
+        pendingOtpEmail,
         signup,
         requestPasswordReset,
         resetPassword,

@@ -31,9 +31,19 @@ api.interceptors.response.use(
 
 export function extractApiError(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const detail = (error.response?.data as { detail?: string } | undefined)
-      ?.detail;
-    if (detail) return detail;
+    const data = error.response?.data as
+      | { message?: string; detail?: unknown }
+      | undefined;
+
+    // Every error this API raises goes through the centralised envelope in
+    // backend/app/utils/handlers.py, which carries the readable text in
+    // `message` -- FastAPI's own validation errors included.
+    if (typeof data?.message === "string" && data.message) return data.message;
+
+    // Reached only for responses that never entered the app, such as
+    // Starlette's default 404 for an unrouted path.
+    if (typeof data?.detail === "string" && data.detail) return data.detail;
+
     if (error.message === "Network Error") {
       return "Can't reach the server. Check that the backend is running.";
     }

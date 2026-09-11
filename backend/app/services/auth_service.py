@@ -165,6 +165,38 @@ class AuthService:
 
         otp_service.generate_and_send_otp(identity=email, to_email=email)
 
+    def request_otp_login(self, db: Session, email: str) -> None:
+        """
+        Email an OTP if the address belongs to an active account.
+        Always returns normally either way — never reveals whether the
+        address is registered.
+        """
+
+        user = self.user_service.get_user_by_email(db, email)
+        if user is None or not user.is_active:
+            return
+
+        otp_service.generate_and_send_otp(identity=email, to_email=email)
+
+    def verify_otp_login(
+        self,
+        db: Session,
+        email: str,
+        otp: str,
+        password: str,
+    ) -> Token:
+        """
+        Verify credentials and OTP together, then issue an access token.
+        This flow allows users to log in with email+password+OTP as an
+        additional security layer.
+        """
+
+        if not otp_service.verify_otp(identity=email, submitted_code=otp):
+            raise InvalidOtpError("Invalid or expired verification code.")
+
+        user = self.verify_credentials(db, email, password)
+        return Token(access_token=self.create_access_token(user))
+
     def reset_password(
         self,
         db: Session,

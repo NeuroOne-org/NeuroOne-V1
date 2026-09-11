@@ -11,9 +11,12 @@ from app.schemas.auth import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     LoginRequest,
+    RequestOtpRequest,
+    RequestOtpResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
     Token,
+    VerifyOtpRequest,
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
@@ -67,3 +70,30 @@ def reset_password(
 
     auth_service.reset_password(db, payload.email, payload.otp, payload.new_password)
     return ResetPasswordResponse()
+
+
+@router.post("/request-otp", response_model=RequestOtpResponse)
+def request_otp_login(
+    payload: RequestOtpRequest,
+    db: Annotated[Session, Depends(get_db)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> RequestOtpResponse:
+    """Email an OTP if the address belongs to an active account.
+
+    Always returns the same generic message so this endpoint can't be used
+    to enumerate registered accounts.
+    """
+
+    auth_service.request_otp_login(db, payload.email)
+    return RequestOtpResponse()
+
+
+@router.post("/verify-otp", response_model=Token)
+def verify_otp_login(
+    payload: VerifyOtpRequest,
+    db: Annotated[Session, Depends(get_db)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> Token:
+    """Verify credentials and OTP together, then issue an access token."""
+
+    return auth_service.verify_otp_login(db, payload.email, payload.otp, payload.password)
