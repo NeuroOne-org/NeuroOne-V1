@@ -371,6 +371,77 @@ def test_a_non_worsening_trend_does_not_support_an_early_watch():
     assert result.candidates[0].category == "differential_diagnosis"
 
 
+def test_a_confidently_ranked_condition_is_not_an_early_watch():
+    """early_watch is a low-confidence watch, not a confident finding.
+
+    A real model flagged early_watch at 0.78 with a genuine trend behind it,
+    which contradicts ADR-003 decision 4 and disagreed with the rule the mock
+    applies. The category is derived, so the two providers cannot drift.
+    """
+    context = _rising_tremor_context()
+    document_id = _evidence(context)[0].document_id
+    result = _analyze(
+        _returning(
+            _candidates(
+                category="early_watch",
+                confidence=0.78,
+                evidence_document_ids=[document_id],
+                trend_symptom_names=["tremor"],
+            )
+        ),
+        context,
+    )
+
+    candidate = result.candidates[0]
+    assert candidate.category == "differential_diagnosis"
+    # The trace survives the category decision -- trend_basis is a trace, not
+    # a category marker (ADR-003 decision 4).
+    assert candidate.trend_basis
+
+
+def test_a_low_confidence_trend_is_an_early_watch_whatever_the_model_said():
+    context = _rising_tremor_context()
+    document_id = _evidence(context)[0].document_id
+    result = _analyze(
+        _returning(
+            _candidates(
+                category="differential_diagnosis",
+                confidence=0.2,
+                evidence_document_ids=[document_id],
+                trend_symptom_names=["tremor"],
+            )
+        ),
+        context,
+    )
+
+    assert result.candidates[0].category == "early_watch"
+
+
+def test_both_providers_agree_on_what_an_early_watch_means():
+    """The seam exists so a category cannot mean two things (ADR-004)."""
+    context = _rising_tremor_context()
+    evidence = _evidence(context)
+    request = ReasoningRequest(context=context, evidence=evidence)
+
+    mock_flags = {
+        candidate.category == "early_watch"
+        for candidate in MockLLMClient().generate_analysis(request).candidates
+        if candidate.confidence < 0.4 and candidate.trend_basis
+    }
+
+    live = _returning(
+        _candidates(
+            category="differential_diagnosis",
+            confidence=0.2,
+            evidence_document_ids=[evidence[0].document_id],
+            trend_symptom_names=["tremor"],
+        )
+    ).generate_analysis(request)
+
+    assert mock_flags in ({True}, set())
+    assert live.candidates[0].category == "early_watch"
+
+
 def test_an_unrecognized_category_falls_back_to_the_non_flagging_one():
     context = _context()
     document_id = _evidence(context)[0].document_id

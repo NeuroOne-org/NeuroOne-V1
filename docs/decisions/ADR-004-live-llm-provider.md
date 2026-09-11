@@ -69,9 +69,13 @@ trend_symptom_names: list[str]      # names, never UUIDs
 | A `document_id` not in the supplied evidence | drop that id |
 | A candidate left with zero resolved evidence | skip that candidate |
 | `confidence` above `MAX_CONFIDENCE` | clamp to 0.92 |
-| `early_watch` with no resolvable trend | downgrade to `differential_diagnosis` |
+| `category` | **ignored** — derived from the trend and the confidence |
 | A candidate that fails `DiagnosisCandidate` validation | skip that candidate |
 | Every candidate skipped | the orchestrator's existing `ai_no_candidates` |
+
+**3a. `category` is derived, not accepted.** A candidate is `early_watch` when it has a resolvable worsening trend **and** its confidence is below `MODERATE_CONFIDENCE` — byte-for-byte the rule `mock_llm` applies. The model's own `category` is advisory and is not consulted.
+
+This was corrected after the first live call rather than designed correctly up front: the initial implementation honoured the model's category whenever a trend resolved, and `openai/gpt-oss-120b` promptly returned Parkinson's disease at confidence 0.78 flagged `early_watch`. That contradicts ADR-003 decision 4, and worse, it meant `early_watch` denoted a *low-confidence watch* under the mock and *any trend-backed finding* under a live model. `trend_basis` is still attached to a `differential_diagnosis` when one resolves — it is a trace, not a category marker.
 
 **4. `trend_basis` UUIDs are system-authored** — option (b). The model names worsening symptoms; `LiveLLMClient` resolves those names through `normalize_symptom_name` against `context.trends` and builds refs from real `TrendPoint` rows. The shared builder is extracted to `app/ai/trends.trend_basis_refs()` and used by both the mock and live providers, so there is one implementation of this logic rather than two.
 
@@ -97,6 +101,8 @@ Selection reads `self.retriever.provenance` alongside `reasoning.provider_mode`:
 
 **Symptom names rather than UUIDs** because this is the one place a hallucination would be indistinguishable from a legitimate record. ADR-003 §Consequences accepts dangling `trend_basis` ids on the reasoning that *"a dangling id honestly means the underlying record changed since this analysis ran — that is information, not corruption."* That reasoning holds precisely because the only writer of those ids was the system. A model that authors UUIDs breaks the premise: a fabricated id would be indistinguishable from a stale one, and the §18 traceability chain would silently become unfalsifiable. Never letting the model near a UUID preserves the existing interpretation of a dangling reference. It is the same principle as `_resolve_evidence`, applied to the other half of the traceability chain — **a provider selects, the system resolves.**
 
+**A derived `category` rather than a reported one** because it is rendered by the UI and the PDF, which cannot tell which provider produced it. Confidence can be clamped and a citation can be dropped, and the result is still an honest degradation of the same thing. A category that means one thing under the mock and another under a live model is not a degradation — it is two different vocabularies sharing one field name, and the consumer has no way to know which it is holding. The seam exists to keep the contract identical across providers; a field whose *meaning* varies by provider defeats that more quietly than a field whose type does.
+
 **Deriving the note from both providers** because the alternative ships a false statement. `LIVE_PIPELINE_NOTE` reads *"evidence retrieved from live corpus."* With a live LLM and a mocked retriever, `reasoning.provider_mode == "live"`, so the current expression stamps that sentence onto an analysis whose evidence came from `mock_corpus.py`. That is not a cosmetic defect: §8.1 requires mock-sourced output stay labelled as simulated, and `NEUROONE-MVP-SCOPE.md` names a mocked pipeline that *looks* real as the project's principal credibility risk — a risk it explicitly says is mitigated by `provider_mode` and `pipeline_note`. Leaving the expression alone would disable the one technical mitigation on record at the exact moment it starts mattering. That is why ADR-003's prediction about not touching the orchestrator is knowingly broken here: honest labelling outranks a prediction about file scope, the change is four lines, and it removes a lie rather than adding a feature. `EvidenceRetriever` already declares `provenance`, so no protocol changes.
 
 ## Consequences
@@ -108,6 +114,7 @@ Selection reads `self.retriever.provenance` alongside `reasoning.provider_mode`:
 - **The mock provider is not deprecated.** It remains the default, keeps the test suite network-free and deterministic, and is what the demo runs on unless deliberately switched. This slice adds a path; it does not replace one.
 - **`app/ai/` stays database-free.** `LiveLLMClient` touches no `Session` and imports no repository, so the pipeline remains unit-testable without a database (ADR-003 §2).
 - **`trends.py` gains an import from `app.schemas.analysis`** for `TrendBasisRef`. No cycle: `analysis.py` does not import `trends.py`.
+- **The test suite had to be pinned to the mock provider.** Several suites call `build_providers()` with no argument, which reads the real `Settings`. While `AI_PROVIDER` could only be `"mock"` that was harmless; with a second value it meant a developer whose `backend/.env` selected `live-llm` would have the suite issue real model calls — observed directly, as ten tests began hitting Groq and the run time tripled. `tests/conftest.py` now sets `AI_PROVIDER=mock` in the environment, which outranks the `.env` file. Tests that exercise the live provider build their own `Settings` and drive an `httpx.MockTransport`.
 - **Rate limits are now a runtime failure mode.** A free tier returns 429 under load. One bounded retry absorbs a transient limit; a persistent one surfaces as `AIError(ai_error)`, which §8.5 already guarantees leaves the clinical record untouched and the analysis retryable.
 
 ## Risks
@@ -116,6 +123,7 @@ Selection reads `self.retriever.provenance` alongside `reasoning.provider_mode`:
 - **A model can produce clinically plausible, clinically wrong output** with fluent supporting findings attached to real citations. The safety boundary (§2.1) — decision support, ranked possibilities, clinician-owned interpretation — is what contains this, and it is unchanged. But the failure mode is now persuasive prose rather than a visibly arbitrary score.
 - **Provider JSON-mode support varies.** `response_format: {"type": "json_object"}` is widely but not uniformly honoured across OpenAI-compatible endpoints. A provider that ignores it returns prose, which fails parsing and surfaces as `ai_contract_error` — a controlled failure, but one that makes the endpoint unusable rather than degraded. Verify JSON mode when changing `AI_LLM_BASE_URL`.
 - **An API key is now a secret in `backend/.env`.** §12 forbids committing it. `.env.example` carries a placeholder only.
+- **A hosted model id is not a stable identifier.** The first configured default, `llama-3.3-70b-versatile`, was already retired when the first live call was made and returned `404 model_not_found` — the failure surfaced correctly as `AIError(ai_error)`, but the analysis was unavailable until the id was changed. The default is now `openai/gpt-oss-120b`. Check the provider's own `/models` endpoint rather than trusting a remembered id, and expect this to recur: a model id in configuration is a dependency that can be retired without a release on our side.
 - **Free-tier models are weaker at instruction-following** than frontier models, so dropped candidates will be more common on the default configuration than on a paid one. This degrades output quality without weakening any guarantee — every containment rule above holds regardless of model strength.
 
 ## Alternatives Rejected

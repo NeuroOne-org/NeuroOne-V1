@@ -31,7 +31,9 @@ class Settings(BaseSettings):
     # configuration rather than a code branch (ADR-004), so Groq, Gemini's
     # compatibility endpoint, OpenRouter and a local Ollama all work here.
     AI_LLM_BASE_URL: str = "https://api.groq.com/openai/v1"
-    AI_LLM_MODEL: str = "llama-3.3-70b-versatile"
+    # Verify against the provider's own /models list when changing this --
+    # hosted model ids are retired without notice, and a stale one is a 404.
+    AI_LLM_MODEL: str = "openai/gpt-oss-120b"
     # Optional so mock mode boots without a key; build_providers() rejects a
     # live selection that has none.
     AI_LLM_API_KEY: str | None = None
