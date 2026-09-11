@@ -28,6 +28,20 @@ class ResetPasswordResponse(BaseModel):
     message: str = "Password has been reset. You can log in with your new password."
 
 
+class RequestOtpRequest(BaseModel):
+    email: EmailStr
+
+
+class RequestOtpResponse(BaseModel):
+    message: str = "If an account exists for that email, a verification code has been sent."
+
+
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+    password: str = Field(min_length=1, max_length=128)
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -46,6 +60,9 @@ __all__ = [
     "ForgotPasswordResponse",
     "ResetPasswordRequest",
     "ResetPasswordResponse",
+    "RequestOtpRequest",
+    "RequestOtpResponse",
+    "VerifyOtpRequest",
     "Token",
     "TokenPayload",
 ]
