@@ -65,6 +65,8 @@ class User(BaseModel):
         nullable=False,
     )
 
+    # Reserved for a future email/account-verification step. Nothing sets it
+    # true or gates on it yet — do not rely on it for access control.
     is_verified: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
