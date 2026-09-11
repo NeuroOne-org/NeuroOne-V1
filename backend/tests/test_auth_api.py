@@ -207,6 +207,66 @@ def test_expired_token_returns_controlled_401() -> None:
     assert response.json()["error_code"] == "authentication_error"
 
 
+def test_forgot_password_always_returns_the_same_generic_message() -> None:
+    class AuthStub:
+        def __init__(self):
+            self.calls: list[str] = []
+
+        def request_password_reset(self, db, email):
+            self.calls.append(email)
+
+    stub = AuthStub()
+    app.dependency_overrides[get_auth_service] = lambda: stub
+    client = _client()
+
+    known = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "known@example.com"},
+    )
+    unknown = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "unknown@example.com"},
+    )
+
+    assert known.status_code == 200
+    assert unknown.status_code == 200
+    assert known.json() == unknown.json()
+    assert stub.calls == ["known@example.com", "unknown@example.com"]
+
+
+def test_reset_password_success_and_invalid_otp() -> None:
+    from app.utils.exceptions import InvalidOtpError
+
+    class AuthStub:
+        def reset_password(self, db, email, otp, new_password):
+            if otp != "123456":
+                raise InvalidOtpError("Invalid or expired verification code.")
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    success = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "email": "known@example.com",
+            "otp": "123456",
+            "new_password": "brand-new-password",
+        },
+    )
+    failure = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "email": "known@example.com",
+            "otp": "000000",
+            "new_password": "brand-new-password",
+        },
+    )
+
+    assert success.status_code == 200
+    assert failure.status_code == 422
+    assert failure.json()["error_code"] == "invalid_otp"
+
+
 def test_valid_token_loads_current_user_from_service() -> None:
     current_user = _user()
 

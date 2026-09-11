@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     SQL_ECHO: bool = False
 
+    # Explicit allow-list, not a wildcard: the frontend sends the JWT via
+    # Authorization header with credentialed requests, and CORS forbids
+    # combining allow_origins=["*"] with allow_credentials=True anyway.
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+
+    # Gmail SMTP sender for password-reset OTP emails (app/services/otp_service.py).
+    GMAIL_ADDRESS: str
+    GMAIL_APP_PASSWORD: str
+
     # Providers sit behind app/ai/providers/base.py. "live-llm" is live
     # reasoning over a still-simulated corpus (ADR-005); real retrieval is a
     # later slice. The default stays "mock": live reasoning sends clinical

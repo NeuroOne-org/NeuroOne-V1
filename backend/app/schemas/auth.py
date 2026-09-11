@@ -10,16 +10,6 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
-class OtpVerifyRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=255)
-    otp: str = Field(min_length=6, max_length=6)
-
-
-class OtpRequiredResponse(BaseModel):
-    otp_required: bool = True
-    message: str = "Verification code sent to your email."
-
-
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -32,6 +22,10 @@ class ResetPasswordRequest(BaseModel):
     email: EmailStr
     otp: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=8, max_length=128)
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str = "Password has been reset. You can log in with your new password."
 
 
 class Token(BaseModel):
@@ -48,11 +42,10 @@ class TokenPayload(BaseModel):
 
 __all__ = [
     "LoginRequest",
-    "OtpVerifyRequest",
-    "OtpRequiredResponse",
     "ForgotPasswordRequest",
     "ForgotPasswordResponse",
     "ResetPasswordRequest",
+    "ResetPasswordResponse",
     "Token",
     "TokenPayload",
 ]
