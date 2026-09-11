@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { LoginForm } from "../../components/login-form";
-import { LoginShell } from "../../components/login-shell";
+import { AuthShell } from "../../components/auth-shell";
 
 export default function LoginPage() {
   return (
-    <LoginShell>
+    <AuthShell heading="Welcome back!" headingId="login-heading" subtitle="Access your patient queue and analyses.">
       <Suspense fallback={<p role="status">Loading sign-in form…</p>}>
         <LoginForm />
       </Suspense>
-    </LoginShell>
+    </AuthShell>
   );
 }
