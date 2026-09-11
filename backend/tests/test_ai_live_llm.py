@@ -761,7 +761,7 @@ def test_an_analysis_with_every_candidate_dropped_raises():
 
 
 def test_build_providers_returns_the_live_pair_when_configured():
-    retriever, llm = build_providers(_settings())
+    retriever, llm, _ = build_providers(_settings())
 
     assert isinstance(llm, LiveLLMClient)
     assert llm.provenance == "live"
@@ -770,7 +770,7 @@ def test_build_providers_returns_the_live_pair_when_configured():
 
 def test_the_live_pair_keeps_the_simulated_retriever():
     """AI-02 slice 1 swaps reasoning only (ADR-005)."""
-    retriever, _ = build_providers(_settings())
+    retriever, _, _ = build_providers(_settings())
 
     assert isinstance(retriever, MockEvidenceRetriever)
     assert retriever.provenance == "simulated"
@@ -782,7 +782,7 @@ def test_build_providers_rejects_a_live_selection_without_a_key():
 
 
 def test_build_providers_still_defaults_to_the_mock_pair():
-    retriever, llm = build_providers(_settings(AI_PROVIDER="mock"))
+    retriever, llm, _ = build_providers(_settings(AI_PROVIDER="mock"))
 
     assert isinstance(retriever, MockEvidenceRetriever)
     assert isinstance(llm, MockLLMClient)

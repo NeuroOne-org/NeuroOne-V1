@@ -1,6 +1,13 @@
 # REPORT-01D — Frontend Requirements & Backend Mapping Checklist
 
-**Status:** Reference for future work. Not started. Written after AI-01C, CASE-01C, and REPORT-01A/B/C landed (backend HEAD includes `dcfbc7d5b2c9`).
+**Status:** Reference for future work, **partially superseded.** Written after AI-01C, CASE-01C, and REPORT-01A/B/C landed (backend HEAD includes `dcfbc7d5b2c9`).
+
+Two things have changed since, and the tables below are stale where they conflict:
+
+- **The auth surface grew.** `forgot-password`, `reset-password`, `request-otp` and `verify-otp` now exist, and the corresponding pages have been rebuilt against them. §1 understates the surface.
+- **MRI is no longer excluded.** [ADR-006](decisions/ADR-006-mri-primary-with-symptoms-as-context.md) makes the scan a primary input attached to a visit, so guidance here that rests on the old PRD §7 exclusion no longer applies.
+
+The §0 baseline finding — that this is mostly new pages, not a reconcile — still holds, and so does its central point that the existing frontend targets a different product than the backend serves.
 
 **Purpose:** every field, endpoint, and error case the frontend needs to reproduce, taken directly from the current backend code (schemas/routers actually read, not assumed) — not from `docs/PRD.md`/`APP-FLOW.md` alone, per `AGENTS.md` §16.
 
@@ -13,10 +20,10 @@ Only these frontend files exist today, and all of them target a different produc
 | File | Current contract | Reality |
 |---|---|---|
 | [frontend/src/lib/types.ts](../frontend/src/lib/types.ts) | `UserRole = "doctor"\|"admin"\|"receptionist"\|"researcher"`, `Patient` (with `mmse_score`, `latest_result`), `PredictionResult`, `DiseaseLabel`, `DiseaseStage` | None of this exists in the backend. Real roles are `ADMIN`/`CLINICIAN` only. |
-| [frontend/src/app/dashboard/upload/page.tsx](../frontend/src/app/dashboard/upload/page.tsx) | POSTs an MRI file to `/patients`, expects a `latest_result` prediction back | No such endpoint. MRI analysis is a V1 exclusion (`AGENTS.md` §19). **Delete this page entirely.** |
+| [frontend/src/app/dashboard/upload/page.tsx](../frontend/src/app/dashboard/upload/page.tsx) | POSTs an MRI file to `/patients`, expects a `latest_result` prediction back | No such endpoint — `POST /patients` takes `PatientCreate` JSON, so this 422s every time. **Rebuild, don't delete:** MRI intake is now in scope (ADR-006), but it belongs on a visit, not on patient creation. |
 | [frontend/src/app/dashboard/patients/[id]/page.tsx](../frontend/src/app/dashboard/patients/[id]/page.tsx) | Renders `PredictionResult`/disease staging | Rewrite against the real `Patient`/`Visit` shape. |
-| `login`, `signup`, `forgot-password`, `reset-password`, `verify-otp` pages | Assume self-service signup + OTP + password reset flows exist | **None of these backend endpoints exist** (see §1). Only `login` has a real target. |
-| [frontend/src/lib/api.ts](../frontend/src/lib/api.ts) | axios client, JWT cookie interceptor, `extractApiError` | **Reusable as-is.** Contract-agnostic, no changes needed. |
+| `login`, `forgot-password`, `reset-password`, `verify-otp` pages | Assume OTP + password reset flows exist | **Now true, and rebuilt against them.** Password login no longer forces an OTP; OTP is opt-in or for reset. `signup` remains unbacked — there is still no `/auth/register`. |
+| [frontend/src/lib/api.ts](../frontend/src/lib/api.ts) | axios client, JWT cookie interceptor, `extractApiError` | Client and interceptor reusable. `extractApiError` **was** wrong — it read `data.detail`, but this API always returns `{message, error_code, details}`, so every backend message was replaced with a generic string. Since fixed. |
 
 Net: keep the axios client and the shared `components/ui/*` kit; rebuild everything else. There are currently **zero** pages for Case/Visit, Symptom entry, Analysis, or Report.
 

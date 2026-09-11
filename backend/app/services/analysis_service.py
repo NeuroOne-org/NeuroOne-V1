@@ -6,6 +6,7 @@ retrieval failure has nothing to roll back and cannot leave a clinical record
 partly modified (AGENTS.md section 8.5, ADR-003).
 """
 
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -185,6 +186,24 @@ class AnalysisService(BaseService[AnalysisRepository]):
         items = self.repository.get_by_visit(db, visit_id, skip, limit)
         total = self.repository.count_by_visit(db, visit_id)
         return items, total
+
+    def sign_off_analysis(
+        self,
+        db: Session,
+        analysis_id: UUID,
+        current_user: User,
+    ) -> Analysis:
+        """Record clinician sign-off, gating report generation (ADR-006).
+
+        Idempotent rather than one-shot: re-signing updates who and when
+        rather than raising, since there is no separate amendment flow yet
+        through which a clinician would need to revoke a prior sign-off.
+        """
+
+        analysis = self.get_analysis(db, analysis_id, current_user)
+        analysis.reviewed_by_id = current_user.id
+        analysis.reviewed_at = datetime.now(timezone.utc)
+        return self.repository.update(db, analysis)
 
     def get_latest_for_visit(
         self,

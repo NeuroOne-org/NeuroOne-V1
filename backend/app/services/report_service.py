@@ -31,7 +31,11 @@ from app.services.analysis_service import AnalysisService
 from app.services.base_service import BaseService
 from app.services.patient_service import PatientService
 from app.services.visit_service import VisitService
-from app.utils.exceptions import EntityNotFoundError, InternalServerError
+from app.utils.exceptions import (
+    AnalysisNotReviewedError,
+    EntityNotFoundError,
+    InternalServerError,
+)
 
 
 def _age_years(dob: date | None, *, today: date | None = None) -> int | None:
@@ -150,9 +154,19 @@ class ReportService(BaseService[ReportRepository]):
         Render-before-persist (ADR-004): rendering is proved to succeed
         before any row is constructed, so a rendering failure leaves nothing
         to roll back.
+
+        Sign-off gates this (ADR-006 decision 6): no PDF is produced until a
+        clinician has reviewed the analysis, which is what makes "a
+        clinician reviewed it" structural rather than a disclaimer.
         """
 
         analysis = self.analysis_service.get_analysis(db, analysis_id, current_user)
+        if analysis.reviewed_at is None:
+            raise AnalysisNotReviewedError(
+                "This analysis has not been signed off by a clinician yet. "
+                "A report can only be generated after sign-off."
+            )
+
         visit = self.visit_service.get_visit(db, analysis.visit_id, current_user)
         patient = self.patient_service.get_patient(
             db, visit.patient_id, current_user

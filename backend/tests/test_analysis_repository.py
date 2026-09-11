@@ -372,3 +372,83 @@ def test_soft_deleted_analyses_are_hidden() -> None:
 
         assert repository.get_with_graph(db, stored.id) is None
         assert repository.count_by_visit(db, visit.id) == 0
+
+
+# --------------------------------------------------------------------------
+# Latest-per-patient (triage queue, ADR-006)
+# --------------------------------------------------------------------------
+
+
+def test_get_latest_by_patient_ids_with_no_ids_returns_empty() -> None:
+    repository = AnalysisRepository()
+
+    with Session(_engine()) as db:
+        assert repository.get_latest_by_patient_ids(db, []) == {}
+
+
+def test_get_latest_by_patient_ids_picks_each_patients_most_recent_analysis() -> None:
+    repository = AnalysisRepository()
+
+    with Session(_engine()) as db:
+        patient_a, patient_b = uuid4(), uuid4()
+        visit_a1, visit_a2 = _visit(patient_a), _visit(patient_a)
+        visit_b1 = _visit(patient_b)
+        db.add_all([visit_a1, visit_a2, visit_b1])
+        db.commit()
+
+        older_a = repository.create_with_status(
+            db, _analysis(visit_a1, findings=[_finding(0, name="older-a")]), visit_a1
+        )
+        newer_a = _analysis(visit_a2, findings=[_finding(0, name="newer-a")])
+        newer_a.created_at = older_a.created_at + timedelta(seconds=1)
+        stored_newer_a = repository.create_with_status(db, newer_a, visit_a2)
+
+        only_b = repository.create_with_status(
+            db, _analysis(visit_b1, findings=[_finding(0, name="only-b")]), visit_b1
+        )
+
+        latest = repository.get_latest_by_patient_ids(db, [patient_a, patient_b])
+
+        assert latest[patient_a].id == stored_newer_a.id
+        assert latest[patient_a].findings[0].condition_name == "newer-a"
+        assert latest[patient_b].id == only_b.id
+
+
+def test_get_latest_by_patient_ids_ignores_soft_deleted_analyses() -> None:
+    repository = AnalysisRepository()
+
+    with Session(_engine()) as db:
+        patient = uuid4()
+        visit = _visit(patient)
+        db.add(visit)
+        db.commit()
+
+        first = repository.create_with_status(
+            db, _analysis(visit, findings=[_finding(0, name="kept")]), visit
+        )
+        deleted = _analysis(visit, findings=[_finding(0, name="retracted")])
+        deleted.created_at = first.created_at + timedelta(seconds=1)
+        stored_deleted = repository.create_with_status(db, deleted, visit)
+        repository.soft_delete(db, stored_deleted)
+
+        latest = repository.get_latest_by_patient_ids(db, [patient])
+
+        assert latest[patient].id == first.id
+
+
+def test_get_latest_by_patient_ids_omits_patients_with_no_analysis() -> None:
+    repository = AnalysisRepository()
+
+    with Session(_engine()) as db:
+        analyzed_patient, unanalyzed_patient = uuid4(), uuid4()
+        visit = _visit(analyzed_patient)
+        db.add(visit)
+        db.commit()
+        repository.create_with_status(db, _analysis(visit), visit)
+
+        latest = repository.get_latest_by_patient_ids(
+            db, [analyzed_patient, unanalyzed_patient]
+        )
+
+        assert analyzed_patient in latest
+        assert unanalyzed_patient not in latest

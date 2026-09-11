@@ -94,6 +94,21 @@ class Analysis(BaseModel):
         default=dict,
     )
 
+    # Sign-off (ADR-006 decision 6). Both null until a clinician reviews the
+    # analysis; a report cannot be generated until they are set (see
+    # ReportService.generate_report). This is what makes "a clinician
+    # reviewed it" structural rather than a disclaimer: nothing leaves the
+    # system as a document that a human did not accept.
+    reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     findings: Mapped[list["AnalysisFinding"]] = relationship(
         "AnalysisFinding",
         back_populates="analysis",

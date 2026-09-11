@@ -20,6 +20,7 @@ from app.schemas.clinical_context import (
     ClinicalContext,
     ContextSymptom,
     ContextVisit,
+    ScanSummary,
 )
 
 
@@ -58,6 +59,7 @@ def _to_context_visit(visit: Visit) -> ContextVisit:
             for symptom in visit.symptoms
             if not symptom.is_deleted
         ],
+        scan=ScanSummary.model_validate(visit.scan) if visit.scan else None,
     )
 
 

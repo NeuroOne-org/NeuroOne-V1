@@ -72,8 +72,8 @@ def _rising_trend_context() -> ClinicalContext:
 
 
 def _orchestrator(**kwargs) -> AnalysisOrchestrator:
-    retriever, llm = build_providers()
-    return AnalysisOrchestrator(retriever, llm, **kwargs)
+    retriever, llm, stager = build_providers()
+    return AnalysisOrchestrator(retriever, llm, stager, **kwargs)
 
 
 class _StubRetriever:

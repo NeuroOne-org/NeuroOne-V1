@@ -1,4 +1,5 @@
 """Analysis persistence operations."""
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -104,3 +105,47 @@ class AnalysisRepository(BaseRepository[Analysis]):
             .limit(1)
         )
         return db.scalars(statement).unique().first()
+
+    def get_latest_by_patient_ids(
+        self,
+        db: Session,
+        patient_ids: Sequence[UUID],
+    ) -> dict[UUID, Analysis]:
+        """Return each patient's most recent analysis, across all their visits.
+
+        The triage queue (ADR-006) ranks by a patient's latest analysis, not
+        their latest visit -- a visit with no analysis yet has nothing to
+        rank the patient by.
+        """
+        if not patient_ids:
+            return {}
+
+        latest = (
+            select(
+                Visit.patient_id.label("patient_id"),
+                func.max(Analysis.created_at).label("latest_created_at"),
+            )
+            .join(Visit, Visit.id == Analysis.visit_id)
+            .where(
+                Visit.patient_id.in_(patient_ids),
+                Analysis.is_deleted.is_(False),
+                Visit.is_deleted.is_(False),
+            )
+            .group_by(Visit.patient_id)
+            .subquery()
+        )
+
+        statement = self._with_graph(
+            select(Analysis, Visit.patient_id)
+            .join(Visit, Visit.id == Analysis.visit_id)
+            .join(
+                latest,
+                (Visit.patient_id == latest.c.patient_id)
+                & (Analysis.created_at == latest.c.latest_created_at),
+            )
+        )
+
+        return {
+            patient_id: analysis
+            for analysis, patient_id in db.execute(statement).unique().all()
+        }

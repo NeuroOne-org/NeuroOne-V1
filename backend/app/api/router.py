@@ -9,6 +9,7 @@ from app.api.v1 import (
     patient_visits,
     patients,
     reports,
+    triage,
     visits,
 )
 
@@ -20,3 +21,4 @@ api_router.include_router(patient_visits.router, prefix="/patients", tags=["visi
 api_router.include_router(visits.router, prefix="/visits", tags=["visits"])
 api_router.include_router(analysis.router, prefix="/analyses", tags=["analysis"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
+api_router.include_router(triage.router, prefix="/triage", tags=["triage"])

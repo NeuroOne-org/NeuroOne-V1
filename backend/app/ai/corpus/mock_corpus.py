@@ -13,6 +13,7 @@ were rejected.
 from dataclasses import dataclass, field
 
 from app.schemas.evidence import RetrievedDocument
+from app.schemas.imaging import STAGE_LABELS, StageLabel
 
 
 # Scoring weights. Tuned so a strong presentation lands in the moderate/high
@@ -163,6 +164,59 @@ MOCK_DOCUMENTS: tuple[RetrievedDocument, ...] = (
         2022,
         ("headache", "visual disturbance", "aura", "migraine"),
     ),
+    # MRI staging citations (ADR-006). One document per stage label, keyed by
+    # the exact normalized STAGE_LABELS text so a retrieval query built from
+    # a stage code always has something to cite.
+    _document(
+        "doc-mri-cn-01",
+        "Neuroimaging in Aging Reference",
+        "Illustrative reference (simulated corpus), Neuroimaging Aging Ref. 2022;5:12-24.",
+        "An MRI without significant hippocampal or cortical atrophy is consistent "
+        "with a cognitively normal aging pattern.",
+        "reference_text",
+        2022,
+        ("cognitively normal", "mri", "no atrophy", "normal aging"),
+    ),
+    _document(
+        "doc-mri-mci-01",
+        "Journal of Neuroimaging in Dementia",
+        "Illustrative reference (simulated corpus), J Neuroimaging Dement. 2023;10(2):55-70.",
+        "Mild hippocampal volume loss on MRI is described as an early structural "
+        "correlate of mild cognitive impairment.",
+        "systematic_review",
+        2023,
+        ("mild cognitive impairment (mci)", "hippocampal atrophy", "mri", "mci"),
+    ),
+    _document(
+        "doc-mri-mild-01",
+        "Alzheimer's Imaging Consortium Guidelines",
+        "Illustrative reference (simulated corpus), Alz Imaging Guidel. 2022;14:101-118.",
+        "Moderate medial temporal lobe atrophy on MRI is reported at the mild "
+        "dementia stage of Alzheimer's disease.",
+        "guideline",
+        2022,
+        ("mild dementia", "medial temporal atrophy", "mri", "staging"),
+    ),
+    _document(
+        "doc-mri-moderate-01",
+        "Structural MRI in Dementia Progression",
+        "Illustrative reference (simulated corpus), Struct MRI Dement Prog. 2021;8(3):140-156.",
+        "Widespread cortical atrophy and ventricular enlargement on MRI are "
+        "associated with the moderate dementia stage.",
+        "primary_study",
+        2021,
+        ("moderate dementia", "cortical atrophy", "ventricular enlargement", "mri"),
+    ),
+    _document(
+        "doc-mri-severe-01",
+        "Advanced Neurodegeneration Imaging Review",
+        "Illustrative reference (simulated corpus), Adv Neurodegen Imaging Rev. 2020;6:33-49.",
+        "Severe global cortical atrophy on MRI, with marked ventricular enlargement, "
+        "is described at the severe dementia stage.",
+        "systematic_review",
+        2020,
+        ("severe dementia", "global atrophy", "mri", "ventricular enlargement"),
+    ),
 )
 
 
@@ -247,6 +301,58 @@ MOCK_CONDITIONS: tuple[MockCondition, ...] = (
 )
 
 
+# One MockCondition per MRI stage label (ADR-006), kept out of MOCK_CONDITIONS
+# deliberately: those are evaluated against symptoms, these against a
+# StagingResult the mock reasoner receives directly. any_symptoms /
+# complaint_terms / contradicting_symptoms go unused on this path but are
+# still required by the dataclass, so they are left empty rather than typed
+# as optional -- a staging condition is a citation source, not a rule.
+STAGE_CONDITIONS: dict[StageLabel, MockCondition] = {
+    stage: MockCondition(
+        name=STAGE_LABELS[stage],
+        any_symptoms=frozenset(),
+        complaint_terms=frozenset(),
+        contradicting_symptoms=frozenset(),
+        base_likelihood=0.0,
+        explanation_template=explanation,
+        document_ids=(document_id,),
+        trend_sensitive=False,
+    )
+    for stage, document_id, explanation in (
+        (
+            "CN",
+            "doc-mri-cn-01",
+            "The MRI staging estimate for this scan places it in the "
+            "cognitively normal range, with no atrophy pattern noted.",
+        ),
+        (
+            "MCI",
+            "doc-mri-mci-01",
+            "The MRI staging estimate for this scan is consistent with mild "
+            "cognitive impairment, based on the structural pattern observed.",
+        ),
+        (
+            "Mild",
+            "doc-mri-mild-01",
+            "The MRI staging estimate for this scan is consistent with the "
+            "mild dementia stage, based on the structural pattern observed.",
+        ),
+        (
+            "Moderate",
+            "doc-mri-moderate-01",
+            "The MRI staging estimate for this scan is consistent with the "
+            "moderate dementia stage, based on the structural pattern observed.",
+        ),
+        (
+            "Severe",
+            "doc-mri-severe-01",
+            "The MRI staging estimate for this scan is consistent with the "
+            "severe dementia stage, based on the structural pattern observed.",
+        ),
+    )
+}
+
+
 DOCUMENTS_BY_ID: dict[str, RetrievedDocument] = {
     document.document_id: document for document in MOCK_DOCUMENTS
 }
@@ -261,5 +367,6 @@ __all__ = [
     "MOCK_CONDITIONS",
     "MOCK_DOCUMENTS",
     "MockCondition",
+    "STAGE_CONDITIONS",
     "TREND_WEIGHT",
 ]

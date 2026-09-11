@@ -16,6 +16,7 @@ from app.models.user import UserRole
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.patient_repository import PatientRepository
 from app.repositories.report_repository import ReportRepository
+from app.repositories.scan_repository import ScanRepository
 from app.repositories.symptom_repository import SymptomRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.visit_repository import VisitRepository
@@ -23,8 +24,11 @@ from app.services.analysis_service import AnalysisService
 from app.services.auth_service import AuthService
 from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
+from app.services.scan_service import ScanService
+from app.services.triage_service import TriageService
 from app.services.user_service import UserService
 from app.services.visit_service import VisitService
+from app.storage.scan_storage import LocalScanStorage
 from app.utils.exceptions import AuthenticationError, AuthorizationError
 
 
@@ -38,7 +42,7 @@ _visit_service = VisitService(
     _patient_service,
 )
 
-_retriever, _llm = build_providers(settings)
+_retriever, _llm, _stager = build_providers(settings)
 _analysis_service = AnalysisService(
     AnalysisRepository(),
     _visit_service,
@@ -46,6 +50,7 @@ _analysis_service = AnalysisService(
     AnalysisOrchestrator(
         _retriever,
         _llm,
+        _stager,
         max_candidates=settings.AI_MAX_CANDIDATES,
         evidence_per_candidate=settings.AI_EVIDENCE_PER_CANDIDATE,
     ),
@@ -56,6 +61,13 @@ _report_service = ReportService(
     _visit_service,
     _patient_service,
 )
+_scan_service = ScanService(
+    ScanRepository(),
+    _visit_service,
+    LocalScanStorage(settings.SCAN_STORAGE_DIR),
+    max_size_bytes=settings.MAX_SCAN_SIZE_BYTES,
+)
+_triage_service = TriageService(_patient_service, AnalysisRepository())
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -96,6 +108,18 @@ def get_report_service() -> ReportService:
     """Provide the configured report service."""
 
     return _report_service
+
+
+def get_scan_service() -> ScanService:
+    """Provide the configured scan service."""
+
+    return _scan_service
+
+
+def get_triage_service() -> TriageService:
+    """Provide the configured triage service."""
+
+    return _triage_service
 
 
 def get_auth_service(
@@ -182,6 +206,8 @@ __all__ = [
     "get_db",
     "get_patient_service",
     "get_report_service",
+    "get_scan_service",
+    "get_triage_service",
     "get_user_service",
     "get_visit_service",
     "oauth2_scheme",

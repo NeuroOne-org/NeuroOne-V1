@@ -18,9 +18,10 @@ from pydantic import (
     model_validator,
 )
 
-from app.schemas.clinical_context import ClinicalContext
+from app.schemas.clinical_context import ClinicalContext, ScanTrend
 from app.schemas.common import PaginatedResponse
 from app.schemas.evidence import EvidenceRef, RetrievedDocument
+from app.schemas.imaging import StagingResult
 
 
 DiagnosisCategory = Literal["differential_diagnosis", "early_watch"]
@@ -137,6 +138,17 @@ class ReasoningRequest(BaseModel):
     context: ClinicalContext
     evidence: list[RetrievedDocument] = Field(default_factory=list)
     max_candidates: int = Field(default=5, ge=1, le=10)
+
+    # Present only when the current visit has a scan and the orchestrator ran
+    # the imaging staging provider ahead of reasoning (ADR-006). Absent for a
+    # symptoms-only visit -- the pipeline must still work without a scan.
+    imaging: StagingResult | None = None
+
+    # How the imaging-derived stage moved across the patient's other scanned
+    # visits, if any (ADR-006 consequence: detect_trends extended to scan
+    # data). Absent when imaging is absent, or when fewer than two of the
+    # patient's visits have a scan.
+    scan_trend: ScanTrend | None = None
 
 
 class ReasoningResult(BaseModel):
@@ -255,6 +267,10 @@ class AnalysisResponse(BaseModel):
     disclaimer: str
     generated_at: datetime
     findings: list[FindingResponse] = Field(default_factory=list)
+    # Sign-off (ADR-006 decision 6). Both null until a clinician reviews the
+    # analysis; report generation is refused until then.
+    reviewed_by_id: UUID | None = None
+    reviewed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

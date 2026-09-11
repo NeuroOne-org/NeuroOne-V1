@@ -353,6 +353,47 @@ def test_triggering_analysis_on_another_clinicians_visit_is_404() -> None:
 
 
 # --------------------------------------------------------------------------
+# Sign-off (ADR-006 decision 6)
+# --------------------------------------------------------------------------
+
+
+def test_signing_off_an_analysis_returns_the_reviewed_analysis() -> None:
+    clinician = _user()
+    analysis = _analysis()
+    analysis.reviewed_by_id = clinician.id
+    analysis.reviewed_at = NOW
+
+    class ServiceStub:
+        def sign_off_analysis(self, db, analysis_id, current_user):
+            assert analysis_id == analysis.id
+            assert current_user is clinician
+            return analysis
+
+    response = _client(clinician, ServiceStub()).post(
+        f"/api/v1/analyses/{analysis.id}/review"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["reviewed_by_id"] == str(clinician.id)
+    assert body["reviewed_at"] is not None
+
+
+def test_signing_off_a_foreign_analysis_is_404() -> None:
+    clinician = _user()
+
+    class ServiceStub:
+        def sign_off_analysis(self, db, analysis_id, current_user):
+            raise EntityNotFoundError("Analysis", analysis_id)
+
+    response = _client(clinician, ServiceStub()).post(
+        f"/api/v1/analyses/{uuid4()}/review"
+    )
+
+    assert response.status_code == 404
+
+
+# --------------------------------------------------------------------------
 # Reads
 # --------------------------------------------------------------------------
 
