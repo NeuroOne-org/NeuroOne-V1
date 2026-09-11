@@ -23,9 +23,12 @@ All of FR-01 through FR-07 are in scope for this MVP. Nothing is cut — but FR-
 - The retrieval corpus and the LLM call are **mocked/deterministic**: they return schema-valid synthetic results.
 - Everything downstream of that — ranking, citation attachment, clinician review, PDF assembly — is exercised for real, against real (mocked-sourced) data flowing through a real contract.
 
-**AI-02 (later phase, post-demo):**
-- Swap the mock retriever and mock LLM client for a real trusted-literature corpus and real LLM call, behind the *same* interface defined now.
-- Because the contract is fixed in MVP-AI, this should be a provider swap, not a pipeline rewrite — that's the point of building the contract first.
+**AI-02 (later phase, post-demo) — split in two, because the two protocols swap independently:**
+
+- **AI-02a — live LLM (done, [ADR-004](decisions/ADR-004-live-llm-provider.md)).** `MockLLMClient` is joined by `LiveLLMClient`, reasoning through any OpenAI-compatible endpoint selected by config. It was a provider swap, not a pipeline rewrite — the contract, ranking, citation attachment, validation and persistence were untouched, which is what building the contract first bought. `AI_PROVIDER` still defaults to `mock`.
+- **AI-02b — real retrieval corpus (deferred).** The mock retriever stays until a trusted-literature corpus, an index and a source-tier policy are decided. That is a larger scope decision than the model swap, and it is where the prompt-injection exposure actually lands: a retrieved passage is untrusted text in a way a symptom field is not.
+
+Live reasoning over a still-simulated corpus is a real state and is labelled as one — every analysis carries `pipeline_note = "pipeline complete, live model reasoning, evidence retrieval simulated"`.
 
 ## Roles (confirmed)
 `ADMIN`, `CLINICIAN`. `RECEPTIONIST` deferred — not in MVP, and not yet defined in PRD §4 (Users) if it returns later.
@@ -47,7 +50,8 @@ PAT-01        authorized patient CRUD vertical slice
 CASE-01       clinical case / symptom domain (currently a broken stub)
 AI-01 (mock)  structured AI contract + mocked retriever/LLM + evidence/citation shape
 REPORT-01     PDF assembly — full acceptance journey becomes demoable end-to-end
-AI-02         real LLM + RAG swap-in behind the AI-01 interface (post-demo)
+AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-004)
+AI-02b        real RAG corpus behind the same interface (deferred)
 ```
 
 ## Early-detection design (confirmed — governs CASE-01 and AI-01, not SEC-01/AUTH-01)

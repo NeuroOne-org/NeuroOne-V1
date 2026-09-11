@@ -35,6 +35,14 @@ from app.utils.exceptions import AIError
 
 LIVE_PIPELINE_NOTE = "pipeline complete, evidence retrieved from live corpus"
 
+# AI-02 slice 1: live reasoning, still-simulated corpus. Naming this state is
+# not cosmetic -- LIVE_PIPELINE_NOTE would claim evidence came from a live
+# corpus when it came from mock_corpus, and section 8.1 requires mock-sourced
+# output stay labelled as simulated (ADR-004).
+HYBRID_PIPELINE_NOTE = (
+    "pipeline complete, live model reasoning, evidence retrieval simulated"
+)
+
 
 class AnalysisOrchestrator:
     """Runs the pipeline for one clinical context."""
@@ -179,6 +187,21 @@ class AnalysisOrchestrator:
             ranked, limit=self.evidence_per_candidate
         )
 
+    def _pipeline_note(self, provider_mode: str) -> str:
+        """Describe what actually produced this analysis.
+
+        Derived from both providers rather than the model alone, because the
+        two are swapped independently: live reasoning over a simulated corpus
+        is a real state, and it must not be described as live evidence
+        (ADR-004).
+        """
+
+        if provider_mode == "simulated":
+            return SIMULATED_PIPELINE_NOTE
+        if self.retriever.provenance == "simulated":
+            return HYBRID_PIPELINE_NOTE
+        return LIVE_PIPELINE_NOTE
+
     # -- pipeline --------------------------------------------------------
 
     def run(self, context: ClinicalContext) -> AnalysisResult:
@@ -196,18 +219,17 @@ class AnalysisOrchestrator:
                 error_code="ai_no_candidates",
             )
 
-        simulated = reasoning.provider_mode == "simulated"
-
         try:
             return AnalysisResult(
                 visit_id=context.visit_id,
                 patient_id=context.patient_id,
                 model_name=reasoning.model_name,
+                # Describes the reasoning provider, which is where it has
+                # always been sourced from; pipeline_note carries the fuller
+                # truth about retrieval (ADR-004).
                 provider_mode=reasoning.provider_mode,
                 # Section 8.1: mock-sourced output stays labelled as simulated.
-                pipeline_note=(
-                    SIMULATED_PIPELINE_NOTE if simulated else LIVE_PIPELINE_NOTE
-                ),
+                pipeline_note=self._pipeline_note(reasoning.provider_mode),
                 disclaimer=DISCLAIMER,
                 generated_at=datetime.now(timezone.utc),
                 candidates=candidates,
@@ -220,4 +242,8 @@ class AnalysisOrchestrator:
             ) from exc
 
 
-__all__ = ["LIVE_PIPELINE_NOTE", "AnalysisOrchestrator"]
+__all__ = [
+    "HYBRID_PIPELINE_NOTE",
+    "LIVE_PIPELINE_NOTE",
+    "AnalysisOrchestrator",
+]
