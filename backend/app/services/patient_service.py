@@ -129,6 +129,17 @@ class PatientService(BaseService[PatientRepository]):
         total = self.repository.count(db)
         return items, total
 
+    def list_all_patients(self, db: Session, current_user: User) -> list[Patient]:
+        """Return every patient the caller may triage, unpaginated.
+
+        Mirrors list_patients' role scoping (CLINICIAN: own patients only;
+        ADMIN: everyone), without pagination -- the triage queue (ADR-006)
+        must rank the whole panel before paging.
+        """
+        if current_user.role == UserRole.CLINICIAN:
+            return self.repository.get_all_by_doctor(db, current_user.id)
+        return self.repository.get_all_active(db)
+
     def search_patients(
         self,
         db: Session,

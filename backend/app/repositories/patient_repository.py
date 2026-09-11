@@ -32,6 +32,23 @@ class PatientRepository(BaseRepository[Patient]):
         )
         return list(db.scalars(statement).all())
 
+    def get_all_by_doctor(self, db: Session, doctor_id: UUID) -> list[Patient]:
+        """Return every active patient assigned to a doctor, unpaginated.
+
+        The triage queue (ADR-006) ranks a clinician's whole panel before
+        paging, so it needs the full set rather than one page at a time.
+        """
+        statement = select(Patient).where(
+            Patient.doctor_id == doctor_id,
+            Patient.is_deleted.is_(False),
+        )
+        return list(db.scalars(statement).all())
+
+    def get_all_active(self, db: Session) -> list[Patient]:
+        """Return every active patient, unpaginated. See get_all_by_doctor."""
+        statement = select(Patient).where(Patient.is_deleted.is_(False))
+        return list(db.scalars(statement).all())
+
     def _search_statement(self, search_term: str, doctor_id: UUID | None):
         term = search_term.strip()
         statement = select(Patient).where(Patient.is_deleted.is_(False))

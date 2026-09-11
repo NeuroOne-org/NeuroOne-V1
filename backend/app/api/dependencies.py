@@ -25,6 +25,7 @@ from app.services.auth_service import AuthService
 from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
 from app.services.scan_service import ScanService
+from app.services.triage_service import TriageService
 from app.services.user_service import UserService
 from app.services.visit_service import VisitService
 from app.storage.scan_storage import LocalScanStorage
@@ -66,6 +67,7 @@ _scan_service = ScanService(
     LocalScanStorage(settings.SCAN_STORAGE_DIR),
     max_size_bytes=settings.MAX_SCAN_SIZE_BYTES,
 )
+_triage_service = TriageService(_patient_service, AnalysisRepository())
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -112,6 +114,12 @@ def get_scan_service() -> ScanService:
     """Provide the configured scan service."""
 
     return _scan_service
+
+
+def get_triage_service() -> TriageService:
+    """Provide the configured triage service."""
+
+    return _triage_service
 
 
 def get_auth_service(
@@ -199,6 +207,7 @@ __all__ = [
     "get_patient_service",
     "get_report_service",
     "get_scan_service",
+    "get_triage_service",
     "get_user_service",
     "get_visit_service",
     "oauth2_scheme",
