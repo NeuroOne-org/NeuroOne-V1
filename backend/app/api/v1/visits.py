@@ -9,16 +9,18 @@ patient_visits.py, where the patient is the natural parent.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import (
     get_analysis_service,
     get_current_active_user,
     get_db,
+    get_scan_service,
     get_visit_service,
 )
 from app.models.analysis import Analysis
+from app.models.scan import Scan
 from app.models.symptom import Symptom
 from app.models.user import User
 from app.models.visit import Visit
@@ -27,6 +29,7 @@ from app.schemas.analysis import (
     AnalysisListResponse,
     AnalysisResponse,
 )
+from app.schemas.scan import ScanResponse
 from app.schemas.symptom import (
     SymptomCreate,
     SymptomListResponse,
@@ -35,6 +38,7 @@ from app.schemas.symptom import (
 )
 from app.schemas.visit import VisitResponse, VisitUpdate
 from app.services.analysis_service import AnalysisService
+from app.services.scan_service import ScanService
 from app.services.visit_service import VisitService
 from app.utils.responses import build_pagination
 
@@ -167,6 +171,53 @@ def delete_symptom(
     """Soft-delete a symptom. A symptom on another visit reads as 404."""
 
     visit_service.delete_symptom(db, visit_id, symptom_id, current_user)
+
+
+# --------------------------------------------------------------------------
+# Scan (ADR-006)
+# --------------------------------------------------------------------------
+
+
+@router.post(
+    "/{visit_id}/scan",
+    response_model=ScanResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_scan(
+    visit_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    scan_service: Annotated[ScanService, Depends(get_scan_service)],
+    file: Annotated[UploadFile, File()],
+) -> Scan:
+    """Attach an MRI scan to a visit. One scan per visit (ADR-006).
+
+    Intake for a returning patient's follow-up scan is a new visit, not a
+    replacement of this one -- that is what makes cross-visit comparison
+    possible.
+    """
+
+    content = await file.read()
+    return scan_service.upload_scan(
+        db,
+        visit_id,
+        current_user,
+        filename=file.filename or "scan",
+        content_type=file.content_type or "application/octet-stream",
+        content=content,
+    )
+
+
+@router.get("/{visit_id}/scan", response_model=ScanResponse)
+def get_scan(
+    visit_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    scan_service: Annotated[ScanService, Depends(get_scan_service)],
+) -> Scan:
+    """Retrieve the scan attached to a visit, if any."""
+
+    return scan_service.get_scan(db, visit_id, current_user)
 
 
 # --------------------------------------------------------------------------

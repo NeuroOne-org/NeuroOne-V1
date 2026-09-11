@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     AI_LLM_TIMEOUT_SECONDS: float = 30.0
     AI_LLM_MAX_OUTPUT_TOKENS: int = 2048
 
+    # Where scan bytes live outside the database (ADR-006 decision 5). A
+    # relative value resolves against the backend directory, matching
+    # ENV_FILE below; an absolute path (e.g. a mounted volume) overrides it.
+    SCAN_STORAGE_DIR: Path = ENV_FILE.parent / "storage" / "scans"
+    MAX_SCAN_SIZE_BYTES: int = 200 * 1024 * 1024
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         case_sensitive=True,
