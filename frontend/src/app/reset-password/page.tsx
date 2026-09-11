@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
+import { OtpInput } from "@/components/otp-input";
 import { PasswordStrength } from "@/components/password-strength";
 import { useAuth } from "@/components/auth-provider";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validation";
@@ -33,8 +34,13 @@ function ResetPasswordForm() {
     register,
     handleSubmit,
     watch,
+    setValue,
+    trigger,
     formState: { errors },
-  } = useForm<ResetPasswordInput>({ resolver: zodResolver(resetPasswordSchema) });
+  } = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { otp: "" },
+  });
 
   const newPassword = watch("new_password") ?? "";
 
@@ -43,7 +49,8 @@ function ResetPasswordForm() {
     setIsSubmitting(true);
     try {
       await resetPassword(email, values.otp, values.new_password);
-      router.replace("/dashboard");
+      // Resetting does not issue a token, so sign in with the new password.
+      router.replace("/login?reset=1");
     } catch (err) {
       setServerError((err as Error).message);
     } finally {
@@ -63,15 +70,14 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div>
           <Label htmlFor="otp">6-digit code</Label>
-          <Input
-            id="otp"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="000000"
+          <OtpInput
+            value={watch("otp") ?? ""}
+            onChange={(value) => {
+              setValue("otp", value, { shouldValidate: false });
+              if (value.length === 6) trigger("otp");
+            }}
             error={errors.otp?.message}
-            {...register("otp")}
           />
-          <FieldError message={errors.otp?.message} />
         </div>
 
         <div>
@@ -106,7 +112,7 @@ function ResetPasswordForm() {
         )}
 
         <Button type="submit" className="w-full" isLoading={isSubmitting}>
-          Reset password &amp; sign in
+          Reset password
         </Button>
       </form>
 
