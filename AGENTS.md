@@ -352,10 +352,20 @@ Per `NEUROONE-MVP-SCOPE.md`, the `AI-01` phase is deliberately split. (`AI-01` i
 
 **Mocked now, swapped later (`AI-02`):**
 
-- the retrieval corpus,
-- the LLM call.
+- the retrieval corpus — still mocked (`AI-02b`, deferred),
+- the LLM call — **swapped** (`AI-02a`, done; see [ADR-005](docs/decisions/ADR-005-live-llm-provider.md)).
 
-Mock providers return **schema-valid deterministic results** and sit **behind the same interface** the real providers will use. Fixing the contract first is the entire point: `AI-02` must be a provider swap, not a pipeline rewrite.
+Mock providers return **schema-valid deterministic results** and sit **behind the same interface** the real providers will use. Fixing the contract first is the entire point, and it held: `AI-02a` changed `app/ai/providers/` and the `pipeline_note` derivation, and nothing else.
+
+**Three provenance states now exist, and the label must match the one in force:**
+
+| Reasoning | Retrieval | `pipeline_note` |
+|---|---|---|
+| mock | mock | `pipeline complete, evidence retrieval simulated` |
+| live | mock | `pipeline complete, live model reasoning, evidence retrieval simulated` |
+| live | live | `pipeline complete, evidence retrieved from live corpus` |
+
+The orchestrator derives this from **both** providers, never from the model alone. `AI_PROVIDER` defaults to `mock`; `live-llm` sends clinical context to a third party, which §12's synthetic-demo-data assumption permits and real PHI does not.
 
 Two obligations follow:
 
@@ -740,7 +750,8 @@ PAT-01        authorized patient CRUD vertical slice
 CASE-01       clinical case / symptom domain (currently a broken stub; must support cross-visit history)
 AI-01 (mock)  structured AI contract + mocked retriever/LLM + evidence/citation shape
 REPORT-01     PDF assembly — full acceptance journey becomes demoable end-to-end
-AI-02         real LLM + RAG swap-in behind the AI-01 interface (post-demo)
+AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-005)
+AI-02b        real RAG corpus behind the same interface (deferred)
 ```
 
 This ordering supersedes the generic sequence in `TRD.md` §13 for the current phase. Do not start a downstream item while an upstream contract it depends on is unimplemented.
@@ -828,7 +839,7 @@ A feature is not complete because code exists. A task is complete only when ever
 
 - the `RECEPTIONIST` role (not in the MVP, and not yet defined in PRD §4; if it returns, PRD §4 must define it first),
 - biomarker analysis (§8.3),
-- real LLM + RAG providers (`AI-02`, §15).
+- a real retrieval corpus (`AI-02b`, §15) — the live LLM landed in `AI-02a`, the corpus did not.
 
 Do not introduce any of these quietly while implementing adjacent features. If asked for one, switch to PLAN mode and treat the request as a scope/version decision, not a feature request.
 

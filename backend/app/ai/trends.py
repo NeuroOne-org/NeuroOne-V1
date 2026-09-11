@@ -9,8 +9,9 @@ reasoning stays traceable.
 Pure: no database, no ORM, no I/O.
 """
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
+from app.schemas.analysis import TrendBasisRef
 from app.schemas.clinical_context import (
     ContextVisit,
     SymptomTrend,
@@ -113,9 +114,51 @@ def worsening_symptom_names(trends: Sequence[SymptomTrend]) -> set[str]:
     }
 
 
+def trend_basis_refs(
+    trends: Sequence[SymptomTrend],
+    matched_names: Collection[str],
+) -> list[TrendBasisRef]:
+    """Build history references for the matched worsening symptoms.
+
+    Every reference points at a real visit and symptom row, which is what
+    makes an early_watch flag traceable (AGENTS.md section 8.2).
+
+    Shared by both providers deliberately: under AI-02 a live model names the
+    symptoms it reasoned over, and these ids are resolved here from the
+    patient's own context rather than authored by the model. A fabricated id
+    would be indistinguishable from a stale one, which is the premise ADR-003
+    relied on to accept soft references (ADR-005).
+
+    ``matched_names`` holds normalized names -- see ``normalize_symptom_name``.
+    """
+
+    refs: list[TrendBasisRef] = []
+    for trend in trends:
+        if trend.direction != "worsening" or trend.symptom_name not in matched_names:
+            continue
+
+        observation = (
+            f"{trend.symptom_name} severity {trend.first_severity} -> "
+            f"{trend.latest_severity} across {trend.visit_span} visits"
+        )
+        for point in trend.points:
+            refs.append(
+                TrendBasisRef(
+                    visit_id=point.visit_id,
+                    symptom_id=point.symptom_id,
+                    symptom_name=trend.symptom_name,
+                    visit_date=point.visit_date,
+                    severity=point.severity,
+                    observation=observation,
+                )
+            )
+    return refs
+
+
 __all__ = [
     "MIN_VISITS_FOR_TREND",
     "detect_trends",
     "normalize_symptom_name",
+    "trend_basis_refs",
     "worsening_symptom_names",
 ]

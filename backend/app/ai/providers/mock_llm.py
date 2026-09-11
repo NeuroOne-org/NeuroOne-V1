@@ -18,16 +18,19 @@ from app.ai.corpus.mock_corpus import (
     TREND_WEIGHT,
     MockCondition,
 )
-from app.ai.trends import normalize_symptom_name, worsening_symptom_names
+from app.ai.trends import (
+    normalize_symptom_name,
+    trend_basis_refs,
+    worsening_symptom_names,
+)
 from app.schemas.analysis import (
     MAX_CONFIDENCE,
     MODERATE_CONFIDENCE,
     DiagnosisCandidate,
     ReasoningRequest,
     ReasoningResult,
-    TrendBasisRef,
 )
-from app.schemas.clinical_context import ClinicalContext, SymptomTrend
+from app.schemas.clinical_context import ClinicalContext
 from app.schemas.evidence import RetrievedDocument
 
 
@@ -51,39 +54,6 @@ class MockLLMClient:
                 key = normalize_symptom_name(symptom.symptom_name)
                 severities[key] = max(severities.get(key, 0), symptom.severity)
         return severities
-
-    def _trend_refs(
-        self,
-        trends: list[SymptomTrend],
-        matched: set[str],
-    ) -> list[TrendBasisRef]:
-        """Build history references for the matched worsening symptoms.
-
-        Every reference points at a real visit and symptom row, which is what
-        makes an early_watch flag traceable (AGENTS.md section 8.2).
-        """
-
-        refs: list[TrendBasisRef] = []
-        for trend in trends:
-            if trend.direction != "worsening" or trend.symptom_name not in matched:
-                continue
-
-            observation = (
-                f"{trend.symptom_name} severity {trend.first_severity} -> "
-                f"{trend.latest_severity} across {trend.visit_span} visits"
-            )
-            for point in trend.points:
-                refs.append(
-                    TrendBasisRef(
-                        visit_id=point.visit_id,
-                        symptom_id=point.symptom_id,
-                        symptom_name=trend.symptom_name,
-                        visit_date=point.visit_date,
-                        severity=point.severity,
-                        observation=observation,
-                    )
-                )
-        return refs
 
     def _evaluate(
         self,
@@ -157,7 +127,7 @@ class MockLLMClient:
         if not supporting:
             supporting.append("recorded findings overlap with this presentation")
 
-        trend_basis = self._trend_refs(context.trends, trend_matched)
+        trend_basis = trend_basis_refs(context.trends, trend_matched)
         is_early_watch = bool(trend_basis) and confidence < MODERATE_CONFIDENCE
 
         return DiagnosisCandidate(
