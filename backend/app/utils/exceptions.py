@@ -63,6 +63,12 @@ class UserAlreadyExistsError(ConflictError):
     """Raised when a unique user identity is already registered."""
 
 
+class InvalidOtpError(ValidationApplicationError):
+    """Raised when a submitted OTP is wrong, expired, or unknown."""
+
+    default_error_code = "invalid_otp"
+
+
 class EntityNotFoundError(NotFoundError):
     """Raised when a requested entity does not exist."""
 
@@ -86,6 +92,7 @@ __all__ = [
     "ExternalServiceError",
     "InternalServerError",
     "InvalidCredentialsError",
+    "InvalidOtpError",
     "NotFoundError",
     "UserAlreadyExistsError",
     "ValidationApplicationError",

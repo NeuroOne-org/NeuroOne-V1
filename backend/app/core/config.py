@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # combining allow_origins=["*"] with allow_credentials=True anyway.
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
+    # Gmail SMTP sender for password-reset OTP emails (app/services/otp_service.py).
+    GMAIL_ADDRESS: str
+    GMAIL_APP_PASSWORD: str
+
     # AI-01 ships mocked providers behind app/ai/providers/base.py.
     # AI-02 widens this literal; nothing else in the pipeline changes.
     AI_PROVIDER: Literal["mock"] = "mock"

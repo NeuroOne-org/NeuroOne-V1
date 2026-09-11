@@ -7,11 +7,13 @@ from app.models import User
 from app.models.user import UserRole
 from app.schemas.auth import Token, TokenPayload
 from app.schemas.user import UserCreate, UserResponse
+from app.services import otp_service
 from app.services.user_service import UserService
 from app.utils.exceptions import (
     AuthenticationError,
     AuthorizationError,
     InvalidCredentialsError,
+    InvalidOtpError,
     UserAlreadyExistsError,
 )
 
@@ -149,3 +151,34 @@ class AuthService:
             return TokenPayload.model_validate(payload)
         except (JWTError, ValidationError, ValueError, TypeError) as exc:
             raise AuthenticationError("Invalid or expired access token.") from exc
+
+    def request_password_reset(self, db: Session, email: str) -> None:
+        """
+        Email a reset code if the address belongs to an active account.
+        Always returns normally either way — never reveals whether the
+        address is registered.
+        """
+
+        user = self.user_service.get_user_by_email(db, email)
+        if user is None or not user.is_active:
+            return
+
+        otp_service.generate_and_send_otp(identity=email, to_email=email)
+
+    def reset_password(
+        self,
+        db: Session,
+        email: str,
+        otp: str,
+        new_password: str,
+    ) -> None:
+        """Validate the reset code and set a new password."""
+
+        if not otp_service.verify_otp(identity=email, submitted_code=otp):
+            raise InvalidOtpError("Invalid or expired verification code.")
+
+        user = self.user_service.get_user_by_email(db, email)
+        if user is None or not user.is_active:
+            raise InvalidOtpError("Invalid or expired verification code.")
+
+        self.user_service.set_password(db, user, self.hash_password(new_password))
