@@ -1,4 +1,4 @@
-# ADR-004: Live LLM Provider Behind the AI-01 Seam
+# ADR-005: Live LLM Provider Behind the AI-01 Seam
 
 ## Status
 Accepted

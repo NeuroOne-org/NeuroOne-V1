@@ -1,7 +1,7 @@
 # ADR-003: AI Analysis Contract and the Mocked-Provider Seam
 
 ## Status
-Accepted. Extended by [ADR-004](ADR-004-live-llm-provider.md), which lands a live `LLMClient` behind this seam and revises the `pipeline_note` derivation described under *Consequences*.
+Accepted. Extended by [ADR-005](ADR-005-live-llm-provider.md), which lands a live `LLMClient` behind this seam and revises the `pipeline_note` derivation described under *Consequences*.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 The AI-02 counterpart to ``mock_llm``: the retrieval corpus is still
 simulated, so this provider reasons over mock-sourced evidence and the
-orchestrator labels the result accordingly (ADR-004).
+orchestrator labels the result accordingly (ADR-005).
 
 The endpoint is configuration, not code -- Groq, Gemini's compatibility
 endpoint, OpenRouter and a local Ollama all speak this wire format, so
@@ -13,7 +13,7 @@ controlled ``AIError`` at the seam; per-candidate content violations are
 normalized or dropped, so one imprecise row cannot destroy an otherwise
 usable analysis. The model selects evidence by id and names symptoms; this
 module resolves both against the case's own data, so no citation body and no
-UUID is ever model-authored (ADR-004).
+UUID is ever model-authored (ADR-005).
 """
 
 import json
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 # A free tier rate-limits under load. One retry absorbs a transient limit;
-# a persistent one is a provider outage and surfaces as AIError (ADR-004).
+# a persistent one is a provider outage and surfaces as AIError (ADR-005).
 MAX_ATTEMPTS = 2
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
@@ -93,7 +93,7 @@ class LiveCandidatePayload(BaseModel):
     Deliberately narrower than ``DiagnosisCandidate``: the model is never
     shown that schema, because its computed ``likelihood_band`` field plus
     ``extra="forbid"`` would make a faithful echo fail validation on every
-    call (ADR-004).
+    call (ADR-005).
 
     ``confidence`` and ``category`` carry no constraints here -- an
     out-of-range likelihood is clamped and an unrecognized category falls
@@ -105,7 +105,7 @@ class LiveCandidatePayload(BaseModel):
     name: str
     # Advisory only. The real category is derived from the trend and the
     # confidence, by the same rule the mock applies, so the two providers
-    # cannot disagree about what an early_watch means (ADR-004).
+    # cannot disagree about what an early_watch means (ADR-005).
     category: str = "differential_diagnosis"
     confidence: float
     explanation: str
@@ -297,7 +297,7 @@ class LiveLLMClient:
         # dict.fromkeys dedupes while preserving the model's ordering. An id
         # retrieval never returned is discarded rather than passed on -- the
         # orchestrator would reject it anyway, but rejecting the whole
-        # analysis over one bad id is the outcome ADR-004 avoids.
+        # analysis over one bad id is the outcome ADR-005 avoids.
         evidence = [
             evidence_by_id[document_id]
             for document_id in dict.fromkeys(payload.evidence_document_ids)

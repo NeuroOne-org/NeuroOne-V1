@@ -127,7 +127,7 @@ def trend_basis_refs(
     symptoms it reasoned over, and these ids are resolved here from the
     patient's own context rather than authored by the model. A fabricated id
     would be indistinguishable from a stale one, which is the premise ADR-003
-    relied on to accept soft references (ADR-004).
+    relied on to accept soft references (ADR-005).
 
     ``matched_names`` holds normalized names -- see ``normalize_symptom_name``.
     """

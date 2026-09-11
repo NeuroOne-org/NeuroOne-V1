@@ -2,7 +2,7 @@
 
 The single place that maps configuration to concrete providers. Adding the
 live branch here is the whole of the AI-02 wiring; nothing downstream of the
-seam changes (ADR-003, ADR-004).
+seam changes (ADR-003, ADR-005).
 """
 
 import httpx
@@ -29,7 +29,7 @@ def build_providers(
     if config.AI_PROVIDER == "live-llm":
         if not config.AI_LLM_API_KEY:
             # Fail where the misconfiguration is, rather than mid-analysis on
-            # a clinician's screen (ADR-004).
+            # a clinician's screen (ADR-005).
             raise ValueError(
                 "AI_PROVIDER='live-llm' requires AI_LLM_API_KEY. Set it in "
                 "backend/.env, or set AI_PROVIDER=mock."

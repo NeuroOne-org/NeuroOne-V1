@@ -38,7 +38,7 @@ LIVE_PIPELINE_NOTE = "pipeline complete, evidence retrieved from live corpus"
 # AI-02 slice 1: live reasoning, still-simulated corpus. Naming this state is
 # not cosmetic -- LIVE_PIPELINE_NOTE would claim evidence came from a live
 # corpus when it came from mock_corpus, and section 8.1 requires mock-sourced
-# output stay labelled as simulated (ADR-004).
+# output stay labelled as simulated (ADR-005).
 HYBRID_PIPELINE_NOTE = (
     "pipeline complete, live model reasoning, evidence retrieval simulated"
 )
@@ -193,7 +193,7 @@ class AnalysisOrchestrator:
         Derived from both providers rather than the model alone, because the
         two are swapped independently: live reasoning over a simulated corpus
         is a real state, and it must not be described as live evidence
-        (ADR-004).
+        (ADR-005).
         """
 
         if provider_mode == "simulated":
@@ -226,7 +226,7 @@ class AnalysisOrchestrator:
                 model_name=reasoning.model_name,
                 # Describes the reasoning provider, which is where it has
                 # always been sourced from; pipeline_note carries the fuller
-                # truth about retrieval (ADR-004).
+                # truth about retrieval (ADR-005).
                 provider_mode=reasoning.provider_mode,
                 # Section 8.1: mock-sourced output stays labelled as simulated.
                 pipeline_note=self._pipeline_note(reasoning.provider_mode),

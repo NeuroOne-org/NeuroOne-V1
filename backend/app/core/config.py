@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     SQL_ECHO: bool = False
 
     # Providers sit behind app/ai/providers/base.py. "live-llm" is live
-    # reasoning over a still-simulated corpus (ADR-004); real retrieval is a
+    # reasoning over a still-simulated corpus (ADR-005); real retrieval is a
     # later slice. The default stays "mock": live reasoning sends clinical
     # context to a third party, which section 12 permits only under the
     # unconfirmed synthetic-demo-data assumption.
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     AI_EVIDENCE_PER_CANDIDATE: int = 3
 
     # Any OpenAI-compatible /chat/completions endpoint. Provider choice is
-    # configuration rather than a code branch (ADR-004), so Groq, Gemini's
+    # configuration rather than a code branch (ADR-005), so Groq, Gemini's
     # compatibility endpoint, OpenRouter and a local Ollama all work here.
     AI_LLM_BASE_URL: str = "https://api.groq.com/openai/v1"
     # Verify against the provider's own /models list when changing this --

@@ -1,4 +1,4 @@
-"""Tests for the live reasoning provider (AI-02 slice 1, ADR-004).
+"""Tests for the live reasoning provider (AI-02 slice 1, ADR-005).
 
 A live model is untrusted output, so most of what matters here is containment
 rather than the happy path: what happens to a fabricated citation, an
@@ -303,7 +303,7 @@ def test_cited_evidence_keeps_the_retrieved_metadata():
 
 
 def test_trend_basis_ids_come_from_the_context_not_the_model():
-    """The model names a symptom; the system resolves the ids (ADR-004)."""
+    """The model names a symptom; the system resolves the ids (ADR-005)."""
     context = _rising_tremor_context()
     document_id = _evidence(context)[0].document_id
     result = _analyze(
@@ -418,7 +418,7 @@ def test_a_low_confidence_trend_is_an_early_watch_whatever_the_model_said():
 
 
 def test_both_providers_agree_on_what_an_early_watch_means():
-    """The seam exists so a category cannot mean two things (ADR-004)."""
+    """The seam exists so a category cannot mean two things (ADR-005)."""
     context = _rising_tremor_context()
     evidence = _evidence(context)
     request = ReasoningRequest(context=context, evidence=evidence)
@@ -505,7 +505,7 @@ def test_no_live_candidate_expresses_certainty():
 
 
 # --------------------------------------------------------------------------
-# Structural failures fail hard (ADR-004)
+# Structural failures fail hard (ADR-005)
 
 
 def test_an_invented_payload_field_is_a_contract_failure():
@@ -552,7 +552,7 @@ def test_a_transport_failure_propagates_to_the_orchestrator():
 
 
 def test_a_transient_rate_limit_is_retried_once():
-    """A free tier rate-limits under load (ADR-004)."""
+    """A free tier rate-limits under load (ADR-005)."""
     context = _context()
     document_id = _evidence(context)[0].document_id
     attempts = []
@@ -636,7 +636,7 @@ def test_the_prompt_offers_only_retrieved_document_ids():
 
 
 def test_the_prompt_carries_no_identifiers_for_the_model_to_echo():
-    """No UUID reaches the model, so none can come back (ADR-004)."""
+    """No UUID reaches the model, so none can come back (ADR-005)."""
     context = _rising_tremor_context()
     requests = []
     _analyze(_returning(_candidates(), requests), context)
@@ -691,7 +691,7 @@ def test_no_patient_data_is_logged(caplog):
 
 
 # --------------------------------------------------------------------------
-# Honest labelling (AGENTS.md section 8.1, ADR-004)
+# Honest labelling (AGENTS.md section 8.1, ADR-005)
 
 
 def test_live_reasoning_over_a_simulated_corpus_is_labelled_hybrid():
@@ -769,7 +769,7 @@ def test_build_providers_returns_the_live_pair_when_configured():
 
 
 def test_the_live_pair_keeps_the_simulated_retriever():
-    """AI-02 slice 1 swaps reasoning only (ADR-004)."""
+    """AI-02 slice 1 swaps reasoning only (ADR-005)."""
     retriever, _ = build_providers(_settings())
 
     assert isinstance(retriever, MockEvidenceRetriever)

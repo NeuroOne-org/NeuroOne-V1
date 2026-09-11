@@ -353,7 +353,7 @@ Per `NEUROONE-MVP-SCOPE.md`, the `AI-01` phase is deliberately split. (`AI-01` i
 **Mocked now, swapped later (`AI-02`):**
 
 - the retrieval corpus — still mocked (`AI-02b`, deferred),
-- the LLM call — **swapped** (`AI-02a`, done; see [ADR-004](docs/decisions/ADR-004-live-llm-provider.md)).
+- the LLM call — **swapped** (`AI-02a`, done; see [ADR-005](docs/decisions/ADR-005-live-llm-provider.md)).
 
 Mock providers return **schema-valid deterministic results** and sit **behind the same interface** the real providers will use. Fixing the contract first is the entire point, and it held: `AI-02a` changed `app/ai/providers/` and the `pipeline_note` derivation, and nothing else.
 
@@ -750,7 +750,7 @@ PAT-01        authorized patient CRUD vertical slice
 CASE-01       clinical case / symptom domain (currently a broken stub; must support cross-visit history)
 AI-01 (mock)  structured AI contract + mocked retriever/LLM + evidence/citation shape
 REPORT-01     PDF assembly — full acceptance journey becomes demoable end-to-end
-AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-004)
+AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-005)
 AI-02b        real RAG corpus behind the same interface (deferred)
 ```
 
