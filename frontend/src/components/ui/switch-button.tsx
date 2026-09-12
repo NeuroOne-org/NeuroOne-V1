@@ -12,9 +12,9 @@
  * the original's.
  */
 
-import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun } from "@/components/icons";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 interface SwitchButtonProps
@@ -39,8 +39,7 @@ export default function SwitchButton({
 
   // The server cannot know the stored theme, so the button renders inert
   // until the client has read it. Without this it flashes the wrong label.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
 
   const isDark = resolvedTheme === "dark";
 

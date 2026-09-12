@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { extractApiError } from "@/lib/api";
 
 export interface AsyncState<T> {
@@ -33,26 +33,31 @@ export function useAsync<T>(
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
+  // A new request starts whenever these change. The loading flag and the
+  // stale error are reset during render rather than in the effect, so the
+  // render that starts a request already shows it as in flight.
+  const requestKey = [enabled, nonce, ...deps];
+  const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
+  if (!sameKey(prevRequestKey, requestKey)) {
+    setPrevRequestKey(requestKey);
+    setIsLoading(enabled);
+    if (enabled) setError(null);
+  }
+
   // Guards against a slow earlier request resolving after a newer one and
   // overwriting fresher data.
   const requestId = useRef(0);
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+  // Always calls the latest `fetcher` without making it a dependency, so an
+  // inline arrow doesn't refetch on every render.
+  const runFetcher = useEffectEvent(() => fetcher());
 
   useEffect(() => {
-    if (!enabled) {
-      setIsLoading(false);
-      return;
-    }
+    if (!enabled) return;
 
     const id = ++requestId.current;
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
-
-    fetcherRef
-      .current()
+    runFetcher()
       .then((result) => {
         if (cancelled || id !== requestId.current) return;
         setData(result);
@@ -76,6 +81,11 @@ export function useAsync<T>(
   const refetch = useCallback(() => setNonce((n) => n + 1), []);
 
   return { data, isLoading, isInitialLoad, error, refetch };
+}
+
+/** Compares two dependency lists the way `useEffect` does. */
+function sameKey(a: unknown[], b: unknown[]): boolean {
+  return a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
 }
 
 /**
