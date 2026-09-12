@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Activity,
   Calendar,
@@ -10,6 +10,7 @@ import {
   CircleCheck,
   FileArrowDown,
   FileText,
+  Plus,
   Scan,
   Sparkles,
 } from "@/components/icons";
@@ -37,13 +38,18 @@ export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const patient = usePatient(id);
   const visits = usePatientVisits(id);
+  // Set by New visit on success, so the visit just analysed is the one shown.
+  const requestedVisitId = useSearchParams().get("visit");
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
 
   const visitItems = visits.data?.items ?? [];
-  // Default to the most recent visit once they land, without clobbering a
-  // visit the clinician has since picked.
-  const activeVisitId = selectedVisitId ?? visitItems[0]?.id ?? null;
+  const requestedVisit = visitItems.find((visit) => visit.id === requestedVisitId);
+  // Default to the requested visit, else the most recent, without clobbering
+  // a visit the clinician has since picked.
+  const activeVisitId =
+    selectedVisitId ?? requestedVisit?.id ?? visitItems[0]?.id ?? null;
+  const newVisitHref = `/dashboard/patients/${id}/visits/new`;
 
   if (patient.isLoading && patient.isInitialLoad) {
     return <DetailSkeleton />;
@@ -131,6 +137,14 @@ export default function PatientDetailPage() {
                 visits.data ? `${visits.data.pagination.total_records} total` : "Loading"
               }
               title="Visits"
+              action={
+                <Link href={newVisitHref}>
+                  <Button size="sm" variant="secondary">
+                    <Plus className="h-4 w-4" />
+                    New visit
+                  </Button>
+                </Link>
+              }
             />
             {visits.isLoading && visits.isInitialLoad ? (
               <CardBody className="space-y-2">
@@ -143,7 +157,7 @@ export default function PatientDetailPage() {
               <EmptyState
                 icon={Calendar}
                 title="No visits recorded"
-                hint="Start one from the intake form."
+                hint="Record a visit to attach a scan and run an analysis."
               />
             ) : (
               <div className="max-h-[380px] overflow-y-auto">

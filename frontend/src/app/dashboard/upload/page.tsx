@@ -4,15 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleAlert, CircleCheck, Loader } from "@/components/icons";
+import { CircleAlert } from "@/components/icons";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Label, FieldError } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { Select, Textarea } from "@/components/ui/select";
-import { MriDropzone } from "@/components/mri-dropzone";
+import {
+  Field,
+  ScanUploadField,
+  StepProgress,
+} from "@/components/intake-fields";
 import { extractApiError } from "@/lib/api";
 import { patients as patientsApi, visits as visitsApi } from "@/lib/endpoints";
-import { cn } from "@/lib/utils";
 import {
   BLOOD_GROUPS,
   patientIntakeSchema,
@@ -274,24 +277,13 @@ export default function UploadPage() {
         <Card className="mb-5">
           <CardHeader eyebrow="Step 3" title="MRI scan" />
           <CardBody>
-            <MriDropzone file={mriFile} onChange={setMriFile} />
-            <FieldError message={fileError ?? undefined} />
-            {activeStep === "scan" && (
-              <div className="mt-3">
-                <div className="h-1 w-full overflow-hidden rounded-full bg-raised">
-                  <div
-                    className="h-full rounded-full bg-teal transition-[width] duration-200 ease-out"
-                    style={{ width: `${uploadPct}%` }}
-                  />
-                </div>
-                <p className="data-num mt-1.5 text-[11px] text-text-faint">
-                  Uploading {uploadPct}%
-                </p>
-              </div>
-            )}
-            <p className="mt-3 text-[12px] text-text-faint">
-              Optional. The pipeline also reads the visit history and symptoms.
-            </p>
+            <ScanUploadField
+              file={mriFile}
+              onChange={setMriFile}
+              isUploading={activeStep === "scan"}
+              uploadPct={uploadPct}
+              error={fileError}
+            />
           </CardBody>
         </Card>
 
@@ -303,38 +295,11 @@ export default function UploadPage() {
         )}
 
         {isSubmitting && (
-          <div className="mb-5 rounded border border-line bg-panel px-4 py-3">
-            <ul className="space-y-2">
-              {STEPS.filter((step) => step.key !== "scan" || mriFile).map(
-                (step) => {
-                  const done = doneSteps.includes(step.key);
-                  const current = activeStep === step.key;
-                  return (
-                    <li
-                      key={step.key}
-                      className={cn(
-                        "flex items-center gap-2.5 text-[13px] transition-colors duration-200",
-                        done
-                          ? "text-teal"
-                          : current
-                            ? "text-text"
-                            : "text-text-faint"
-                      )}
-                    >
-                      {done ? (
-                        <CircleCheck className="h-4 w-4" />
-                      ) : current ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <span className="h-4 w-4 rounded-full border border-line" />
-                      )}
-                      {step.label}
-                    </li>
-                  );
-                }
-              )}
-            </ul>
-          </div>
+          <StepProgress
+            steps={STEPS.filter((step) => step.key !== "scan" || mriFile)}
+            activeStep={activeStep}
+            doneSteps={doneSteps}
+          />
         )}
 
         <div className="flex justify-end">
@@ -348,36 +313,6 @@ export default function UploadPage() {
 }
 
 /* -- pieces ----------------------------------------------------------- */
-
-function Field({
-  label,
-  error,
-  hint,
-  optional,
-  children,
-}: {
-  label: string;
-  error?: string;
-  hint?: string;
-  optional?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between">
-        <Label>{label}</Label>
-        {optional && (
-          <span className="mb-1.5 text-[11px] text-text-faint">Optional</span>
-        )}
-      </div>
-      {children}
-      {hint && !error && (
-        <p className="mt-1 text-[11px] text-text-faint">{hint}</p>
-      )}
-      <FieldError message={error} />
-    </div>
-  );
-}
 
 function splitList(value?: string): string[] {
   if (!value) return [];

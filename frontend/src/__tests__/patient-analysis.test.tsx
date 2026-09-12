@@ -49,7 +49,10 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
 
 const latestAnalysis = vi.fn<(visitId: string) => Promise<Analysis>>();
 
-vi.mock("next/navigation", () => ({ useParams: () => ({ id: "p1" }) }));
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ id: "p1" }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
