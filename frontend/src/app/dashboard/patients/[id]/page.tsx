@@ -18,6 +18,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/state";
 import { AnalysisFindings } from "@/components/analysis-findings";
+import { AnalysisProvenance } from "@/components/analysis-provenance";
 import { useAsync } from "@/hooks/use-api";
 import { usePatient, usePatientVisits } from "@/hooks/use-patients";
 import { analyses as analysesApi, reports as reportsApi, visits as visitsApi } from "@/lib/endpoints";
@@ -333,6 +334,8 @@ function VisitAnalysis({ visitId }: { visitId: string }) {
             )}
           </div>
 
+          <AnalysisProvenance analysis={analysis} />
+
           {analysis.findings && analysis.findings.length > 0 ? (
             <AnalysisFindings findings={analysis.findings} />
           ) : (
@@ -377,10 +380,6 @@ function VisitAnalysis({ visitId }: { visitId: string }) {
               Re-run
             </Button>
           </div>
-
-          <p className="mt-4 text-[11px] leading-relaxed text-text-faint">
-            {analysis.disclaimer}
-          </p>
         </CardBody>
       ) : null}
     </Card>

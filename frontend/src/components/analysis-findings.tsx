@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, Info, Sparkles } from "@/components/icons";
-import { cn } from "@/lib/utils";
+import { cn, confidencePercent } from "@/lib/utils";
 import type { Finding, LikelihoodBand } from "@/lib/types";
 
 const BAND_TONE: Record<LikelihoodBand, string> = {
@@ -72,7 +72,7 @@ function FindingGroup({
 function FindingRow({ finding, index }: { finding: Finding; index: number }) {
   const [open, setOpen] = useState(false);
   const evidence = finding.evidence ?? [];
-  const pct = Math.round(finding.confidence * 100);
+  const pct = confidencePercent(finding.confidence);
 
   return (
     <div
