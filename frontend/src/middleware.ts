@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const TOKEN_COOKIE = "neuroone_token";
 const PROTECTED_PREFIXES = ["/dashboard"];
-const AUTH_PAGES = ["/login", "/signup", "/verify-otp"];
+const AUTH_PAGES = ["/login", "/verify-otp"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -39,5 +39,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/login", "/signup", "/verify-otp"],
+  matcher: ["/", "/dashboard/:path*", "/login", "/verify-otp"],
 };

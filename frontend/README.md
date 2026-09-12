@@ -28,48 +28,22 @@ Visit `http://localhost:3000`. You'll land on `/login` until authenticated;
 
 ## Backend contract this frontend expects
 
-The backend's auth/patient/model modules aren't built yet as of this
-writing, so the frontend is coded against the following **assumed**
-contract. Whoever builds the backend should either match this, or the
-frontend should be updated to match whatever's actually implemented —
-whichever is easier for the team.
+Every backend call the app makes is in `src/lib/endpoints.ts`, typed by
+`src/lib/types.ts`. Read it against the root `backend-routes.json` (the
+OpenAPI dump) to check the two still agree.
 
-| Endpoint | Method | Body | Returns |
-|---|---|---|---|
-| `/auth/login` | POST | form-encoded `username`, `password` (OAuth2 password flow) | `{ access_token, token_type }` |
-| `/auth/signup` | POST | JSON `{ full_name, email, role, password }` | creates an **unverified** user and emails a 6-digit OTP; no token yet |
-| `/auth/verify-otp` | POST | JSON `{ email, otp }` | `{ access_token, token_type }` on success |
-| `/auth/resend-otp` | POST | JSON `{ email }` | 204/200, triggers a new email |
-| `/users/me` | GET | — (Bearer token) | `User` |
-| `/patients` | GET | — | `Patient[]` |
-| `/patients` | POST | `multipart/form-data`: `full_name, age, gender, mmse_score?, family_history, notes?, mri_scan` | created `Patient` (with `latest_result` if the pipeline finishes synchronously, or `null` if it's still processing) |
-| `/patients/{id}` | GET | — | `Patient` (including `latest_result`) |
-
-**Password rule enforced client-side:** 8+ characters, at least one
-uppercase, one lowercase, one digit, one special character. The backend
-should enforce the same rule server-side too — client-side validation is
-UX, not security.
-
-**On OTP / email verification:** sending the actual code requires a real
-email provider on the backend (SMTP via Gmail, SendGrid, etc.) — the
-frontend can't send email itself. `requirements.txt` already has
-`email-validator`, so this was clearly already on the radar; someone just
-needs to wire up the actual send step and a way to store/expire OTPs
-(e.g. a short-lived `otp_code` + `otp_expires_at` column on the user, or
-a separate table).
-
-Types for all of these are in `src/lib/types.ts`. If the real backend
-shapes differ (field names, nesting, etc.), that file plus
-`src/lib/api.ts` and the two data-fetching hooks/pages are the only
-places that need to change — the rest of the UI consumes the typed
-`Patient` / `PredictionResult` objects, not raw API responses.
+There is no self-registration. Accounts are provisioned by an admin through
+`POST /admin/users`, so the app has sign-in, OTP sign-in and password reset
+pages but no sign-up page.
 
 ## Structure
 
 ```
 src/
   app/
-    login/, signup/          — auth pages (public)
+    login/, verify-otp/,
+    forgot-password/,
+    reset-password/          — auth pages (public)
     dashboard/
       layout.tsx              — sidebar shell
       page.tsx                — patient list
@@ -77,8 +51,8 @@ src/
       patients/[id]/page.tsx  — patient record + prediction results
   components/
     ui/                       — Button, Input, Select, Card, Badge, etc.
-    auth-provider.tsx          — auth context (login/signup/logout, current user)
-    auth-shell.tsx              — split-panel layout for login/signup
+    auth-provider.tsx          — auth context (login/OTP/reset/logout, current user)
+    auth-shell.tsx              — split-panel layout for the auth pages
     confidence-dial.tsx         — radial confidence gauge (results page)
     mri-dropzone.tsx             — drag/drop MRI upload with scan-line state
     region-bars.tsx               — contributing-region bar chart

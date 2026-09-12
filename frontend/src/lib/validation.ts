@@ -17,12 +17,6 @@ const emailSchema = z
     message: "Please use a permanent email address, not a disposable one",
   });
 
-const usernameSchema = z
-  .string()
-  .min(3, "At least 3 characters")
-  .max(50, "50 characters max")
-  .regex(/^[a-zA-Z0-9_.]+$/, "Letters, numbers, dots, and underscores only");
-
 const strongPasswordSchema = z
   .string()
   .min(8, "At least 8 characters")
@@ -36,23 +30,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
-
-export const signupSchema = z
-  .object({
-    full_name: z.string().min(2, "Enter your full name"),
-    username: usernameSchema,
-    email: emailSchema,
-    role: z.enum(["doctor", "researcher"], {
-      required_error: "Select a role",
-    }),
-    password: strongPasswordSchema,
-    confirm_password: z.string(),
-  })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "Passwords do not match",
-    path: ["confirm_password"],
-  });
-export type SignupInput = z.infer<typeof signupSchema>;
 
 export const otpSchema = z.object({
   otp: z.string().length(6, "Enter the 6-digit code").regex(/^\d+$/, "Digits only"),

@@ -62,7 +62,7 @@ Seeded analyses always use the mock providers. Re-running replaces only the two 
 ### Checklist
 - [ ] `POST /auth/login` — form with `username`, `password`. Store `access_token` in the existing cookie (`TOKEN_COOKIE` in `api.ts`), matching what's already wired.
 - [ ] `GET /auth/me` on load / after login to populate the current user (id, role, name) for role-gated UI.
-- [ ] **Delete the `signup` page** and any link to it — `POST /auth/register` does not exist and will not. Point account creation at admin provisioning instead.
+- [x] **Delete the `signup` page** and any link to it — `POST /auth/register` does not exist and will not. Point account creation at admin provisioning instead.
 - [ ] **Keep** `forgot-password`, `reset-password` and `verify-otp` and verify each against its real endpoint above. These were previously listed for deletion; that instruction is withdrawn.
 - [ ] Update `UserRole` type to `"admin" | "clinician"` only (matches `backend/app/models/user.py:UserRole`). Remove `"doctor"`, `"receptionist"`, `"researcher"`.
 - [ ] 401 handling already exists in `api.ts`'s response interceptor (redirects to `/login`) — keep it, verify it still fires against the real `/auth/me`/token-expiry behavior.
