@@ -402,15 +402,15 @@
     "semantic_hash": "187b4b5b507c358a018aeeadd81abe57"
   },
   "frontend/next.config.mjs": {
-    "mtime": 1788902406.081515,
-    "seen": 1789034581.8203945,
-    "ast_hash": "8785d8d209cf3b74be5e3f508ebc87a5",
-    "semantic_hash": "8785d8d209cf3b74be5e3f508ebc87a5"
+    "mtime": 1789224057.0256612,
+    "seen": 1789239661.4783013,
+    "ast_hash": "8bd46853a6210066440a943a0d86fdab",
+    "semantic_hash": ""
   },
   "frontend/package.json": {
-    "mtime": 1789222544.733531,
-    "seen": 1789223279.1464705,
-    "ast_hash": "2481da159a5b1c7ddbe9ff120a75abb4",
+    "mtime": 1789239448.8420002,
+    "seen": 1789239661.4783013,
+    "ast_hash": "f34ff074aacfe9c02e83bb16d21134c9",
     "semantic_hash": ""
   },
   "frontend/postcss.config.js": {
@@ -426,15 +426,15 @@
     "semantic_hash": ""
   },
   "frontend/src/app/dashboard/page.tsx": {
-    "mtime": 1789222957.8700068,
-    "seen": 1789223279.1464705,
-    "ast_hash": "a8f438cbf78989c3894f35edf44bd107",
+    "mtime": 1789239441.7883792,
+    "seen": 1789239661.4783013,
+    "ast_hash": "2242444973a5014cc538066f0741c019",
     "semantic_hash": ""
   },
   "frontend/src/app/dashboard/patients/[id]/page.tsx": {
-    "mtime": 1789219565.8345592,
-    "seen": 1789220107.0929174,
-    "ast_hash": "bc9eab0525b6ddee5f9f53efcf352bf5",
+    "mtime": 1789239415.047548,
+    "seen": 1789239661.4783013,
+    "ast_hash": "1bd9bf809c323af5a0fced326fab8bd8",
     "semantic_hash": ""
   },
   "frontend/src/app/dashboard/upload/page.tsx": {
@@ -606,9 +606,9 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/utils.ts": {
-    "mtime": 1789219340.1713502,
-    "seen": 1789220107.0929174,
-    "ast_hash": "c501dbf711fbe2f88857c82a9e5ee465",
+    "mtime": 1789239406.845518,
+    "seen": 1789239661.4783013,
+    "ast_hash": "0911f6f485b80ba873081772160fc73b",
     "semantic_hash": ""
   },
   "frontend/src/lib/validation.ts": {
@@ -630,9 +630,9 @@
     "semantic_hash": ""
   },
   "frontend/tsconfig.json": {
-    "mtime": 1789219667.260467,
-    "seen": 1789220107.0929174,
-    "ast_hash": "4dbfe0d1c2c6fd61d1dd31658faf637a",
+    "mtime": 1789224071.8081772,
+    "seen": 1789239661.4783013,
+    "ast_hash": "5abb657ff563ad439d9e013e998d5471",
     "semantic_hash": ""
   },
   "scripts/backup.py": {
@@ -882,10 +882,10 @@
     "semantic_hash": "0ecc59071023e6c8545efba7f2d99b35"
   },
   ".github/workflows/backend-tests.yml": {
-    "mtime": 1789045071.8345675,
-    "seen": 1789216769.2003405,
-    "ast_hash": "2e01f0cfa0ec8cafff23c7b941a77375",
-    "semantic_hash": "2e01f0cfa0ec8cafff23c7b941a77375"
+    "mtime": 1789239442.9706607,
+    "seen": 1789239661.4783013,
+    "ast_hash": "757b9e9fec97f8b35b0fdead38a37ea3",
+    "semantic_hash": ""
   },
   "CLAUDE.md": {
     "mtime": 1789042104.2351234,
@@ -1086,9 +1086,9 @@
     "semantic_hash": "7236c09df54bcb79f47f731c7ad8158b"
   },
   ".claude/launch.json": {
-    "mtime": 1789220190.171046,
-    "seen": 1789223279.1464705,
-    "ast_hash": "8de44cbd29425315bd7d4d12f533f74e",
+    "mtime": 1789237094.8528738,
+    "seen": 1789239661.4783013,
+    "ast_hash": "66fa969cb45a8d96df0e98ce29b72e74",
     "semantic_hash": ""
   },
   "frontend/src/components/otp-input.tsx": {
@@ -1380,9 +1380,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/analysis-findings.tsx": {
-    "mtime": 1789219832.0489821,
-    "seen": 1789220107.0929174,
-    "ast_hash": "1481310e2fc713345c4e96cbfe7cbeaa",
+    "mtime": 1789239409.7120302,
+    "seen": 1789239661.4783013,
+    "ast_hash": "fc7170d7793975151d1d8c7a41dfc59b",
     "semantic_hash": ""
   },
   "frontend/src/components/icons/activity.tsx": {
@@ -1620,9 +1620,9 @@
     "semantic_hash": ""
   },
   "frontend/design.md": {
-    "mtime": 1789223187.7302146,
-    "seen": 1789223279.1474843,
-    "ast_hash": "06ffd410f1d77184f2c6c9bb43a1f2e1",
+    "mtime": 1789224726.6237555,
+    "seen": 1789239661.4783013,
+    "ast_hash": "49f17896e5a4e6b33c405decd38484ea",
     "semantic_hash": ""
   },
   "frontend/prompt.txt": {
@@ -1644,9 +1644,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/queue-filter-cards.tsx": {
-    "mtime": 1789222924.6042106,
-    "seen": 1789223279.1464705,
-    "ast_hash": "23f31e81cae4a4eb38fc642b30ad6b4f",
+    "mtime": 1789224715.9465437,
+    "seen": 1789239661.4783013,
+    "ast_hash": "8871fbb631187f481bd039b01d864566",
     "semantic_hash": ""
   },
   "frontend/src/components/theme-provider.tsx": {
@@ -1659,6 +1659,60 @@
     "mtime": 1789222668.7700098,
     "seen": 1789223279.1464705,
     "ast_hash": "51afbe9ef5cd6e29e5c638f73e8c57ba",
+    "semantic_hash": ""
+  },
+  "frontend/src/__tests__/analysis-display.test.tsx": {
+    "mtime": 1789239459.9204967,
+    "seen": 1789239661.4783013,
+    "ast_hash": "08c66358d2cf68cd2128c74fa2f9fa11",
+    "semantic_hash": ""
+  },
+  "frontend/src/__tests__/dashboard-queue.test.tsx": {
+    "mtime": 1789239471.7384164,
+    "seen": 1789239661.4783013,
+    "ast_hash": "e4d58d2309ae596a33370266ecbdd04d",
+    "semantic_hash": ""
+  },
+  "frontend/src/__tests__/patient-analysis.test.tsx": {
+    "mtime": 1789239503.7425857,
+    "seen": 1789239661.4783013,
+    "ast_hash": "1b625d4d4bb4beade64482f3a2012dae",
+    "semantic_hash": ""
+  },
+  "frontend/src/__tests__/utils.test.ts": {
+    "mtime": 1789239451.1171463,
+    "seen": 1789239661.4783013,
+    "ast_hash": "8bc15214a700d14442817d000d2deeed",
+    "semantic_hash": ""
+  },
+  "frontend/src/__tests__/vocabulary.test.ts": {
+    "mtime": 1789239480.7873755,
+    "seen": 1789239661.4783013,
+    "ast_hash": "6aa23a11955baffd1d93291880778050",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/analysis-provenance.tsx": {
+    "mtime": 1789239352.7243643,
+    "seen": 1789239661.4783013,
+    "ast_hash": "f091cc3fe5a060c289a826061ababde4",
+    "semantic_hash": ""
+  },
+  "frontend/vitest.config.ts": {
+    "mtime": 1789239353.0015204,
+    "seen": 1789239661.4783013,
+    "ast_hash": "558bb97e6189781af014167e85ba2a8c",
+    "semantic_hash": ""
+  },
+  "frontend/vitest.setup.ts": {
+    "mtime": 1789239353.3570359,
+    "seen": 1789239661.4783013,
+    "ast_hash": "b60e8b200c802a938be4d0e8a2aeae4e",
+    "semantic_hash": ""
+  },
+  ".github/workflows/frontend-tests.yml": {
+    "mtime": 1789239353.5656495,
+    "seen": 1789239661.4783013,
+    "ast_hash": "7bd8f5ac4872da5ee6a10a545a333517",
     "semantic_hash": ""
   }
 }
