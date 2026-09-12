@@ -17,8 +17,13 @@ from app.core.security import create_access_token
 from main import app
 from app.core.config import settings
 from app.models.user import User, UserRole
-from app.schemas.auth import Token
+from app.schemas.auth import LoginResponse
 from app.schemas.user import UserResponse
+from app.api.v1.auth import (
+    _LOGIN_LIMIT,
+    _OTP_REQUEST_LIMIT,
+    _OTP_VERIFY_LIMIT,
+)
 from app.utils.exceptions import InvalidCredentialsError, UserAlreadyExistsError
 
 
@@ -58,7 +63,7 @@ def test_login_success_and_invalid_credentials_share_safe_contract() -> None:
         def login(self, db, username, password):
             if password != "correct-password":
                 raise InvalidCredentialsError("Invalid username/email or password.")
-            return Token(access_token="signed-token")
+            return LoginResponse(access_token="signed-token")
 
     app.dependency_overrides[get_auth_service] = lambda: AuthStub()
     client = _client()
@@ -73,12 +78,37 @@ def test_login_success_and_invalid_credentials_share_safe_contract() -> None:
     )
 
     assert success.status_code == 200
-    assert success.json() == {"access_token": "signed-token", "token_type": "bearer"}
+    assert success.json() == {
+        "access_token": "signed-token",
+        "token_type": "bearer",
+        "otp_required": False,
+    }
     assert failure.status_code == 401
     assert failure.json() == {
         "message": "Invalid username/email or password.",
         "error_code": "authentication_error",
         "details": None,
+    }
+
+
+def test_login_reports_otp_required_without_a_token() -> None:
+    class AuthStub:
+        def login(self, db, username, password):
+            return LoginResponse(otp_required=True)
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "clinician", "password": "correct-password"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "access_token": None,
+        "token_type": "bearer",
+        "otp_required": True,
     }
 
 
@@ -212,7 +242,7 @@ def test_forgot_password_always_returns_the_same_generic_message() -> None:
         def __init__(self):
             self.calls: list[str] = []
 
-        def request_password_reset(self, db, email):
+        def request_password_reset(self, db, email, background_tasks):
             self.calls.append(email)
 
     stub = AuthStub()
@@ -290,3 +320,166 @@ def test_valid_token_loads_current_user_from_service() -> None:
 
     assert response.status_code == 200
     assert response.json()["id"] == str(current_user.id)
+
+
+def test_login_is_rate_limited_per_account() -> None:
+    class AuthStub:
+        def login(self, db, username, password):
+            raise InvalidCredentialsError("Invalid username/email or password.")
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    for _ in range(_LOGIN_LIMIT):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "someone@example.com", "password": "wrong"},
+        )
+        assert response.status_code == 401
+
+    limited = client.post(
+        "/api/v1/auth/login",
+        json={"username": "someone@example.com", "password": "wrong"},
+    )
+
+    assert limited.status_code == 429
+    assert limited.json()["error_code"] == "rate_limited"
+    assert "Retry-After" in limited.headers
+    # Note: a different account from the same source IP is also blocked
+    # here, since TestClient presents one simulated client IP for every
+    # request and the IP-keyed check (app/api/v1/auth.py) has an identical
+    # threshold -- see test_different_accounts_have_independent_login_limits
+    # for the per-account dimension in isolation.
+
+
+def test_different_accounts_have_independent_login_limits(monkeypatch) -> None:
+    """The per-account and per-IP checks are separate buckets -- simulate
+    distinct source IPs to exercise the account dimension on its own."""
+
+    class AuthStub:
+        def login(self, db, username, password):
+            raise InvalidCredentialsError("Invalid username/email or password.")
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    ips = iter(f"10.0.0.{i}" for i in range(1, 1000))
+    monkeypatch.setattr(
+        "app.api.v1.auth.rate_limit.client_ip", lambda request: next(ips)
+    )
+
+    for _ in range(_LOGIN_LIMIT):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "someone@example.com", "password": "wrong"},
+        )
+        assert response.status_code == 401
+
+    limited = client.post(
+        "/api/v1/auth/login",
+        json={"username": "someone@example.com", "password": "wrong"},
+    )
+    assert limited.status_code == 429
+
+    # A different account, still one of the fresh simulated IPs, is unaffected.
+    other = client.post(
+        "/api/v1/auth/login",
+        json={"username": "someone-else@example.com", "password": "wrong"},
+    )
+    assert other.status_code == 401
+
+
+def test_forgot_password_is_rate_limited_per_email() -> None:
+    class AuthStub:
+        def request_password_reset(self, db, email, background_tasks):
+            pass
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    for _ in range(_OTP_REQUEST_LIMIT):
+        response = client.post(
+            "/api/v1/auth/forgot-password", json={"email": "someone@example.com"}
+        )
+        assert response.status_code == 200
+
+    limited = client.post(
+        "/api/v1/auth/forgot-password", json={"email": "someone@example.com"}
+    )
+    assert limited.status_code == 429
+
+
+def test_request_otp_is_rate_limited_per_email() -> None:
+    class AuthStub:
+        def request_otp_login(self, db, email, background_tasks):
+            pass
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    for _ in range(_OTP_REQUEST_LIMIT):
+        response = client.post(
+            "/api/v1/auth/request-otp", json={"email": "someone@example.com"}
+        )
+        assert response.status_code == 200
+
+    limited = client.post(
+        "/api/v1/auth/request-otp", json={"email": "someone@example.com"}
+    )
+    assert limited.status_code == 429
+
+
+def test_verify_otp_is_rate_limited_per_account() -> None:
+    from app.utils.exceptions import InvalidOtpError
+
+    class AuthStub:
+        def verify_otp_login(self, db, email, otp, password):
+            raise InvalidOtpError("Invalid or expired verification code.")
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    for _ in range(_OTP_VERIFY_LIMIT):
+        response = client.post(
+            "/api/v1/auth/verify-otp",
+            json={"email": "someone@example.com", "otp": "000000", "password": "x"},
+        )
+        assert response.status_code == 422
+
+    limited = client.post(
+        "/api/v1/auth/verify-otp",
+        json={"email": "someone@example.com", "otp": "000000", "password": "x"},
+    )
+    assert limited.status_code == 429
+
+
+def test_reset_password_is_rate_limited_per_account() -> None:
+    from app.utils.exceptions import InvalidOtpError
+
+    class AuthStub:
+        def reset_password(self, db, email, otp, new_password):
+            raise InvalidOtpError("Invalid or expired verification code.")
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+    client = _client()
+
+    for _ in range(_OTP_VERIFY_LIMIT):
+        response = client.post(
+            "/api/v1/auth/reset-password",
+            json={
+                "email": "someone@example.com",
+                "otp": "000000",
+                "new_password": "brand-new-password",
+            },
+        )
+        assert response.status_code == 422
+
+    limited = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "email": "someone@example.com",
+            "otp": "000000",
+            "new_password": "brand-new-password",
+        },
+    )
+    assert limited.status_code == 429

@@ -20,6 +20,7 @@ from app.utils.exceptions import (
     ExternalServiceError,
     InternalServerError,
     NotFoundError,
+    RateLimitedError,
     ValidationApplicationError,
 )
 
@@ -58,6 +59,20 @@ def _application_handler(status_code: int, *, authenticate: bool = False):
         )
 
     return handler
+
+
+async def rate_limited_handler(request: Request, exc: RateLimitedError) -> JSONResponse:
+    retry_after = (
+        exc.details.get("retry_after_seconds") if isinstance(exc.details, dict) else None
+    )
+    headers = {"Retry-After": str(retry_after)} if retry_after is not None else None
+    return _error_response(
+        429,
+        exc.message,
+        exc.error_code,
+        details=exc.details,
+        headers=headers,
+    )
 
 
 async def request_validation_error_handler(
@@ -128,6 +143,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AIError, _application_handler(502))
     app.add_exception_handler(ExternalServiceError, _application_handler(502))
     app.add_exception_handler(InternalServerError, _application_handler(500))
+    app.add_exception_handler(RateLimitedError, rate_limited_handler)
     app.add_exception_handler(RequestValidationError, request_validation_error_handler)
     app.add_exception_handler(ValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
