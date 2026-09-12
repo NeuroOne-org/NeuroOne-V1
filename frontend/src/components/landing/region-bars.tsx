@@ -1,6 +1,21 @@
-import type { PredictionRegion } from "@/lib/types";
+/**
+ * Contribution bars for the landing page's sample cases.
+ *
+ * Landing-scoped on purpose: these regions are illustrative copy, not an API
+ * shape. The live analysis view renders ranked findings from the backend
+ * instead — see `@/components/analysis-findings`.
+ */
 
-export function RegionBars({ regions }: { regions: PredictionRegion[] }) {
+export type DemoDiseaseLabel = "healthy" | "alzheimers" | "parkinsons";
+
+export type DemoDiseaseStage = "CN" | "MCI" | "MILD" | "MODERATE" | "SEVERE";
+
+export interface DemoRegion {
+  label: string;
+  contribution: number;
+}
+
+export function RegionBars({ regions }: { regions: DemoRegion[] }) {
   const sorted = [...regions].sort((a, b) => b.contribution - a.contribution);
   return (
     <div className="space-y-3">

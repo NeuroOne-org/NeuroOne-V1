@@ -3,24 +3,99 @@
 @tailwind utilities;
 
 @layer base {
+  /**
+   * Palette.
+   *
+   * Every surface and text colour is a channel triplet so Tailwind can apply
+   * alpha modifiers (`bg-raised/60`, `border-amber/30`) to it. Light is the
+   * base declaration and `.dark` overrides it, which means a `dark` class on
+   * any subtree re-themes just that subtree -- how the auth and landing
+   * surfaces stay dark while the dashboard follows the user's choice.
+   */
+  :root {
+    color-scheme: light;
+
+    --ink: 246 247 250;
+    --panel: 255 255 255;
+    --raised: 240 242 246;
+    --line: 223 227 234;
+    --line-soft: 233 236 241;
+
+    /* Contrast on white, smallest use first: faint carries 11px eyebrow
+       labels, so it is held at 5:1 rather than the 3.3:1 a purely visual
+       pick lands on. */
+    --text: 18 21 26;        /* 18.3:1 */
+    --text-muted: 82 89 101; /*  7.1:1 */
+    --text-faint: 103 111 124; /* 5.1:1 */
+
+    /* Darkened against the light surfaces: the dark-mode accents sit near
+       2:1 on white and would fail outright as text or icons. */
+    --amber: 186 60 22;  /* 5.6:1 */
+    --teal: 11 118 110;  /* 5.5:1 */
+    --indigo: 72 82 214; /* 6.1:1 */
+
+    /* Ambient page wash. Near-invisible on light, so it is kept faint. */
+    --wash-a: 72 82 214;
+    --wash-b: 13 138 128;
+    --wash-alpha: 0.05;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    --ink: 11 13 16;
+    --panel: 20 23 27;
+    --raised: 27 31 36;
+    --line: 38 43 49;
+    --line-soft: 29 33 38;
+
+    --text: 231 233 236;
+    --text-muted: 138 144 153;
+    --text-faint: 86 92 102;
+
+    --amber: 255 106 61;
+    --teal: 53 214 200;
+    --indigo: 110 123 255;
+
+    --wash-a: 110 123 255;
+    --wash-b: 53 214 200;
+    --wash-alpha: 0.05;
+  }
+
+  :root {
+    /* Motion --------------------------------------------------------- */
+    /* The built-in CSS easings are too weak to read as intentional at
+       UI durations. These are the three curves the whole app uses. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@layer base {
   * {
     @apply border-line;
-  }
-  html {
-    color-scheme: dark;
   }
   body {
     @apply bg-ink text-text font-body antialiased;
     background-image:
-      radial-gradient(circle at 15% 0%, #6e7bff0d 0%, transparent 40%),
-      radial-gradient(circle at 85% 100%, #35d6c80a 0%, transparent 40%);
+      radial-gradient(
+        circle at 15% 0%,
+        rgb(var(--wash-a) / var(--wash-alpha)) 0%,
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 85% 100%,
+        rgb(var(--wash-b) / var(--wash-alpha)) 0%,
+        transparent 40%
+      );
     background-attachment: fixed;
   }
   ::selection {
     @apply bg-indigo/30 text-text;
   }
   :focus-visible {
-    outline: 2px solid #6e7bff;
+    outline: 2px solid rgb(var(--indigo));
     outline-offset: 2px;
   }
   @media (prefers-reduced-motion: reduce) {
@@ -134,9 +209,9 @@ html {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #262b31;
+  background: rgb(var(--line));
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #34393f;
+  background: rgb(var(--text-faint) / 0.55);
 }

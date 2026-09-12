@@ -118,7 +118,7 @@ function ResetPasswordForm() {
 
       <p className="mt-6 text-center text-[13px] text-text-muted">
         <Link href="/forgot-password" className="text-indigo hover:underline">
-          Didn't get a code? Request a new one
+          Didn&rsquo;t get a code? Request a new one
         </Link>
       </p>
     </AuthShell>
