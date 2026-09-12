@@ -111,7 +111,8 @@ function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Link href="/forgot-password" className="text-[13px] text-indigo hover:underline">
               Forgot password?
-            </Link>          </div>
+            </Link>
+          </div>
           <Input
             id="password"
             type="password"
@@ -142,13 +143,6 @@ function LoginForm() {
           {isRequestingCode ? "Sending code…" : "Sign in with an email code instead"}
         </button>
       </form>
-
-      <div className="mt-6 text-center text-[13px] text-text-muted">
-        New here?{" "}
-        <Link href="/signup" className="text-indigo hover:underline">
-          Create an account
-        </Link>
-      </div>
     </AuthShell>
   );
 }

@@ -10,13 +10,9 @@ import {
 } from "react";
 import Cookies from "js-cookie";
 import { api, TOKEN_COOKIE, extractApiError } from "@/lib/api";
+import { auth as authApi } from "@/lib/endpoints";
 import type { User } from "@/lib/types";
 import type { LoginInput, SignupInput } from "@/lib/validation";
-
-interface AuthTokens {
-  access_token: string;
-  token_type: string;
-}
 
 interface AuthContextValue {
   user: User | null;
@@ -64,8 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const { data } = await api.get<User>("/auth/me");
-      setUser(data);
+      setUser(await authApi.me());
     } catch {
       Cookies.remove(TOKEN_COOKIE);
       setUser(null);
@@ -81,11 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (input: LoginInput) => {
       try {
-        const { data } = await api.post<AuthTokens>("/auth/login", {
-          username: input.email,
-          password: input.password,
-        });
-        persistToken(data.access_token);
+        const token = await authApi.login(input.email, input.password);
+        persistToken(token.access_token);
         await fetchCurrentUser();
       } catch (error) {
         throw new Error(extractApiError(error));
@@ -96,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const beginOtpLogin = useCallback(async (input: LoginInput) => {
     try {
-      await api.post("/auth/request-otp", { email: input.email });
+      await authApi.requestOtp(input.email);
       pendingLogin.current = { email: input.email, password: input.password };
       setPendingOtpEmail(input.email);
     } catch (error) {
@@ -113,12 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
       }
       try {
-        const { data } = await api.post<AuthTokens>("/auth/verify-otp", {
-          email: pending.email,
-          otp,
-          password: pending.password,
-        });
-        persistToken(data.access_token);
+        const token = await authApi.verifyOtp(pending.email, otp, pending.password);
+        persistToken(token.access_token);
         pendingLogin.current = null;
         setPendingOtpEmail(null);
         await fetchCurrentUser();
@@ -142,6 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const last_name =
         spaceIndex === -1 ? "" : input.full_name.slice(spaceIndex + 1).trim();
 
+      // NOTE: the backend exposes no public registration route -- accounts
+      // are created by an admin through POST /admin/users. This call has no
+      // endpoint behind it and the sign-in page no longer links here.
       await api.post("/auth/register", {
         username: input.username,
         email: input.email,
@@ -157,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const requestPasswordReset = useCallback(async (email: string) => {
     try {
-      await api.post("/auth/forgot-password", { email });
+      await authApi.forgotPassword(email);
     } catch (error) {
       throw new Error(extractApiError(error));
     }
@@ -169,11 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Returns a confirmation message, not a token: resetting a password
         // does not sign you in, so the caller sends the user to sign in with
         // the password they just chose.
-        await api.post("/auth/reset-password", {
-          email,
-          otp,
-          new_password: newPassword,
-        });
+        await authApi.resetPassword(email, otp, newPassword);
       } catch (error) {
         throw new Error(extractApiError(error));
       }

@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -37,14 +37,18 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed",
+          // Named properties rather than `all`, and a press scale so the
+          // button confirms it heard the click before the network does.
+          "inline-flex items-center justify-center gap-2 rounded font-medium",
+          "transition-[transform,background-color,border-color,color,opacity] duration-150 ease-out",
+          "active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100",
           variantClasses[variant],
           sizeClasses[size],
           className
         )}
         {...props}
       >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+        {isLoading && <Loader className="h-4 w-4 animate-spin" />}
         {children}
       </button>
     );

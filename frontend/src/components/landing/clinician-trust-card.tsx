@@ -41,7 +41,7 @@ export function ClinicianTrustCard() {
             )}
           >
             <XCircle className="h-3.5 w-3.5 text-amber" />
-            Opaque "Black-Box" AI
+            Opaque &ldquo;Black-Box&rdquo; AI
           </button>
         </div>
       </div>

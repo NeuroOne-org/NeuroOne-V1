@@ -25,7 +25,7 @@ export default function LandingPage() {
   });
 
   return (
-    <div className="relative min-h-[500vh] bg-ink text-text selection:bg-indigo/30 selection:text-text overflow-x-hidden">
+    <div className="dark relative min-h-[500vh] bg-ink text-text selection:bg-indigo/30 selection:text-text overflow-x-hidden">
       {/* Fixed 3D canvas — carries ALL the story copy as rotating/floating cards.
           Nothing else on this page duplicates that content. */}
       <R3fCanvasScene />
