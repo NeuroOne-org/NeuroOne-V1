@@ -87,16 +87,22 @@ F --> G[Healthcare Intelligence OS]
 
 <div align="center">
 
-| Module | Progress |
-|:--|:--:|
-| 🔐 Authentication | 🟢 Complete |
-| ⚙️ Backend APIs | 🟢 Complete |
-| 🧠 AI Pipeline | 🟡 In Progress |
-| 🖥️ Dashboard | 🟡 In Progress |
-| 📊 Explainable AI | 🔵 Planned |
-| ☁️ Deployment | ⚪ Planned |
+| Module | Progress | What that actually means |
+|:--|:--:|:--|
+| 🔐 Authentication | 🟢 Complete | Login, JWT, OTP sign-in, password reset. Accounts are admin-provisioned; there is no self-registration. |
+| ⚙️ Backend APIs | 🟢 Complete | 35 endpoints across patients, visits, symptoms, scans, analyses, reports and triage. 400 tests, run in CI. |
+| 🧠 AI Pipeline | 🟡 Contract complete, providers simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Literature retrieval and MRI staging are **mocked**; reasoning can run against a live model. Every analysis states which parts were simulated. |
+| 🖥️ Dashboard | 🔴 Not started against real data | The current screens render hardcoded arrays and call no clinical endpoint. Being replaced by a triage queue. |
+| 📊 Explainable AI | 🟡 In the API, not yet in the UI | Ranked differentials, supporting and contradicting findings, citations, and per-patient trend references are all returned today. Nothing renders them yet. |
+| ☁️ Deployment | 🟡 Partial | Compose runs the API and Postgres. Scan storage has no volume, so uploaded scans do not survive a container restart. |
 
 </div>
+
+> **Status, stated plainly.** The backend implements the full clinical journey and is
+> tested. The frontend is not connected to it. NeuroOne is not clinically validated, is
+> not a diagnostic device, and assists clinicians rather than diagnosing. Demo data is
+> synthetic. See [`reports/PROGRESS_REPORT.md`](reports/PROGRESS_REPORT.md) for the
+> detailed state and [`docs/decisions/`](docs/decisions/) for the decisions behind it.
 
 ---
 
@@ -107,38 +113,36 @@ NeuroOne/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── v1/
+│   │   │   ├── v1/          # auth, admin, patients, visits, analyses, reports, triage
 │   │   │   ├── dependencies.py
 │   │   │   └── router.py
-│   │   ├── core/
-│   │   ├── models/
-│   │   ├── schemas/
+│   │   ├── core/            # config, database, security
+│   │   ├── models/          # SQLAlchemy: user, patient, visit, symptom, scan, analysis, report
+│   │   ├── schemas/         # Pydantic wire contracts
 │   │   ├── services/
 │   │   ├── repositories/
-│   │   ├── ai/
-│   │   ├── rag/
-│   │   ├── reports/
+│   │   ├── ai/              # orchestrator, context, ranking, trends, providers/, corpus/
+│   │   ├── reports/         # PDF rendering
 │   │   ├── utils/
-│   │   └── tests/
-│   ├── main.py
-│   ├── migrations/
+│   │   └── main.py
+│   ├── alembic/versions/    # 13 migrations
+│   ├── tests/               # 400 tests
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
-│   ├── app/
-│   ├── components/
-│   ├── hooks/
-│   ├── lib/
-│   ├── services/
-│   ├── store/
-│   ├── types/
-│   ├── styles/
-│   └── public/
-├── vector_db/
-├── medical_corpus/
+│   ├── src/                 # the application
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── lib/
+│   └── web-page/            # parked design reference, not a build target
 ├── docs/
-├── scripts/
-├── .env.example
+│   ├── decisions/           # ADR-001 .. ADR-006
+│   ├── PRD.md, TRD.md, APP-FLOW.md, NEUROONE-MVP-SCOPE.md
+│   └── REPORT-01D-frontend-checklist.md
+├── reports/                 # PROGRESS_REPORT.md and generated documents
+├── scripts/                 # bootstrap_admin, seed_demo_case, dump_backend_routes
+├── backend-routes.json      # OpenAPI dump, regenerate with scripts/dump_backend_routes.py
 ├── docker-compose.yml
 ├── README.md
 └── LICENSE
