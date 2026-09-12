@@ -27,7 +27,8 @@ import {
   formatRelative,
   initials,
   triageName,
-  triageUrgency,
+  triageReasons,
+  type TriageReasonKey,
 } from "@/lib/utils";
 import type { TriageEntry } from "@/lib/types";
 
@@ -65,24 +66,13 @@ export default function DashboardPage() {
     [entries]
   );
 
-  // Worst first. The backend sends no score, so `triageUrgency` is the whole
-  // ordering rule; ties fall back to the most recently analysed.
-  const ranked = useMemo(
-    () =>
-      [...entries].sort((a, b) => {
-        const byUrgency = triageUrgency(b) - triageUrgency(a);
-        if (byUrgency !== 0) return byUrgency;
-        return (
-          new Date(b.latest_analysis_generated_at ?? 0).getTime() -
-          new Date(a.latest_analysis_generated_at ?? 0).getTime()
-        );
-      }),
-    [entries]
-  );
-
+  // Rendered in server order. The backend has already ranked the queue --
+  // early_watch, then worsening trend, then awaiting sign-off (ADR-006
+  // decision 7) -- and re-sorting here would substitute a second, different
+  // clinical judgment for the one the endpoint exists to express.
   const filtered = useMemo(
-    () => ranked.filter((entry) => matchesFilter(entry, filter)),
-    [ranked, filter]
+    () => entries.filter((entry) => matchesFilter(entry, filter)),
+    [entries, filter]
   );
 
   // Changing the filter while on page 3 of the old result set looks broken.
@@ -106,6 +96,16 @@ export default function DashboardPage() {
       description: "Everything in your queue",
       accentVar: "--indigo",
     },
+    // Same order as the queue's ranking, so the cards read left to right
+    // the way the rows read top to bottom.
+    {
+      key: "early_watch",
+      icon: Sparkles,
+      title: "Early watch",
+      count: isReady ? counts.early_watch : undefined,
+      description: "Worth keeping an eye on",
+      accentVar: "--teal",
+    },
     {
       key: "worsening",
       icon: TrendingDown,
@@ -122,14 +122,6 @@ export default function DashboardPage() {
       description: "Analysed, needs you",
       accentVar: "--indigo",
     },
-    {
-      key: "early_watch",
-      icon: Sparkles,
-      title: "Early watch",
-      count: isReady ? counts.early_watch : undefined,
-      description: "Worth keeping an eye on",
-      accentVar: "--teal",
-    },
   ];
 
   return (
@@ -145,7 +137,7 @@ export default function DashboardPage() {
               isLoading: queue.isLoading && queue.isInitialLoad,
               hasError: Boolean(queue.error),
               counts,
-              topName: ranked[0] ? triageName(ranked[0]) : null,
+              topName: entries[0] ? triageName(entries[0]) : null,
             })}
           </p>
         </div>
@@ -279,10 +271,17 @@ function summarise({
 
   const cases = `${counts.all} ${counts.all === 1 ? "case" : "cases"}`;
 
+  // `topName` is the server's first row, so each branch only names it when
+  // the reason given is the one that put it there.
+  if (counts.early_watch > 0) {
+    return topName
+      ? `${cases} waiting, and ${topName} has an early-watch signal — that's why they're at the top.`
+      : `${cases} waiting. Early-watch signals are at the top.`;
+  }
   if (counts.worsening > 0) {
     return topName
-      ? `${cases} waiting, and ${topName}'s is trending the wrong way — I've moved it to the top.`
-      : `${cases} waiting. I've put the worsening ones at the top.`;
+      ? `${cases} waiting, and ${topName}'s is trending the wrong way — it's at the top.`
+      : `${cases} waiting. The worsening ones are at the top.`;
   }
   if (counts.sign_off > 0) {
     const n = counts.sign_off;
@@ -327,9 +326,35 @@ function TodayLine() {
 
 /* -- pieces ----------------------------------------------------------- */
 
+const REASON_STYLE: Record<
+  TriageReasonKey,
+  {
+    tone: "amber" | "indigo" | "teal";
+    icon: React.ComponentType<{ className?: string }>;
+    avatar: string;
+  }
+> = {
+  early_watch: {
+    tone: "teal",
+    icon: Sparkles,
+    avatar: "border-teal/40 bg-teal-soft text-teal",
+  },
+  worsening: {
+    tone: "amber",
+    icon: TrendingDown,
+    avatar: "border-amber/40 bg-amber-soft text-amber",
+  },
+  sign_off: {
+    tone: "indigo",
+    icon: Clock,
+    avatar: "border-indigo/40 bg-indigo-soft text-indigo",
+  },
+};
+
 function QueueRow({ entry, index }: { entry: TriageEntry; index: number }) {
   const name = triageName(entry) || "Unnamed patient";
-  const urgency = triageUrgency(entry);
+  const reasons = triageReasons(entry);
+  const topReason = reasons[0];
 
   return (
     <tr
@@ -343,8 +368,8 @@ function QueueRow({ entry, index }: { entry: TriageEntry; index: number }) {
           <span
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-[11px]",
-              urgency === 2
-                ? "border-amber/40 bg-amber-soft text-amber"
+              topReason
+                ? REASON_STYLE[topReason.key].avatar
                 : "border-line bg-raised text-text-muted"
             )}
           >
@@ -361,16 +386,15 @@ function QueueRow({ entry, index }: { entry: TriageEntry; index: number }) {
 
       <td className="px-5 py-3.5">
         <div className="flex flex-wrap gap-1.5">
-          {entry.has_worsening_trend && (
-            <Signal tone="amber" icon={TrendingDown} label="Worsening" />
-          )}
-          {entry.awaiting_sign_off && (
-            <Signal tone="indigo" icon={Clock} label="Awaiting sign-off" />
-          )}
-          {entry.has_open_early_watch && (
-            <Signal tone="teal" icon={Sparkles} label="Early watch" />
-          )}
-          {urgency === 0 && (
+          {reasons.map((reason) => (
+            <Signal
+              key={reason.key}
+              tone={REASON_STYLE[reason.key].tone}
+              icon={REASON_STYLE[reason.key].icon}
+              label={reason.label}
+            />
+          ))}
+          {reasons.length === 0 && (
             <span className="text-[12px] text-text-faint">No open signals</span>
           )}
         </div>

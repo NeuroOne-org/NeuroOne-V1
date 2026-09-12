@@ -6,8 +6,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * No displayed confidence may exceed this (ADR-006 constraints). It mirrors
+ * the backend's `MAX_CONFIDENCE`, which already enforces it -- holding the
+ * display to it too means a contract regression can never render as
+ * certainty on a clinician's screen.
+ */
+export const MAX_CONFIDENCE = 0.92;
+
+/** A confidence as a whole percentage, held inside [0, MAX_CONFIDENCE]. */
+export function confidencePercent(value: number): number {
+  const bounded = Math.min(Math.max(value, 0), MAX_CONFIDENCE);
+  return Math.round(bounded * 100);
+}
+
 export function formatConfidence(value: number): string {
-  return `${Math.round(value * 100)}%`;
+  return `${confidencePercent(value)}%`;
 }
 
 export function formatDate(iso: string): string {
@@ -104,13 +118,31 @@ export function visitStatusLabel(status: string): string {
   return map[status] ?? status;
 }
 
+export type TriageReasonKey = "early_watch" | "worsening" | "sign_off";
+
+export interface TriageReason {
+  key: TriageReasonKey;
+  label: string;
+}
+
 /**
- * Urgency of a queue row, derived from the three flags the backend sends.
- * There is no server-side score, so this is the frontend's only ranking
- * signal — and it stays in one place so the table and the tiles agree.
+ * Why a queue row is where it is, most urgent first.
+ *
+ * The backend sends three flags and no score, and has already ranked the
+ * queue on them in exactly this order (ADR-006 decision 7). This only names
+ * the reasons; it never orders rows, because a client-side sort would be a
+ * second, different opinion on the server's clinical ranking.
  */
-export function triageUrgency(entry: TriageEntry): 0 | 1 | 2 {
-  if (entry.has_worsening_trend) return 2;
-  if (entry.awaiting_sign_off || entry.has_open_early_watch) return 1;
-  return 0;
+export function triageReasons(entry: TriageEntry): TriageReason[] {
+  const reasons: TriageReason[] = [];
+  if (entry.has_open_early_watch) {
+    reasons.push({ key: "early_watch", label: "Early watch" });
+  }
+  if (entry.has_worsening_trend) {
+    reasons.push({ key: "worsening", label: "Worsening" });
+  }
+  if (entry.awaiting_sign_off) {
+    reasons.push({ key: "sign_off", label: "Awaiting sign-off" });
+  }
+  return reasons;
 }
