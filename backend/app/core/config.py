@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +12,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "NeuroONE"
     APP_VERSION: str = "1.0.0"
 
+    # Gates the production safety check below -- "production" is the only
+    # value that forces AUTH_REQUIRE_OTP=true.
+    APP_ENV: Literal["development", "production"] = "development"
+
     DATABASE_URL: str
 
     JWT_SECRET_KEY: str
@@ -18,14 +23,24 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     SQL_ECHO: bool = False
 
+    # False lets /auth/login issue a token from the password alone -- no
+    # second factor. Convenient for local development (see also OTP_DELIVERY
+    # and ACCESS_TOKEN_EXPIRE_MINUTES below), but refused at startup once
+    # APP_ENV=production so the bypass can't reach a real deployment by
+    # accident (see _validate_auth_safety).
+    AUTH_REQUIRE_OTP: bool = True
+
+    # "console" logs the OTP instead of emailing it, for local 2FA testing
+    # without waiting on Gmail or hitting its sending limits.
+    OTP_DELIVERY: Literal["email", "console"] = "email"
+
     # Explicit allow-list, not a wildcard: the frontend sends the JWT via
     # Authorization header with credentialed requests, and CORS forbids
     # combining allow_origins=["*"] with allow_credentials=True anyway.
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
-    # Gmail SMTP sender for password-reset OTP emails (app/services/otp_service.py).
-    # Optional so the API boots without them (e.g. under docker-compose);
-    # sending an OTP is what fails when they are unset.
+    # Gmail SMTP sender for OTP emails (app/services/otp_service.py). Only
+    # required when OTP_DELIVERY=email.
     GMAIL_ADDRESS: str | None = None
     GMAIL_APP_PASSWORD: str | None = None
 
@@ -68,6 +83,23 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def _validate_auth_safety(self) -> "Settings":
+        if self.APP_ENV == "production" and not self.AUTH_REQUIRE_OTP:
+            raise ValueError(
+                "AUTH_REQUIRE_OTP must be true when APP_ENV=production -- "
+                "password-only login cannot reach a real deployment."
+            )
+        if self.OTP_DELIVERY == "email" and not (
+            self.GMAIL_ADDRESS and self.GMAIL_APP_PASSWORD
+        ):
+            raise ValueError(
+                "GMAIL_ADDRESS and GMAIL_APP_PASSWORD are required when "
+                "OTP_DELIVERY=email. Set OTP_DELIVERY=console for local "
+                "development instead."
+            )
+        return self
 
 
 settings = Settings()

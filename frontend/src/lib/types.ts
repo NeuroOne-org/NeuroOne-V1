@@ -50,6 +50,15 @@ export interface Token {
   token_type: string;
 }
 
+/** /auth/login's response: either a token, or otp_required with no token
+ * when AUTH_REQUIRE_OTP is on -- a code has already been sent and the
+ * caller must continue at /auth/verify-otp. */
+export interface LoginResult {
+  access_token: string | null;
+  token_type: string;
+  otp_required: boolean;
+}
+
 /* -- patients --------------------------------------------------------- */
 
 export interface Patient {

@@ -47,6 +47,20 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class LoginResponse(BaseModel):
+    """/auth/login's response.
+
+    Either a token (AUTH_REQUIRE_OTP=false, or OTP already satisfied), or
+    otp_required=true with no token -- meaning the password was correct, a
+    code has been sent to the account's email, and the client must continue
+    at /auth/verify-otp with that code and the same password.
+    """
+
+    access_token: str | None = None
+    token_type: str = "bearer"
+    otp_required: bool = False
+
+
 class TokenPayload(BaseModel):
     sub: UUID
     username: str
@@ -64,5 +78,6 @@ __all__ = [
     "RequestOtpResponse",
     "VerifyOtpRequest",
     "Token",
+    "LoginResponse",
     "TokenPayload",
 ]

@@ -1,11 +1,13 @@
+from fastapi import BackgroundTasks
 from jose import JWTError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core import security
+from app.core.config import settings
 from app.models import User
 from app.models.user import UserRole
-from app.schemas.auth import Token, TokenPayload
+from app.schemas.auth import LoginResponse, Token, TokenPayload
 from app.schemas.user import UserCreate, UserResponse
 from app.services import otp_service
 from app.services.user_service import UserService
@@ -112,11 +114,27 @@ class AuthService:
         db: Session,
         username_or_email: str,
         password: str,
-    ) -> Token:
-        """Authenticate a user and issue an access token directly (no OTP step)."""
+    ) -> LoginResponse:
+        """Authenticate a user and, per AUTH_REQUIRE_OTP, either issue a
+        token directly or send a login OTP and report that one is required.
+
+        The OTP send happens synchronously and lets delivery failures raise:
+        unlike forgot-password/request-otp, the caller has already proven
+        they know the password, so there is no account-existence to protect
+        by hiding the failure.
+        """
 
         user = self.verify_credentials(db, username_or_email, password)
-        return Token(access_token=self.create_access_token(user))
+
+        if not settings.AUTH_REQUIRE_OTP:
+            return LoginResponse(access_token=self.create_access_token(user))
+
+        otp_service.generate_and_send_otp(
+            identity=user.email,
+            to_email=user.email,
+            purpose="login",
+        )
+        return LoginResponse(otp_required=True)
 
     def verify_password(
         self,
@@ -152,31 +170,53 @@ class AuthService:
         except (JWTError, ValidationError, ValueError, TypeError) as exc:
             raise AuthenticationError("Invalid or expired access token.") from exc
 
-    def request_password_reset(self, db: Session, email: str) -> None:
+    def request_password_reset(
+        self,
+        db: Session,
+        email: str,
+        background_tasks: BackgroundTasks,
+    ) -> None:
         """
-        Email a reset code if the address belongs to an active account.
-        Always returns normally either way — never reveals whether the
-        address is registered.
-        """
-
-        user = self.user_service.get_user_by_email(db, email)
-        if user is None or not user.is_active:
-            return
-
-        otp_service.generate_and_send_otp(identity=email, to_email=email)
-
-    def request_otp_login(self, db: Session, email: str) -> None:
-        """
-        Email an OTP if the address belongs to an active account.
-        Always returns normally either way — never reveals whether the
-        address is registered.
+        Schedule a reset-code email if the address belongs to an active
+        account. Always returns immediately either way — the lookup is the
+        only work done inline, and delivery (including any SMTP failure)
+        happens after the response is sent, so neither response latency nor
+        a delivery error can reveal whether the address is registered.
         """
 
         user = self.user_service.get_user_by_email(db, email)
         if user is None or not user.is_active:
             return
 
-        otp_service.generate_and_send_otp(identity=email, to_email=email)
+        background_tasks.add_task(
+            otp_service.send_otp_background,
+            identity=email,
+            to_email=email,
+            purpose="password_reset",
+        )
+
+    def request_otp_login(
+        self,
+        db: Session,
+        email: str,
+        background_tasks: BackgroundTasks,
+    ) -> None:
+        """
+        Schedule a login-code email if the address belongs to an active
+        account. Always returns immediately either way, for the same
+        reason as request_password_reset.
+        """
+
+        user = self.user_service.get_user_by_email(db, email)
+        if user is None or not user.is_active:
+            return
+
+        background_tasks.add_task(
+            otp_service.send_otp_background,
+            identity=email,
+            to_email=email,
+            purpose="login",
+        )
 
     def verify_otp_login(
         self,
@@ -187,11 +227,11 @@ class AuthService:
     ) -> Token:
         """
         Verify credentials and OTP together, then issue an access token.
-        This flow allows users to log in with email+password+OTP as an
-        additional security layer.
+        Accepts only a code issued for purpose="login" -- a password-reset
+        code cannot be replayed here.
         """
 
-        if not otp_service.verify_otp(identity=email, submitted_code=otp):
+        if not otp_service.verify_otp(identity=email, submitted_code=otp, purpose="login"):
             raise InvalidOtpError("Invalid or expired verification code.")
 
         user = self.verify_credentials(db, email, password)
@@ -204,9 +244,15 @@ class AuthService:
         otp: str,
         new_password: str,
     ) -> None:
-        """Validate the reset code and set a new password."""
+        """Validate the reset code and set a new password.
 
-        if not otp_service.verify_otp(identity=email, submitted_code=otp):
+        Accepts only a code issued for purpose="password_reset" -- a login
+        code cannot be replayed here.
+        """
+
+        if not otp_service.verify_otp(
+            identity=email, submitted_code=otp, purpose="password_reset"
+        ):
             raise InvalidOtpError("Invalid or expired verification code.")
 
         user = self.user_service.get_user_by_email(db, email)
