@@ -1,208 +1,216 @@
 # NeuroONE Progress Report
 
-**Report date:** July 23, 2026  
-**Current phase:** Foundation  
-**Overall status:** In progress, with foundational gaps  
-**Assessment basis:** Repository contents and the standards in
-[`CONTRIBUTING.md`](CONTRIBUTING.md)
+**Report date:** September 12, 2026
+**Supersedes:** the July 23, 2026 edition of this report, which described a
+repository with no endpoints, no models and no tests. That description is now
+badly out of date and was actively misleading anyone — or any agent — reading
+it as current state.
+**Current phase:** Backend complete for the MVP journey; frontend not connected
+**Overall status:** In progress, with the gap concentrated in one place
+**Assessment basis:** Repository contents at `89b4a8d`, a full test run, and the
+standards in [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 
 ## Executive Summary
 
-NeuroONE has a documented product vision, a defined contribution workflow, a
-FastAPI application shell, database configuration, Alembic scaffolding, domain
-module placeholders, and an organized frontend directory structure.
+The backend implements the full PRD §8 acceptance journey. Every layer the
+architecture calls for exists and is exercised: 8 SQLAlchemy models, 8
+repositories, 10 services, 8 API modules, 13 Alembic migrations, and 400 tests
+across 32 files that pass in under ten seconds. CI runs them on every push.
 
-The project is not yet feature-complete. The six versioned API modules register
-routers but contain no business endpoints. Domain models are placeholders,
-service and repository layers have not been implemented, there are no
-migrations or tests, and the frontend contains directory placeholders only.
-No feature currently meets the project's definition of done.
+[ADR-006](../docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md)
+landed in full: MRI scans attach to visits, a staging provider seam sits
+alongside the retriever and reasoning seams, trend detection consumes
+scan-derived metrics, clinician sign-off gates report generation, and a ranked
+triage queue replaces the dashboard's stat tiles.
 
-The highest-priority issue is that `backend/.env` is tracked in Git and appears
-in repository history. Any real credentials stored in that file must be
-rotated, and the file must be removed from version control.
+**The frontend consumes none of it.** A grep of every API call in
+`frontend/src` returns four, all authentication, and one of those posts to an
+endpoint that AUTH-01 deliberately removed. All twenty-nine clinical endpoints
+have no caller. The dashboard renders a hardcoded patient array and still
+displays the framing ADR-006 requires be deleted.
+
+This is the single highest-value gap in the repository. The previous report's
+risk — "documentation overstates progress" — has inverted: the documents
+understated it, and the interface is where the work now is.
 
 ## Progress at a Glance
 
 | Workstream | Status | Current evidence |
 | --- | --- | --- |
-| Project governance | In progress | README and contributing guide exist; active work is occurring directly on `main` |
-| Backend foundation | In progress | FastAPI app, configuration, database session, router registration, and health route exist |
-| Authentication | Not started | Router exists with no endpoints or implementation |
-| Patient management | Not started | Router and placeholder model exist |
-| Visits | Not started | Router and placeholder model exist |
-| AI diagnosis | Not started | Router and placeholder model exist |
-| RAG and reports | Not started | Routers and placeholder report model exist |
-| Database models | Not started | Current domain classes are empty Pydantic models, not persisted SQLAlchemy models |
-| Database migrations | Not started | Alembic is configured, but no migration revisions exist |
-| Service layer | Not started | Directory contains only a placeholder |
-| Repository layer | Not started | Directory is empty |
-| Pydantic schemas | Not started | Directory is empty |
-| Automated testing | Not started | No unit or API test files exist |
-| Frontend | Structure only | Feature and component directories contain `.gitkeep` files only |
-| Documentation | In progress | README and contributing guide exist; topic-specific docs are placeholders |
-| Containerization | Not operational | `docker-compose.yml` is empty and the Dockerfile runs `top` instead of the application |
-| Data/AI scripts | Structure only | Scripts contain module descriptions but no executable workflows |
-
-## Completed Foundations
-
-- FastAPI application initialization with project name and version settings.
-- API prefix established at `/api/v1`.
-- Routers created for authentication, patients, visits, diagnosis, RAG, and
-  reports.
-- Root and database health routes created.
-- SQLAlchemy engine, session factory, and dependency generator created.
-- Alembic configuration and environment scaffolding added.
-- Environment variable example documented.
-- Backend dependency versions pinned.
-- Frontend, documentation, service, and utility directory structures created.
-- Contribution standards documented.
-- All 23 Python source files pass static syntax parsing.
-- The FastAPI application imports successfully.
+| Backend foundation | Complete | FastAPI app, config, database session, exception handlers, CORS, health route |
+| Authentication | Complete | login, me, forgot-password, reset-password, request-otp, verify-otp; self-registration deliberately removed and guarded by a regression test |
+| Patient management | Complete | CRUD, search, soft delete, ownership enforcement per ADR-001/ADR-002 |
+| Visits and symptoms | Complete | Visit CRUD, symptom CRUD, cross-visit history endpoint |
+| Scan intake | Complete | `POST/GET /visits/{id}/scan`, checksum and dimensions in the database, bytes in file storage per ADR-006 decision 5 |
+| AI diagnosis | Contract complete, providers mocked | Orchestrator, context building, ranking, trend detection; retrieval and staging simulated, reasoning live-capable per ADR-005 |
+| Clinician sign-off | Complete | `POST /analyses/{id}/review`; report generation is gated until an analysis is signed |
+| Reports | Complete | Snapshot persistence and PDF rendering per ADR-004 |
+| Triage queue | Complete | `GET /triage`, ranked by early-watch flags, trend and review state |
+| Database migrations | Complete | 13 revisions, single head verified in CI |
+| Automated testing | Complete for backend | 400 tests, 32 files; no frontend tests exist |
+| Frontend | Mockup, unconnected | Calls four auth endpoints and no clinical endpoint; dashboard data is a hardcoded array |
+| Containerization | Partial | Compose runs Postgres and the API; no volume for scan storage |
+| Documentation | Reconciled by this cycle | ADRs are current; this report, `backend-routes.json` and the frontend checklists were stale until now |
 
 ## Current Verification Results
 
 | Check | Result |
 | --- | --- |
-| Python syntax parsing | Pass: 23 files |
-| FastAPI application import | Pass |
-| Application routes | `/`, `/health`, and framework documentation routes |
-| Implemented `/api/v1` business endpoints | 0 |
-| Automated tests found | 0 |
-| Alembic migration revisions found | 0 |
-| Frontend implementation files found | 0 |
-| Clean feature-branch workflow | Fail: current branch is `main` with uncommitted changes |
+| Backend test suite | Pass: 400 tests, 32 files |
+| Alembic heads | Single head |
+| Migration revisions | 13 |
+| Implemented `/api/v1` business endpoints | 35 |
+| Frontend calls to clinical endpoints | 0 |
+| Frontend tests | 0 |
+| CI coverage | Backend only |
 
-Database connectivity, endpoint behavior, migrations, and application startup
-were not considered verified because the required database and deployment
-configuration are not operational in the repository.
+## Implemented API Surface
+
+```text
+auth      POST /auth/login, /auth/forgot-password, /auth/reset-password,
+          /auth/request-otp, /auth/verify-otp        GET /auth/me
+admin     POST|GET /admin/users
+patients  POST|GET /patients   GET /patients/search
+          GET|PATCH|DELETE /patients/{id}
+          POST|GET /patients/{id}/visits   GET /patients/{id}/visits/history
+visits    GET|PATCH|DELETE /visits/{id}
+          GET|POST|PATCH|DELETE /visits/{id}/symptoms[/{symptom_id}]
+          POST|GET /visits/{id}/scan
+          POST|GET /visits/{id}/analyses   GET /visits/{id}/analyses/latest
+analyses  GET /analyses/{id}   POST /analyses/{id}/review
+          POST|GET /analyses/{id}/reports
+reports   GET /reports/{id}   GET /reports/{id}/pdf
+triage    GET /triage
+```
 
 ## Conformance With the Contributing Guide
 
 ### Architecture
 
-The required flow is:
-
-```text
-Feature -> API -> Service -> Repository -> Model -> Schema
-```
-
-The directory structure supports this architecture, but the service,
-repository, and schema layers are not implemented. The current models are
-Pydantic placeholders and do not define database tables.
-
-### API Standards
-
-API versioning is configured through `/api/v1`, but no versioned feature
-endpoints exist yet. The current root and health responses do not use the
-standard `success`, `data`, `message`, and `details` response envelopes.
+The required `Feature -> API -> Service -> Repository -> Model -> Schema` flow
+is implemented and exercised by tests at every layer, not merely present as
+directories. The previous report's finding that "architecture exists only as
+folders" is resolved.
 
 ### Branch and Pull Request Workflow
 
-The current branch is `main`, and the working tree contains uncommitted
-changes. This does not follow the documented requirement to develop in feature
-branches and merge through pull requests.
+Feature branches and pull requests are in use; ADR-006 merged as PR #32. Two
+residual issues: 14 branches remain outstanding, several apparently merged or
+abandoned, and `docs/mri-primary-scope-revision` carried five backend
+implementation commits under a documentation branch name.
 
 ### Testing and Definition of Done
 
-No automated tests exist. Because feature APIs, tests, verified migrations,
-documentation, and pull-request approval are all required, none of the planned
-features currently meets the definition of done.
+Backend features meet the definition of done. Frontend work does not: there are
+no frontend tests and no CI job that would run them.
 
 ## Risks and Blockers
 
-### Critical
-
-1. **Tracked environment file:** `backend/.env` is committed and appears in Git
-   history. Rotate any real database or JWT credentials, remove the file from
-   tracking, and retain only safe placeholders in `.env.example`.
-
 ### High
 
-1. **No persistent domain models:** Alembic cannot generate useful application
-   migrations until SQLAlchemy models are defined and registered in metadata.
-2. **No automated tests:** Regressions cannot be detected and pull requests
-   cannot satisfy the testing checklist.
-3. **Container setup is unusable:** The empty Compose file and placeholder
-   Dockerfile do not start the API or database.
-4. **Architecture exists only as folders:** API, service, repository, model,
-   and schema boundaries are not yet exercised by a working feature.
+1. **The frontend is not connected to the backend.** Twenty-nine clinical
+   endpoints have no caller. Until this closes there is no demoable product
+   regardless of backend completeness, and the acceptance journey cannot be
+   walked through the UI as `NEUROONE-MVP-SCOPE.md` requires.
+2. **The dashboard still carries framing ADR-006 requires removed.** A "Model
+   certainty" stat tile, `Critical`/`Stable` severity vocabulary with no
+   backing in the model, confidence figures above the 0.92 ceiling, and
+   `stageLabel` as a headline badge. These are FR-04 violations that are
+   currently rendering, not theoretical.
+3. **Scan storage is not durable in the container.** `SCAN_STORAGE_DIR`
+   defaults to a local filesystem path and the `api` service in
+   `docker-compose.yml` mounts no volume for it, so uploaded scans are lost
+   when the container restarts. ADR-006 predicted this dependency; it is
+   unaddressed.
 
 ### Medium
 
-1. **Documentation overstates progress:** The README currently marks backend
-   APIs and authentication as complete, while their routers contain no
-   endpoints.
-2. **Health route behavior:** Database failures are returned as a normal
-   response instead of an appropriate error status and standard error envelope.
-3. **Version mismatch:** The default application version and `.env.example`
-   version are inconsistent.
-4. **Placeholder operational scripts:** Backup, seed, ingestion, and embedding
-   scripts do not perform their stated tasks.
+1. **Seed data predates ADR-006.** `scripts/seed_demo_case.py` creates the
+   multi-visit symptom trend that an `early_watch` flag needs, which is real
+   coverage. It seeds no `Scan`, so scan-derived trends are unexercised, and it
+   seeds one patient, so a ranked triage *queue* has a single row to rank.
+2. **The synthetic-data assumption is still unconfirmed.**
+   `NEUROONE-MVP-SCOPE.md` flags it and ADR-006 raises its cost, because scans
+   are imaging PHI retained as source data rather than discarded after
+   analysis. It should be confirmed explicitly before any non-synthetic scan is
+   loaded.
+3. **A mocked staging model is more convincing than mocked text.** A brain
+   region with a percentage reads as measurement. The per-analysis provenance
+   line (ADR-006 decision 9) is the mitigation and must reach the UI, not just
+   the API response.
+4. **Version mismatch persists.** `APP_VERSION` is `1.0.0` in
+   `backend/app/core/config.py` and `0.1.0` in `backend/.env.example`. This was
+   flagged in the July report and is still open.
+5. **No frontend CI.** `.github/workflows/backend-tests.yml` is the only
+   workflow.
+
+### Resolved Since the Previous Report
+
+- `backend/.env` is no longer tracked.
+- Compose starts a real API and Postgres with health checks.
+- Domain models, migrations, services, repositories and tests all exist.
+- The health route returns 503 with a body rather than a normal response.
 
 ## Recommended Next Milestones
 
-### Milestone 1: Secure and Stabilize the Foundation
+### Milestone 1: Document reconciliation (this cycle)
 
-- Rotate any credentials that were committed.
-- Remove `backend/.env` from Git tracking and history as appropriate.
-- Move current work to a feature branch and restore a clean `main` branch.
-- Replace the placeholder Dockerfile and Compose configuration with a runnable
-  API and PostgreSQL setup.
-- Align application version settings.
+Bring the written record in line with the code: this report,
+`backend-routes.json`, the two frontend checklists, the root README module
+table, and the parked status of `frontend/web-page`. Refresh the graphify graph
+afterwards so the god nodes reflect the corrections.
 
-### Milestone 2: Deliver One Vertical Feature
+### Milestone 2: Connect the frontend, in vertical slices
 
-Use patient management as the first end-to-end implementation:
+Each slice demoable end-to-end against real endpoints, in demo-narration order:
 
-1. Define the SQLAlchemy patient model.
-2. Define request and response schemas.
-3. Implement the patient repository.
-4. Implement the patient service.
-5. Add CRUD API endpoints under `/api/v1/patients`.
-6. Generate and review one Alembic migration.
-7. Add service unit tests and API endpoint tests.
-8. Verify behavior through Swagger UI.
-9. Update API documentation and open a pull request.
+1. **FE-00 foundations** — typed API client generated from the live
+   `openapi.json`, real 401/session handling, design tokens, and removal of the
+   signup page that posts to a deliberately dead endpoint.
+2. **FE-01 triage queue** replacing the dashboard, against `GET /triage`.
+3. **FE-02 patients** — list, search, detail, create (demographics only, per
+   ADR-006 decision 8).
+4. **FE-03 visit** — new visit, scan upload, symptoms. The current upload page
+   posts a contract that never existed and is rebuilt, not adapted.
+5. **FE-04 analysis** — ranked differential, evidence and citations,
+   `early_watch` with `trend_basis` held visually distinct from external
+   evidence, provenance line, no lone stage badge, no confidence above 92%.
+6. **FE-05 sign-off to PDF** — `POST /analyses/{id}/review`, then download.
 
-Completing one vertical feature will validate the architecture before it is
-repeated for visits, diagnosis, RAG, and reports.
+Extend the seed script to cover scans and several patients before FE-01, or the
+queue has nothing to rank.
 
-### Milestone 3: Authentication and Authorization
+### Milestone 3: Deployment readiness
 
-- Implement user persistence and authentication schemas.
-- Add password hashing and JWT creation/validation.
-- Add login, registration, and current-user endpoints.
-- Protect clinical endpoints with dependencies and role checks.
-- Add authentication tests, including token expiration and invalid-token cases.
+Mount scan storage, align the version settings, add a frontend CI job, confirm
+the synthetic-data decision in writing, and prune the outstanding branches.
 
-### Milestone 4: Clinical and AI Workflows
+### Milestone 4: AI-02b, deferred
 
-- Implement visits and diagnosis after patient management is stable.
-- Define the ingestion and embedding pipeline before exposing RAG endpoints.
-- Implement report generation after diagnosis and RAG contracts are agreed.
-- Begin frontend integration only against documented, tested API contracts.
+The real retrieval corpus behind the AI-01 interface. Deliberately deferred in
+`NEUROONE-MVP-SCOPE.md` until a trusted-literature corpus, an index and a
+source-tier policy are decided — and it is where prompt-injection exposure
+actually lands, because a retrieved passage is untrusted text in a way a
+symptom field is not.
 
 ## Definition-of-Done Dashboard
 
-| Requirement | Repository-wide status |
-| --- | --- |
-| Code implemented | Partial foundation only |
-| API works | Root application loads; feature APIs not implemented |
-| Tests pass | Not assessable; no tests exist |
-| Documentation updated | Partial |
-| Migration verified | No migration exists |
-| Pull request approved | Not evidenced in the local repository |
+| Requirement | Backend | Frontend |
+| --- | --- | --- |
+| Code implemented | Yes | Mockup only |
+| API works | Yes, 35 endpoints | Not applicable |
+| Tests pass | Yes, 400 | None exist |
+| Documentation updated | Yes, as of this cycle | Checklists reconciled this cycle |
+| Migration verified | Yes, single head in CI | Not applicable |
+| Pull request approved | Yes | Not applicable |
 
 ## Next Review Exit Criteria
 
-The next progress review should occur after the first vertical feature is
-merged. At minimum, it should demonstrate:
+The next review should occur after FE-01 and FE-02 merge. At minimum it should
+demonstrate:
 
-- One working `/api/v1` feature API.
-- A complete service-repository-model-schema flow.
-- A reviewed and applied Alembic migration.
-- Passing unit and API tests.
-- Standard response envelopes and HTTP status codes.
-- Updated documentation.
-- A feature branch merged through an approved pull request.
+- A clinician logging in and seeing a triage queue populated from `GET /triage`.
+- A patient list and detail view reading real records.
+- No hardcoded clinical data remaining in the frontend.
+- None of the FR-04 framing violations listed above still rendering.
+- A frontend CI job that runs on pull requests.

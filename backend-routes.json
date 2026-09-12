@@ -78,6 +78,30 @@
             "title": "Provider Mode",
             "type": "string"
           },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -101,6 +125,20 @@
           "updated_at"
         ],
         "title": "AnalysisResponse",
+        "type": "object"
+      },
+      "Body_upload_scan_api_v1_visits__visit_id__scan_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_scan_api_v1_visits__visit_id__scan_post",
         "type": "object"
       },
       "EvidenceResponse": {
@@ -283,6 +321,31 @@
           "likelihood_band"
         ],
         "title": "FindingResponse",
+        "type": "object"
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "type": "object"
+      },
+      "ForgotPasswordResponse": {
+        "properties": {
+          "message": {
+            "default": "If an account exists for that email, a reset code has been sent.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "ForgotPasswordResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -826,6 +889,140 @@
         "title": "ReportResponse",
         "type": "object"
       },
+      "RequestOtpRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "RequestOtpRequest",
+        "type": "object"
+      },
+      "RequestOtpResponse": {
+        "properties": {
+          "message": {
+            "default": "If an account exists for that email, a verification code has been sent.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "RequestOtpResponse",
+        "type": "object"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password",
+            "type": "string"
+          },
+          "otp": {
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Otp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "otp",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest",
+        "type": "object"
+      },
+      "ResetPasswordResponse": {
+        "properties": {
+          "message": {
+            "default": "Password has been reset. You can log in with your new password.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "ResetPasswordResponse",
+        "type": "object"
+      },
+      "ScanResponse": {
+        "description": "A persisted scan's metadata, as returned by the API.",
+        "properties": {
+          "checksum": {
+            "title": "Checksum",
+            "type": "string"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dimensions": {
+            "additionalProperties": true,
+            "title": "Dimensions",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "original_filename": {
+            "title": "Original Filename",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          },
+          "uploaded_by_id": {
+            "format": "uuid",
+            "title": "Uploaded By Id",
+            "type": "string"
+          },
+          "visit_id": {
+            "format": "uuid",
+            "title": "Visit Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "visit_id",
+          "uploaded_by_id",
+          "original_filename",
+          "content_type",
+          "size_bytes",
+          "checksum",
+          "uploaded_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScanResponse",
+        "type": "object"
+      },
       "SymptomCreate": {
         "description": "Payload used to record a symptom against a visit.",
         "properties": {
@@ -1094,6 +1291,110 @@
         "title": "Token",
         "type": "object"
       },
+      "TriageEntry": {
+        "additionalProperties": false,
+        "description": "One patient's position in the triage queue.\n\nNot an ORM-backed response: there is no single row this comes from, so\nthe service builds this directly rather than a repository returning it\nfor ``.model_validate()`` to narrow (the same reason ``ClinicalContext``\nand ``AnalysisResult`` are constructed rather than validated from a row).",
+        "properties": {
+          "awaiting_sign_off": {
+            "title": "Awaiting Sign Off",
+            "type": "boolean"
+          },
+          "has_open_early_watch": {
+            "title": "Has Open Early Watch",
+            "type": "boolean"
+          },
+          "has_worsening_trend": {
+            "title": "Has Worsening Trend",
+            "type": "boolean"
+          },
+          "latest_analysis_generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Analysis Generated At"
+          },
+          "latest_analysis_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Analysis Id"
+          },
+          "latest_visit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Visit Id"
+          },
+          "patient_first_name": {
+            "title": "Patient First Name",
+            "type": "string"
+          },
+          "patient_id": {
+            "format": "uuid",
+            "title": "Patient Id",
+            "type": "string"
+          },
+          "patient_last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Last Name"
+          }
+        },
+        "required": [
+          "patient_id",
+          "patient_first_name",
+          "has_open_early_watch",
+          "has_worsening_trend",
+          "awaiting_sign_off"
+        ],
+        "title": "TriageEntry",
+        "type": "object"
+      },
+      "TriageListResponse": {
+        "description": "Paginated, ranked triage queue returned by the triage endpoint.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TriageEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ],
+        "title": "TriageListResponse",
+        "type": "object"
+      },
       "UserCreate": {
         "properties": {
           "email": {
@@ -1255,6 +1556,34 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VerifyOtpRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "otp": {
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Otp",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "otp",
+          "password"
+        ],
+        "title": "VerifyOtpRequest",
         "type": "object"
       },
       "VisitCreate": {
@@ -1922,6 +2251,97 @@
         ]
       }
     },
+    "/api/v1/analyses/{analysis_id}/review": {
+      "post": {
+        "description": "Record clinician sign-off. Gates report generation (ADR-006).",
+        "operationId": "sign_off_analysis_api_v1_analyses__analysis_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Sign Off Analysis",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "description": "Email a reset code if the address belongs to an active account.\n\nAlways returns the same generic message so this endpoint can't be used\nto enumerate registered accounts.",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "description": "Verify username/email and password and return a signed JWT.",
@@ -1986,6 +2406,132 @@
           }
         ],
         "summary": "Read Current User",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/request-otp": {
+      "post": {
+        "description": "Email an OTP if the address belongs to an active account.\n\nAlways returns the same generic message so this endpoint can't be used\nto enumerate registered accounts.",
+        "operationId": "request_otp_login_api_v1_auth_request_otp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Otp Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "description": "Exchange a valid, unexpired reset code for a new password.",
+        "operationId": "reset_password_api_v1_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/verify-otp": {
+      "post": {
+        "description": "Verify credentials and OTP together, then issue an access token.",
+        "operationId": "verify_otp_login_api_v1_auth_verify_otp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Otp Login",
         "tags": [
           "auth"
         ]
@@ -2666,6 +3212,68 @@
         ]
       }
     },
+    "/api/v1/triage": {
+      "get": {
+        "description": "Return the caller's patient panel, ranked by what needs attention.",
+        "operationId": "get_triage_queue_api_v1_triage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Triage Queue",
+        "tags": [
+          "triage"
+        ]
+      }
+    },
     "/api/v1/visits/{visit_id}": {
       "delete": {
         "description": "Soft-delete a visit and its symptoms. Ownership violations read as 404.",
@@ -2985,6 +3593,112 @@
           }
         ],
         "summary": "Get Latest Analysis",
+        "tags": [
+          "visits"
+        ]
+      }
+    },
+    "/api/v1/visits/{visit_id}/scan": {
+      "get": {
+        "description": "Retrieve the scan attached to a visit, if any.",
+        "operationId": "get_scan_api_v1_visits__visit_id__scan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Visit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Scan",
+        "tags": [
+          "visits"
+        ]
+      },
+      "post": {
+        "description": "Attach an MRI scan to a visit. One scan per visit (ADR-006).\n\nIntake for a returning patient's follow-up scan is a new visit, not a\nreplacement of this one -- that is what makes cross-visit comparison\npossible.",
+        "operationId": "upload_scan_api_v1_visits__visit_id__scan_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Visit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_scan_api_v1_visits__visit_id__scan_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Upload Scan",
         "tags": [
           "visits"
         ]

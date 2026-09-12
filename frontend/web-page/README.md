@@ -1,4 +1,11 @@
-# NeuroONE Frontend Redesign
+# NeuroONE Frontend Redesign (parked)
+
+> **Status: parked design reference, not a build target.**
+> `frontend/src` remains the application. This directory is kept for its design
+> work — `DESIGN.md`, the auth shell, the token set and the self-hosted fonts —
+> and is not where the clinician journey gets built. Do not add routes here.
+> Porting the design work into `frontend/src` is the expected path; see the
+> "Parked state" section below for what is unfinished.
 
 This directory contains the isolated Next.js login redesign. The existing
 application in `frontend/src` remains unchanged. All redesign files, assets,
@@ -70,21 +77,44 @@ details and limits are recorded at the end of `PLAN.md`.
 `package.json`, `package-lock.json`, `next-env.d.ts`, `next.config.mjs`,
 `tsconfig.json`, `postcss.config.js`, `tailwind.config.ts`,
 `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/login/page.tsx`,
-`src/app/globals.css`, `src/components/login-shell.tsx`,
-`src/components/login-form.tsx`, `src/components/synapse-artwork.tsx`,
+`src/app/globals.css`, `src/components/auth-shell.tsx`,
+`src/components/login-form.tsx`, `src/components/password-strength.tsx`,
+`src/components/synapse-artwork.tsx`,
 `public/fonts/README.md`, `public/fonts/cormorant-garamond-latin.woff2`,
 `public/fonts/ibm-plex-sans-latin.woff2`,
 `public/fonts/OFL-Cormorant-Garamond.txt`, `public/fonts/OFL-IBM-Plex-Sans.txt`.
 
+## Parked state
+
+Two changes were in progress when this directory was parked. Both are committed
+so nothing is lost, but neither was verified by a build:
+
+- `LoginShell` was generalised into `AuthShell`, taking `heading`, `headingId`
+  and `subtitle` props so a second auth screen could reuse the split layout.
+  `login-shell.tsx` is deleted and nothing references it.
+- `PasswordStrength` (`src/components/password-strength.tsx`) exists but is
+  imported by nothing. It was started for a reset-password screen that was
+  never built. It is dead code until that screen exists — delete it or wire it
+  up, but do not assume it works.
+
+The last verification recorded in `PLAN.md` predates both changes.
+
 ## Required product journey
 
-`Login -> Patient -> Case -> Symptoms -> AI Analysis -> Differential Diagnosis + Evidence -> Clinician Review -> PDF Report`
+Revised by [ADR-006](../../docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md)
+after this directory was written:
+
+`Login -> Triage Queue -> Patient -> Visit (Scan + Symptoms) -> AI Analysis -> Ranked Differential + Evidence -> Clinician Sign-off -> PDF Report`
 
 ## Design boundaries
 
 - Build a clinician-assist interface, never an autonomous diagnosis product.
-- Do not add MRI/image analysis, uploaded diagnostic-report analysis, treatment
-  decisions, self-service signup, or the deferred `RECEPTIONIST` role.
+- **MRI/image analysis is now in scope** as a primary input (ADR-006). The
+  earlier exclusion recorded here is superseded. A stage estimate may appear
+  only as the top-ranked candidate in a ranked differential — never as a lone
+  verdict, and never beside a confidence above 92%.
+- Do not add uploaded diagnostic-report analysis, treatment decisions,
+  self-service signup, or the deferred `RECEPTIONIST` role.
 - Keep patient history (`trend_basis`) visually distinct from external medical
   evidence and citations.
 - Show simulated/live provider state, pipeline notes, uncertainty language, and
