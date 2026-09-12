@@ -55,8 +55,12 @@ function LoginForm() {
 
     setIsSubmitting(true);
     try {
-      await login(credentials);
-      router.replace(next);
+      const { otpRequired } = await login(credentials);
+      if (otpRequired) {
+        router.push(`/verify-otp?next=${encodeURIComponent(next)}`);
+      } else {
+        router.replace(next);
+      }
     } catch (err) {
       setFormError((err as Error).message);
     } finally {

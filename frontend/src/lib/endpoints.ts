@@ -19,6 +19,7 @@ import type {
   TriageEntry,
   User,
   Token,
+  LoginResult,
   Visit,
   VisitCreate,
   VisitHistory,
@@ -34,7 +35,7 @@ export interface PageParams {
 
 export const auth = {
   login: (username: string, password: string) =>
-    api.post<Token>("/auth/login", { username, password }).then((r) => r.data),
+    api.post<LoginResult>("/auth/login", { username, password }).then((r) => r.data),
 
   requestOtp: (email: string) =>
     api.post("/auth/request-otp", { email }).then((r) => r.data),
