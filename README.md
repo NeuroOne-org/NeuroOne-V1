@@ -92,17 +92,19 @@ F --> G[Healthcare Intelligence OS]
 | 🔐 Authentication | 🟢 Complete | Login, JWT, OTP sign-in, password reset. Accounts are admin-provisioned; there is no self-registration. |
 | ⚙️ Backend APIs | 🟢 Complete | 35 endpoints across patients, visits, symptoms, scans, analyses, reports and triage. 400 tests, run in CI. |
 | 🧠 AI Pipeline | 🟡 Contract complete, providers simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Literature retrieval and MRI staging are **mocked**; reasoning can run against a live model. Every analysis states which parts were simulated. |
-| 🖥️ Dashboard | 🔴 Not started against real data | The current screens render hardcoded arrays and call no clinical endpoint. Being replaced by a triage queue. |
-| 📊 Explainable AI | 🟡 In the API, not yet in the UI | Ranked differentials, supporting and contradicting findings, citations, and per-patient trend references are all returned today. Nothing renders them yet. |
+| 🖥️ Dashboard | 🟢 Connected to the API | A triage queue ranked by `GET /triage`, patient records, new-patient intake, follow-up visits with symptoms and a scan, analysis runs, clinician sign-off and PDF report download, all against real endpoints. Lint, typecheck, tests and build run in CI. |
+| 📊 Explainable AI | 🟢 In the API and the UI | The patient record renders ranked differentials with supporting and contradicting findings and their citations, under a provenance line stating which parts of the analysis were simulated. |
 | ☁️ Deployment | 🟡 Partial | Compose runs the API and Postgres. Scan storage has no volume, so uploaded scans do not survive a container restart. |
 
 </div>
 
 > **Status, stated plainly.** The backend implements the full clinical journey and is
-> tested. The frontend is not connected to it. NeuroOne is not clinically validated, is
-> not a diagnostic device, and assists clinicians rather than diagnosing. Demo data is
-> synthetic. See [`reports/PROGRESS_REPORT.md`](reports/PROGRESS_REPORT.md) for the
-> detailed state and [`docs/decisions/`](docs/decisions/) for the decisions behind it.
+> tested, and the frontend drives that journey against it. Literature retrieval and MRI
+> staging are still simulated. NeuroOne is not clinically validated, is not a diagnostic
+> device, and assists clinicians rather than diagnosing. Demo data is synthetic. See
+> [`reports/PROGRESS_REPORT.md`](reports/PROGRESS_REPORT.md) for the backend detail
+> (written before the frontend was connected) and [`docs/decisions/`](docs/decisions/)
+> for the decisions behind it.
 
 ---
 
