@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { extractApiError } from "@/lib/api";
 
 export interface AsyncState<T> {
@@ -48,8 +48,12 @@ export function useAsync<T>(
   // overwriting fresher data.
   const requestId = useRef(0);
   // Always calls the latest `fetcher` without making it a dependency, so an
-  // inline arrow doesn't refetch on every render.
-  const runFetcher = useEffectEvent(() => fetcher());
+  // inline arrow doesn't refetch on every render. Written in an effect, not
+  // during render; declared first, so it runs before the fetch below.
+  const fetcherRef = useRef(fetcher);
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  });
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,7 +61,8 @@ export function useAsync<T>(
     const id = ++requestId.current;
     let cancelled = false;
 
-    runFetcher()
+    fetcherRef
+      .current()
       .then((result) => {
         if (cancelled || id !== requestId.current) return;
         setData(result);
