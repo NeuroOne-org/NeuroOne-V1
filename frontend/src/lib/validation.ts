@@ -116,6 +116,32 @@ export const visitIntakeSchema = z.object({
 });
 export type VisitIntakeInput = z.infer<typeof visitIntakeSchema>;
 
+/** Mirrors the backend `SymptomOnset` enum. */
+export const SYMPTOM_ONSETS = [
+  "sudden", "subacute", "gradual", "insidious", "unknown",
+] as const;
+
+/** Mirrors `SymptomCreate`: severity is an integer from 1 to 10. */
+export const symptomEntrySchema = z.object({
+  symptom_name: z.string().trim().min(1, "Name the symptom").max(100),
+  severity: z
+    .number({ invalid_type_error: "Enter a severity from 1 to 10" })
+    .int("Enter a severity from 1 to 10")
+    .min(1, "Enter a severity from 1 to 10")
+    .max(10, "Enter a severity from 1 to 10"),
+  onset: z.enum(SYMPTOM_ONSETS).or(z.literal("")),
+});
+
+/**
+ * A follow-up visit for an existing patient: `VisitCreate` with its symptoms
+ * inline, so the visit and the severities a trend is built from land in one
+ * request.
+ */
+export const followUpVisitSchema = visitIntakeSchema.extend({
+  symptoms: z.array(symptomEntrySchema),
+});
+export type FollowUpVisitInput = z.infer<typeof followUpVisitSchema>;
+
 export const BLOOD_GROUPS = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-",
 ] as const;
