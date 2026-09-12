@@ -47,7 +47,17 @@ Net: keep the axios client and the shared `components/ui/*` kit; rebuild everyth
 
 **Self-registration is still absent and deliberately so.** There is no `/auth/register`; AUTH-01 removed it and a regression test asserts it returns 404. Accounts are admin-provisioned through `POST /admin/users`.
 
-There is no public bootstrap route: the first ADMIN is created by `AuthService.bootstrap_admin`, called from a script rather than over HTTP. Two scripts exist for demo data — `scripts/bootstrap_admin.py` and `scripts/seed_demo_case.py`, the latter seeding a patient whose multi-visit symptom trend gives an `early_watch` flag something to point at. Note that `seed_demo_case.py` predates ADR-006: it seeds no `Scan` and only one patient, so scan-derived trends are unexercised and the triage queue has a single row to rank. Extending it is a backend prerequisite for §1A, not a frontend task.
+There is no public bootstrap route: the first ADMIN is created by `AuthService.bootstrap_admin`, called from a script rather than over HTTP. Two scripts exist for demo data: `scripts/bootstrap_admin.py` and `scripts/seed_demo_case.py`. The seed follows ADR-006.
+
+- **`demo-clinician`** gets five synthetic patients, one per queue state. Every visit carries a scan and symptoms.
+  - Early watch, worsening trend and awaiting sign-off together.
+  - An imaging-only worsening trend (MRI stage CN → MCI → Mild).
+  - Awaiting sign-off only.
+  - Signed off.
+  - A returning patient whose latest visit is deliberately left unanalysed for a live run.
+- **`demo-clinician-2`** owns one patient, for the cross-clinician isolation check.
+
+Seeded analyses always use the mock providers. Re-running replaces only the two demo accounts' data. `backend/tests/test_seed_demo_case.py` replays every scenario through the real mock pipeline and asserts its queue flags.
 
 ### Checklist
 - [ ] `POST /auth/login` — form with `username`, `password`. Store `access_token` in the existing cookie (`TOKEN_COOKIE` in `api.ts`), matching what's already wired.
