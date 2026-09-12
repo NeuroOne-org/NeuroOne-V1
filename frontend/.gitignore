@@ -5,3 +5,4 @@ out
 .DS_Store
 *.pem
 *.tsbuildinfo
+.next-verify/

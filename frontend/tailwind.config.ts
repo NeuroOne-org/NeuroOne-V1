@@ -6,33 +6,40 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0B0D10",
-        panel: "#14171B",
-        raised: "#1B1F24",
-        line: "#262B31",
-        "line-soft": "#1D2126",
+        // Channel triplets live in globals.css so both themes share these
+        // class names; `<alpha-value>` keeps `/30`-style modifiers working.
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        panel: "rgb(var(--panel) / <alpha-value>)",
+        raised: "rgb(var(--raised) / <alpha-value>)",
+        line: "rgb(var(--line) / <alpha-value>)",
+        "line-soft": "rgb(var(--line-soft) / <alpha-value>)",
         text: {
-          DEFAULT: "#E7E9EC",
-          muted: "#8A9099",
-          faint: "#565C66",
+          DEFAULT: "rgb(var(--text) / <alpha-value>)",
+          muted: "rgb(var(--text-muted) / <alpha-value>)",
+          faint: "rgb(var(--text-faint) / <alpha-value>)",
         },
         amber: {
-          DEFAULT: "#FF6A3D",
-          soft: "#FF6A3D1A",
+          DEFAULT: "rgb(var(--amber) / <alpha-value>)",
+          soft: "rgb(var(--amber) / 0.1)",
         },
         teal: {
-          DEFAULT: "#35D6C8",
-          soft: "#35D6C81A",
+          DEFAULT: "rgb(var(--teal) / <alpha-value>)",
+          soft: "rgb(var(--teal) / 0.1)",
         },
         indigo: {
-          DEFAULT: "#6E7BFF",
-          soft: "#6E7BFF1A",
+          DEFAULT: "rgb(var(--indigo) / <alpha-value>)",
+          soft: "rgb(var(--indigo) / 0.1)",
         },
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
+      },
+      transitionTimingFunction: {
+        out: "var(--ease-out)",
+        "in-out": "var(--ease-in-out)",
+        drawer: "var(--ease-drawer)",
       },
       borderRadius: {
         sm: "4px",
@@ -50,7 +57,7 @@ const config: Config = {
           "100%": { strokeDashoffset: "var(--dial-target)" },
         },
         "fade-up": {
-          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "node-pulse": {
@@ -81,7 +88,7 @@ const config: Config = {
       animation: {
         scan: "scan 2.4s linear infinite",
         "dial-sweep": "dial-sweep 1.1s cubic-bezier(0.16,1,0.3,1) forwards",
-        "fade-up": "fade-up 0.4s ease-out forwards",
+        "fade-up": "fade-up 0.4s var(--ease-out) both",
         "node-pulse": "node-pulse 2.8s ease-in-out infinite",
         "rotate-slow": "rotate-slow 60s linear infinite",
         drift: "drift 8s ease-in-out infinite",

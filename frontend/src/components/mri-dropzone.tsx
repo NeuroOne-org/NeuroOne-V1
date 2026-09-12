@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { ScanLine, UploadCloud, X } from "lucide-react";
+import { Scan, Upload, X } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 interface MriDropzoneProps {
@@ -58,7 +58,7 @@ export function MriDropzone({ file, onChange, isScanning }: MriDropzoneProps) {
           />
         ) : file ? (
           <div className="flex flex-col items-center gap-2 text-text-muted">
-            <ScanLine className="h-8 w-8" />
+            <Scan className="h-8 w-8" />
             <p className="font-mono text-sm">{file.name}</p>
             <p className="text-xs text-text-faint">
               {(file.size / 1024 / 1024).toFixed(1)} MB
@@ -66,7 +66,7 @@ export function MriDropzone({ file, onChange, isScanning }: MriDropzoneProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-text-muted">
-            <UploadCloud className="h-8 w-8" />
+            <Upload className="h-8 w-8" />
             <p className="text-sm">Drop an MRI series, or click to browse</p>
             <p className="text-xs text-text-faint">
               Accepts {ACCEPTED.join(", ")}

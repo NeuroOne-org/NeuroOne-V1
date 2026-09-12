@@ -76,22 +76,46 @@ export const resetPasswordSchema = z
   });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+/**
+ * Patient intake.
+ *
+ * Mirrors `PatientCreate` in the API contract. The backend stores names in
+ * two halves and takes a date of birth rather than an age, so the form asks
+ * for exactly that instead of asking for something friendlier and guessing.
+ */
 export const patientIntakeSchema = z.object({
-  full_name: z.string().min(2, "Enter the patient's full name"),
-  age: z.coerce
-    .number({ invalid_type_error: "Age is required" })
-    .min(1, "Enter a valid age")
-    .max(120, "Enter a valid age"),
+  first_name: z.string().min(1, "Enter the patient's first name").max(100),
+  last_name: z.string().max(100).optional().or(z.literal("")),
+  dob: z
+    .string()
+    .min(1, "Enter a date of birth")
+    .refine((value) => {
+      const date = new Date(value);
+      return !Number.isNaN(date.getTime()) && date <= new Date();
+    }, "Enter a date of birth in the past"),
   gender: z.enum(["male", "female", "other"], {
     required_error: "Select a gender",
   }),
-  mmse_score: z.coerce
-    .number()
-    .min(0, "MMSE score ranges from 0–30")
-    .max(30, "MMSE score ranges from 0–30")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
-  family_history: z.boolean().default(false),
-  notes: z.string().max(2000).optional(),
+  email: emailSchema,
+  phone: z.string().min(1, "Enter a contact number").max(15),
+  address: z.string().min(1, "Enter an address").max(500),
+  blood_group: z.string().min(1, "Select a blood group"),
+  allergies: z.string().max(500).optional().or(z.literal("")),
+  emergency_contact: z.string().min(1, "Enter an emergency contact").max(255),
 });
 export type PatientIntakeInput = z.infer<typeof patientIntakeSchema>;
+
+/** Mirrors `VisitCreate`. Vitals and symptoms are added after the visit exists. */
+export const visitIntakeSchema = z.object({
+  chief_complaint: z
+    .string()
+    .min(1, "Enter the presenting complaint")
+    .max(255),
+  history: z.string().max(5000).optional().or(z.literal("")),
+  notes: z.string().max(5000).optional().or(z.literal("")),
+});
+export type VisitIntakeInput = z.infer<typeof visitIntakeSchema>;
+
+export const BLOOD_GROUPS = [
+  "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-",
+] as const;

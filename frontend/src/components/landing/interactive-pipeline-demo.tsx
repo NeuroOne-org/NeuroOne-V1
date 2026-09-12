@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { Play, RotateCcw, Activity, ShieldCheck, Sparkles } from "lucide-react";
 import { ConfidenceDial } from "@/components/confidence-dial";
-import { RegionBars } from "@/components/region-bars";
+import {
+  RegionBars,
+  type DemoDiseaseLabel,
+  type DemoDiseaseStage,
+  type DemoRegion,
+} from "@/components/landing/region-bars";
 import { NeuralNetwork } from "@/components/neural-network";
-import type { PredictionRegion, DiseaseLabel, DiseaseStage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface SampleCase {
@@ -13,14 +17,14 @@ interface SampleCase {
   patientId: string;
   title: string;
   subtitle: string;
-  diseaseLabel: DiseaseLabel;
-  stage: DiseaseStage;
+  diseaseLabel: DemoDiseaseLabel;
+  stage: DemoDiseaseStage;
   stageDisplay: string;
   confidence: number;
   tone: "teal" | "amber";
   mmse: string;
   ageGender: string;
-  regions: PredictionRegion[];
+  regions: DemoRegion[];
 }
 
 const CASESHOTS: SampleCase[] = [
