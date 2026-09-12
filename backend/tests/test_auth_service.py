@@ -1,5 +1,6 @@
 """Service-boundary tests for account provisioning and bootstrap."""
 
+import time
 from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
@@ -185,3 +186,32 @@ def test_reset_password_rejects_when_user_no_longer_exists(monkeypatch) -> None:
 
     with pytest.raises(InvalidOtpError):
         service.reset_password(Mock(), "known@example.com", "123456", "brand-new-password")
+
+
+def test_otp_login_wrong_password_does_not_burn_the_code() -> None:
+    user_service = Mock()
+    service = AuthService(user_service)
+    user = User(
+        id=uuid4(),
+        username="known-user",
+        email="known@example.com",
+        hashed_password=service.hash_password("correct-password"),
+        role=UserRole.CLINICIAN,
+        is_active=True,
+        is_deleted=False,
+    )
+    user_service.get_user_by_email.return_value = user
+    otp_service._otp_store["known@example.com"] = otp_service._OtpEntry(
+        code="123456",
+        expires_at=time.time() + otp_service.OTP_TTL_SECONDS,
+    )
+
+    with pytest.raises(InvalidCredentialsError):
+        service.verify_otp_login(Mock(), "known@example.com", "123456", "wrong-password")
+    with pytest.raises(InvalidOtpError):
+        service.verify_otp_login(Mock(), "known@example.com", "000000", "correct-password")
+
+    token = service.verify_otp_login(
+        Mock(), "known@example.com", "123456", "correct-password"
+    )
+    assert service.verify_access_token(token.access_token).sub == user.id
