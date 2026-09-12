@@ -69,6 +69,12 @@ class InvalidOtpError(ValidationApplicationError):
     default_error_code = "invalid_otp"
 
 
+class RateLimitedError(ApplicationError):
+    """Raised when a caller exceeds an endpoint's request-rate limit."""
+
+    default_error_code = "rate_limited"
+
+
 class EntityNotFoundError(NotFoundError):
     """Raised when a requested entity does not exist."""
 
@@ -105,6 +111,7 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidOtpError",
     "NotFoundError",
+    "RateLimitedError",
     "UserAlreadyExistsError",
     "ValidationApplicationError",
 ]

@@ -1,9 +1,11 @@
 # app/services/otp_service.py
 #
-# Generates and emails one-time passcodes via Gmail SMTP, and verifies them.
-# Used by the forgot/reset-password flow (app/services/auth_service.py).
+# Generates one-time passcodes and delivers them either via Gmail SMTP or,
+# with OTP_DELIVERY=console, the backend log -- then verifies them. Used by
+# the login-2FA and forgot/reset-password flows (app/services/auth_service.py).
 #
-# SETUP REQUIRED (you must do this yourself — I cannot access your Gmail):
+# SETUP REQUIRED for OTP_DELIVERY=email (you must do this yourself — I
+# cannot access your Gmail):
 #   1. Go to https://myaccount.google.com/security
 #   2. Turn on 2-Step Verification if it isn't already on (required for App Passwords)
 #   3. Go to https://myaccount.google.com/apppasswords
@@ -20,16 +22,25 @@
 # work if you ever run multiple server processes. For production, move this
 # to Redis or a database table with a real expiry column.
 
+import logging
 import secrets
 import smtplib
 import time
 from dataclasses import dataclass
 from email.mime.text import MIMEText
+from typing import Literal
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
 OTP_TTL_SECONDS = 300  # 5 minutes
 MAX_VERIFY_ATTEMPTS = 5  # wrong guesses allowed before the code is burned
+
+# A code is only ever valid for the purpose it was issued under: a sign-in
+# code can't be replayed to reset a password, and requesting one purpose's
+# code doesn't clobber the other's (see _store_key).
+OtpPurpose = Literal["login", "password_reset"]
 
 
 @dataclass
@@ -39,15 +50,26 @@ class _OtpEntry:
     attempts_remaining: int = MAX_VERIFY_ATTEMPTS
 
 
-# { identity (e.g. email): _OtpEntry }
+# { "{purpose}:{identity}" (e.g. "login:jane@example.com"): _OtpEntry }
 _otp_store: dict[str, _OtpEntry] = {}
 
 
-def generate_and_send_otp(identity: str, to_email: str) -> None:
-    """Generates a 6-digit OTP, stores it, and emails it via Gmail SMTP."""
+def _store_key(identity: str, purpose: OtpPurpose) -> str:
+    return f"{purpose}:{identity}"
+
+
+def generate_and_send_otp(identity: str, to_email: str, purpose: OtpPurpose) -> None:
+    """Generates a 6-digit OTP scoped to `purpose`, stores it, and delivers
+    it via Gmail SMTP, or logs it when OTP_DELIVERY=console."""
 
     code = f"{secrets.randbelow(1_000_000):06d}"
-    _otp_store[identity] = _OtpEntry(code=code, expires_at=time.time() + OTP_TTL_SECONDS)
+    _otp_store[_store_key(identity, purpose)] = _OtpEntry(
+        code=code, expires_at=time.time() + OTP_TTL_SECONDS
+    )
+
+    if settings.OTP_DELIVERY == "console":
+        logger.info("[dev] %s OTP for %s: %s", purpose, to_email, code)
+        return
 
     message = MIMEText(
         f"Your NeuroOne verification code is: {code}\n\n"
@@ -64,28 +86,44 @@ def generate_and_send_otp(identity: str, to_email: str) -> None:
         server.send_message(message)
 
 
-def verify_otp(identity: str, submitted_code: str) -> bool:
+def send_otp_background(identity: str, to_email: str, purpose: OtpPurpose) -> None:
+    """Fire-and-forget wrapper meant for BackgroundTasks.add_task.
+
+    Swallows delivery failures instead of letting them propagate, so a
+    dead SMTP server can't turn into a 500 that only real accounts get --
+    the caller (forgot-password, request-otp) has already sent its generic
+    response by the time this runs.
     """
-    Checks a submitted OTP against the stored one. The code is only
-    consumed (deleted) when it's correct, expired, or has run out of
-    attempts — a wrong guess costs an attempt but does not otherwise
-    burn a still-valid code, so the user can retry up to
+
+    try:
+        generate_and_send_otp(identity=identity, to_email=to_email, purpose=purpose)
+    except Exception:
+        logger.exception("Failed to deliver OTP (purpose=%s)", purpose)
+
+
+def verify_otp(identity: str, submitted_code: str, purpose: OtpPurpose) -> bool:
+    """
+    Checks a submitted OTP against the one stored for this identity and
+    purpose. The code is only consumed (deleted) when it's correct, expired,
+    or has run out of attempts — a wrong guess costs an attempt but does not
+    otherwise burn a still-valid code, so the user can retry up to
     MAX_VERIFY_ATTEMPTS times before having to request a new code.
     """
-    entry = _otp_store.get(identity)
+    key = _store_key(identity, purpose)
+    entry = _otp_store.get(key)
 
     if entry is None:
         return False
 
     if time.time() > entry.expires_at:
-        del _otp_store[identity]
+        del _otp_store[key]
         return False
 
     if submitted_code != entry.code:
         entry.attempts_remaining -= 1
         if entry.attempts_remaining <= 0:
-            del _otp_store[identity]
+            del _otp_store[key]
         return False
 
-    del _otp_store[identity]
+    del _otp_store[key]
     return True
