@@ -19,3 +19,9 @@ backend/.env
 # OS
 .DS_Store
 Thumbs.db
+
+# Local tooling output (graphify knowledge graph, rebuilt per machine)
+graphify-out/
+
+# Large binaries: share decks and slide exports outside the repo
+*.pptx
