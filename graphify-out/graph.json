@@ -12896,7 +12896,7 @@
       "file_type": "code",
       "norm_label": "samekey()",
       "source_file": "frontend/src/hooks/use-api.ts",
-      "source_location": "L87"
+      "source_location": "L92"
     },
     {
       "id": "frontend_src_hooks_use_api_useasync",
@@ -12920,7 +12920,7 @@
       "file_type": "code",
       "norm_label": "usedebounced()",
       "source_file": "frontend/src/hooks/use-api.ts",
-      "source_location": "L95"
+      "source_location": "L100"
     },
     {
       "id": "frontend_src_hooks_use_patients_usepager",
@@ -55345,7 +55345,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/hooks/use-api.ts",
-      "source_location": "L67",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -94177,6 +94177,17 @@
     },
     {
       "source": "frontend_src_hooks_use_api",
+      "target": "frontend_src_hooks_use_api_usedebounced",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/hooks/use-api.ts",
+      "source_location": "L100",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_hooks_use_api",
       "target": "frontend_src_hooks_use_api_useasync",
       "relation": "contains",
       "_origin": "ast",
@@ -94205,18 +94216,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/hooks/use-api.ts",
-      "source_location": "L87",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_hooks_use_api",
-      "target": "frontend_src_hooks_use_api_usedebounced",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/src/hooks/use-api.ts",
-      "source_location": "L95",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -117021,5 +117021,5 @@
       "source_file": "reports/PROGRESS_REPORT.md"
     }
   ],
-  "built_at_commit": "5d391b1c6544a2002a33b5e743f3a01015aee29b"
+  "built_at_commit": "7abfb9e17bdca6daed7563e763a1eda02539bbae"
 }

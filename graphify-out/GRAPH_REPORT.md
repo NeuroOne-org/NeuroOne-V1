@@ -1,7 +1,7 @@
 # Graph Report - vigorous-haslett-64122c  (2026-09-13)
 
 ## Corpus Check
-- 284 files · ~194,046 words
+- 284 files · ~194,068 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5d391b1c`
+- Built from commit: `7abfb9e1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -210,14 +210,14 @@
 ## Surprising Connections (you probably didn't know these)
 - `MAX_CONFIDENCE 0.92 Ceiling` --semantically_similar_to--> `Clinical Safety Boundary`  [INFERRED] [semantically similar]
   docs/REPORT-01D-frontend-checklist.md → AGENTS.md
-- `Parked Design Reference (frontend/web-page)` --conceptually_related_to--> `Intake Splits Into New Patient and New Visit`  [INFERRED]
-  frontend/web-page/README.md → docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md
+- `Contributing Regions Visualization Has No API` --semantically_similar_to--> `Mocked Staging Model Reads as Measurement`  [INFERRED] [semantically similar]
+  frontend-checklist.md → reports/PROGRESS_REPORT.md
+- `Mocked AI Credibility Risk` --semantically_similar_to--> `Mocked Staging Model Reads as Measurement`  [INFERRED] [semantically similar]
+  docs/NEUROONE-MVP-SCOPE.md → reports/PROGRESS_REPORT.md
 - `MRI Upload + Prediction Polling` --conceptually_related_to--> `V1 Exclusions`  [AMBIGUOUS]
   frontend/README.md → docs/PRD.md
-- `404 Ownership Masking` --semantically_similar_to--> `Security and Privacy Rules`  [INFERRED] [semantically similar]
-  docs/REPORT-01D-frontend-checklist.md → AGENTS.md
-- `storage_key Deliberately Off the Wire` --semantically_similar_to--> `Security and Privacy Rules`  [INFERRED] [semantically similar]
-  docs/REPORT-01D-frontend-checklist.md → AGENTS.md
+- `Parked Design Reference (frontend/web-page)` --conceptually_related_to--> `Intake Splits Into New Patient and New Visit`  [INFERRED]
+  frontend/web-page/README.md → docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md
 
 ## Import Cycles
 - None detected.

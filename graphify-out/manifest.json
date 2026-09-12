@@ -1608,9 +1608,9 @@
     "semantic_hash": ""
   },
   "frontend/src/hooks/use-api.ts": {
-    "mtime": 1789249601.574112,
-    "seen": 1789249817.2049012,
-    "ast_hash": "29b01418837a18861a02a21197755398",
+    "mtime": 1789250515.613943,
+    "seen": 1789250867.4922867,
+    "ast_hash": "826ef010c2bc3867567671abfb6cf30e",
     "semantic_hash": ""
   },
   "frontend/src/lib/endpoints.ts": {
