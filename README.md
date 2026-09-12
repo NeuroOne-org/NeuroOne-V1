@@ -89,7 +89,7 @@ F --> G[Healthcare Intelligence OS]
 
 | Module | Progress | What that actually means |
 |:--|:--:|:--|
-| 🔐 Authentication | 🟢 Complete | Login, JWT, OTP sign-in, password reset. Accounts are admin-provisioned; there is no self-registration. |
+| 🔐 Authentication | 🟢 Complete | Login, JWT, an emailed OTP second factor (on by default, mandatory in production), purpose-scoped codes, password reset, and rate-limited auth endpoints. Accounts are admin-provisioned; there is no self-registration. |
 | ⚙️ Backend APIs | 🟢 Complete | 35 endpoints across patients, visits, symptoms, scans, analyses, reports and triage. 400 tests, run in CI. |
 | 🧠 AI Pipeline | 🟡 Contract complete, providers simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Literature retrieval and MRI staging are **mocked**; reasoning can run against a live model. Every analysis states which parts were simulated. |
 | 🖥️ Dashboard | 🟢 Connected to the API | A triage queue ranked by `GET /triage`, patient records, new-patient intake, follow-up visits with symptoms and a scan, analysis runs, clinician sign-off and PDF report download, all against real endpoints. Lint, typecheck, tests and build run in CI. |

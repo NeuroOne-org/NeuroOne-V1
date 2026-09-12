@@ -17,9 +17,15 @@ import type { LoginInput } from "@/lib/validation";
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
-  /** Password only. Signs in and returns; no second factor. */
-  login: (input: LoginInput) => Promise<void>;
-  /** Opt-in second factor: emails a code and remembers the credentials. */
+  /**
+   * Verifies the password. If the backend requires a second factor
+   * (AUTH_REQUIRE_OTP), it has already emailed a code and this resolves
+   * with `{ otpRequired: true }` instead of signing in -- the caller should
+   * send the user to /verify-otp. Otherwise it signs in directly.
+   */
+  login: (input: LoginInput) => Promise<{ otpRequired: boolean }>;
+  /** Manually opt into a code instead of a password-only sign-in: emails a
+   * code and remembers the credentials, regardless of AUTH_REQUIRE_OTP. */
   beginOtpLogin: (input: LoginInput) => Promise<void>;
   completeOtpLogin: (otp: string) => Promise<void>;
   cancelOtpLogin: () => void;
@@ -75,9 +81,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (input: LoginInput) => {
       try {
-        const token = await authApi.login(input.email, input.password);
-        persistToken(token.access_token);
+        const result = await authApi.login(input.email, input.password);
+        if (result.otp_required) {
+          // The backend already sent the code. Hold the password in memory
+          // the same way beginOtpLogin does, and let the caller route to
+          // /verify-otp -- no separate request-otp call needed here.
+          pendingLogin.current = { email: input.email, password: input.password };
+          setPendingOtpEmail(input.email);
+          return { otpRequired: true };
+        }
+        persistToken(result.access_token as string);
         await fetchCurrentUser();
+        return { otpRequired: false };
       } catch (error) {
         throw new Error(extractApiError(error));
       }
