@@ -14,6 +14,8 @@
 #        GMAIL_APP_PASSWORD=the16charpassword
 #      (use the App Password, NOT your real Gmail login password — Gmail
 #      blocks plain-password SMTP login for security)
+#   Both are optional for booting the API; without them, requesting an OTP
+#   raises ExternalServiceError instead of attempting an SMTP login.
 #
 # NOTE on storage: this uses a simple in-memory dict for OTP codes, which is
 # fine for local dev/demo but resets whenever the server restarts and won't
@@ -27,6 +29,7 @@ from dataclasses import dataclass
 from email.mime.text import MIMEText
 
 from app.core.config import settings
+from app.utils.exceptions import ExternalServiceError
 
 OTP_TTL_SECONDS = 300  # 5 minutes
 MAX_VERIFY_ATTEMPTS = 5  # wrong guesses allowed before the code is burned
@@ -45,6 +48,14 @@ _otp_store: dict[str, _OtpEntry] = {}
 
 def generate_and_send_otp(identity: str, to_email: str) -> None:
     """Generates a 6-digit OTP, stores it, and emails it via Gmail SMTP."""
+
+    # Checked before storing a code: a code the user can never receive would
+    # only sit in the store until it expired.
+    if not settings.GMAIL_ADDRESS or not settings.GMAIL_APP_PASSWORD:
+        raise ExternalServiceError(
+            "Email delivery is not configured. Set GMAIL_ADDRESS and "
+            "GMAIL_APP_PASSWORD to send verification codes."
+        )
 
     code = f"{secrets.randbelow(1_000_000):06d}"
     _otp_store[identity] = _OtpEntry(code=code, expires_at=time.time() + OTP_TTL_SECONDS)

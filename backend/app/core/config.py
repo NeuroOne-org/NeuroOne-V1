@@ -24,8 +24,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # Gmail SMTP sender for password-reset OTP emails (app/services/otp_service.py).
-    GMAIL_ADDRESS: str
-    GMAIL_APP_PASSWORD: str
+    # Optional so the API boots without them (e.g. under docker-compose);
+    # sending an OTP is what fails when they are unset.
+    GMAIL_ADDRESS: str | None = None
+    GMAIL_APP_PASSWORD: str | None = None
 
     # Providers sit behind app/ai/providers/base.py. "live-llm" is live
     # reasoning over a still-simulated corpus (ADR-005); real retrieval is a
