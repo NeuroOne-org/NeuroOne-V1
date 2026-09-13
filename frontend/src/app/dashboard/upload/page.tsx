@@ -47,6 +47,16 @@ export default function UploadPage() {
   const [doneSteps, setDoneSteps] = useState<StepKey[]>([]);
   const [uploadPct, setUploadPct] = useState(0);
 
+  // Resubmitting after a failed scan/analysis step must not repeat the
+  // patient/visit/scan steps that already landed -- otherwise a retry
+  // creates a second patient and visit (and, for the scan, collides with
+  // ADR-006's one-scan-per-visit rule).
+  const [createdPatientId, setCreatedPatientId] = useState<string | null>(
+    null
+  );
+  const [createdVisitId, setCreatedVisitId] = useState<string | null>(null);
+  const [scanUploaded, setScanUploaded] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -56,6 +66,9 @@ export default function UploadPage() {
   });
 
   const isSubmitting = activeStep !== null;
+  const isPatientLocked = createdPatientId !== null;
+  const isVisitLocked = createdVisitId !== null;
+  const isResuming = isPatientLocked || isVisitLocked;
 
   async function onSubmit(values: IntakeInput) {
     setFileError(null);
@@ -64,43 +77,56 @@ export default function UploadPage() {
     setUploadPct(0);
 
     try {
-      setActiveStep("patient");
-      const patient = await patientsApi.create({
-        first_name: values.first_name,
-        last_name: values.last_name || null,
-        dob: values.dob,
-        gender: values.gender,
-        email: values.email,
-        phone: [{ phone_number: values.phone }],
-        address: values.address,
-        blood_group: values.blood_group,
-        allergies: splitList(values.allergies),
-        emergency_contact: values.emergency_contact,
-      });
+      let patientId = createdPatientId;
+      if (!patientId) {
+        setActiveStep("patient");
+        const patient = await patientsApi.create({
+          first_name: values.first_name,
+          last_name: values.last_name || null,
+          dob: values.dob,
+          gender: values.gender,
+          email: values.email,
+          phone: [{ phone_number: values.phone }],
+          address: values.address,
+          blood_group: values.blood_group,
+          allergies: splitList(values.allergies),
+          emergency_contact: values.emergency_contact,
+        });
+        patientId = patient.id;
+        setCreatedPatientId(patientId);
+      }
       setDoneSteps((s) => [...s, "patient"]);
 
-      setActiveStep("visit");
-      const visit = await patientsApi.createVisit(patient.id, {
-        chief_complaint: values.chief_complaint,
-        history: values.history || null,
-        notes: values.notes || null,
-        status: "submitted",
-      });
+      let visitId = createdVisitId;
+      if (!visitId) {
+        setActiveStep("visit");
+        const visit = await patientsApi.createVisit(patientId, {
+          chief_complaint: values.chief_complaint,
+          history: values.history || null,
+          notes: values.notes || null,
+          status: "submitted",
+        });
+        visitId = visit.id;
+        setCreatedVisitId(visitId);
+      }
       setDoneSteps((s) => [...s, "visit"]);
 
       // The scan is optional: the pipeline reads symptoms and history too,
       // and an intake without imaging is still a real visit.
       if (mriFile) {
-        setActiveStep("scan");
-        await visitsApi.uploadScan(visit.id, mriFile, setUploadPct);
+        if (!scanUploaded) {
+          setActiveStep("scan");
+          await visitsApi.uploadScan(visitId, mriFile, setUploadPct);
+          setScanUploaded(true);
+        }
         setDoneSteps((s) => [...s, "scan"]);
       }
 
       setActiveStep("analysis");
-      await visitsApi.runAnalysis(visit.id);
+      await visitsApi.runAnalysis(visitId);
       setDoneSteps((s) => [...s, "analysis"]);
 
-      router.push(`/dashboard/patients/${patient.id}`);
+      router.push(`/dashboard/patients/${patientId}`);
     } catch (err) {
       setServerError(extractApiError(err));
       setActiveStep(null);
@@ -121,6 +147,7 @@ export default function UploadPage() {
       </header>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <fieldset disabled={isSubmitting || isPatientLocked} className="contents">
         <Card className="mb-5">
           <CardHeader eyebrow="Step 1" title="Patient" />
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -238,7 +265,9 @@ export default function UploadPage() {
             </div>
           </CardBody>
         </Card>
+        </fieldset>
 
+        <fieldset disabled={isSubmitting || isVisitLocked} className="contents">
         <Card className="mb-5">
           <CardHeader eyebrow="Step 2" title="Visit" />
           <CardBody className="space-y-4">
@@ -273,6 +302,7 @@ export default function UploadPage() {
             </Field>
           </CardBody>
         </Card>
+        </fieldset>
 
         <Card className="mb-5">
           <CardHeader eyebrow="Step 3" title="MRI scan" />
@@ -290,11 +320,15 @@ export default function UploadPage() {
         {serverError && (
           <div className="mb-5 flex items-start gap-2 rounded border border-amber/30 bg-amber-soft px-4 py-3 text-[13px] text-amber">
             <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            {serverError}
+            <span>
+              {serverError}
+              {isResuming &&
+                " Earlier steps were already saved -- retrying continues from the step that failed."}
+            </span>
           </div>
         )}
 
-        {isSubmitting && (
+        {(isSubmitting || doneSteps.length > 0) && (
           <StepProgress
             steps={STEPS.filter((step) => step.key !== "scan" || mriFile)}
             activeStep={activeStep}
@@ -304,7 +338,7 @@ export default function UploadPage() {
 
         <div className="flex justify-end">
           <Button type="submit" size="lg" isLoading={isSubmitting}>
-            Create and analyse
+            {isResuming ? "Retry" : "Create and analyse"}
           </Button>
         </div>
       </form>

@@ -126,6 +126,29 @@ def test_uploading_a_second_scan_to_the_same_visit_is_409() -> None:
     assert response.status_code == 409
 
 
+def test_an_oversized_upload_is_rejected_without_reaching_the_service(
+    monkeypatch,
+) -> None:
+    """The size limit is enforced while streaming, before the service --
+    and therefore before the whole body -- ever sees the bytes."""
+
+    import app.api.v1.visits as visits_module
+
+    monkeypatch.setattr(visits_module.settings, "MAX_SCAN_SIZE_BYTES", 8)
+    clinician = _user()
+
+    class ServiceStub:
+        def upload_scan(self, db, vid, current_user, *, filename, content_type, content):
+            raise AssertionError("service should not be reached")
+
+    response = _client(clinician, ServiceStub()).post(
+        f"/api/v1/visits/{uuid4()}/scan",
+        files={"file": ("scan.dcm", b"x" * 9, "application/dicom")},
+    )
+
+    assert response.status_code == 422
+
+
 # --------------------------------------------------------------------------
 # Retrieval
 # --------------------------------------------------------------------------

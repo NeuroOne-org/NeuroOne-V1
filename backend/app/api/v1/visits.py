@@ -19,6 +19,7 @@ from app.api.dependencies import (
     get_scan_service,
     get_visit_service,
 )
+from app.core.config import settings
 from app.models.analysis import Analysis
 from app.models.scan import Scan
 from app.models.symptom import Symptom
@@ -40,9 +41,36 @@ from app.schemas.visit import VisitResponse, VisitUpdate
 from app.services.analysis_service import AnalysisService
 from app.services.scan_service import ScanService
 from app.services.visit_service import VisitService
+from app.utils.exceptions import ValidationApplicationError
 from app.utils.responses import build_pagination
 
 router = APIRouter()
+
+_UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MiB
+
+
+async def _read_within_limit(file: UploadFile, max_size_bytes: int) -> bytes:
+    """Read an upload in bounded chunks instead of buffering it whole.
+
+    An unbounded ``await file.read()`` would hold the entire body in memory
+    before the size limit is ever checked, so an oversized upload is
+    rejected only after paying for it. Reading in chunks lets us abort as
+    soon as the limit is crossed.
+    """
+
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_UPLOAD_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_size_bytes:
+            raise ValidationApplicationError(
+                f"The scan exceeds the {max_size_bytes} byte upload limit."
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _analysis_page(
@@ -197,7 +225,7 @@ async def upload_scan(
     possible.
     """
 
-    content = await file.read()
+    content = await _read_within_limit(file, settings.MAX_SCAN_SIZE_BYTES)
     return scan_service.upload_scan(
         db,
         visit_id,
