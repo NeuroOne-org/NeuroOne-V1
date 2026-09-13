@@ -390,9 +390,9 @@
     "semantic_hash": "b22efc21a864f8eb922c41f1877296ae"
   },
   "frontend/next-env.d.ts": {
-    "mtime": 1789287154.527724,
-    "seen": 1789287180.0972238,
-    "ast_hash": "c7b887684e81cfa5830eeeb7286485f6",
+    "mtime": 1789287381.3657568,
+    "seen": 1789287420.6266901,
+    "ast_hash": "0e4a65e8b2b9aa3ed0f8957b9406bd41",
     "semantic_hash": ""
   },
   "frontend/next.config.mjs": {
@@ -1746,9 +1746,9 @@
     "semantic_hash": ""
   },
   "frontend/eslint.config.mjs": {
-    "mtime": 1789287154.527724,
-    "seen": 1789287180.0972238,
-    "ast_hash": "7074633ed55a36b35288f8959c379b4c",
+    "mtime": 1789287232.7432258,
+    "seen": 1789287420.6266901,
+    "ast_hash": "0a796583661cbd25d6753312d3a0ab7b",
     "semantic_hash": ""
   },
   "frontend/src/proxy.ts": {
