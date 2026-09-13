@@ -7,6 +7,7 @@ stays in one place.
 
 import hashlib
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -22,6 +23,18 @@ from app.utils.exceptions import (
     EntityNotFoundError,
     ValidationApplicationError,
 )
+
+# Mirrors the frontend dropzone's accept list (mri-dropzone.tsx) -- the
+# browser filter is a UX convenience only, so the server enforces the same
+# allow-list since a client can send any extension or content-type it likes.
+ALLOWED_SCAN_EXTENSIONS = {".nii", ".nii.gz", ".dcm", ".png", ".jpg", ".jpeg"}
+
+
+def _scan_extension(filename: str) -> str:
+    name = filename.lower()
+    if name.endswith(".nii.gz"):
+        return ".nii.gz"
+    return Path(name).suffix
 
 
 class ScanService(BaseService[ScanRepository]):
@@ -59,6 +72,12 @@ class ScanService(BaseService[ScanRepository]):
 
         visit = self.visit_service.get_visit(db, visit_id, current_user)
 
+        if _scan_extension(filename) not in ALLOWED_SCAN_EXTENSIONS:
+            raise ValidationApplicationError(
+                "Unsupported scan file type. Accepted types: "
+                + ", ".join(sorted(ALLOWED_SCAN_EXTENSIONS))
+                + "."
+            )
         if not content:
             raise ValidationApplicationError("An MRI scan file must not be empty.")
         if len(content) > self.max_size_bytes:
@@ -90,6 +109,12 @@ class ScanService(BaseService[ScanRepository]):
                 "This visit already has a scan attached. A follow-up scan "
                 "belongs to a new visit (ADR-006)."
             ) from exc
+        except Exception:
+            # Any other persistence failure (e.g. a transient DatabaseError)
+            # still leaves the row unwritten, so the file must not outlive
+            # the record it was meant to back.
+            self.storage.delete(storage_key)
+            raise
 
     def get_scan(
         self,

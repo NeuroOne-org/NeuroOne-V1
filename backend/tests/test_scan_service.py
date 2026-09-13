@@ -16,6 +16,7 @@ from app.models.visit import Visit, VisitStatus
 from app.services.scan_service import ScanService
 from app.utils.exceptions import (
     ConflictError,
+    DatabaseError,
     EntityNotFoundError,
     ValidationApplicationError,
 )
@@ -201,6 +202,63 @@ def test_a_second_scan_on_the_same_visit_is_a_conflict_and_cleans_up_storage() -
         )
 
     storage.delete.assert_called_once_with(storage.save.return_value)
+
+
+def test_a_non_conflict_database_error_also_cleans_up_storage() -> None:
+    """Any persistence failure orphans the file, not just a conflict."""
+    service, repository, visit_service, storage = _service()
+    visit = _visit()
+    visit_service.get_visit.return_value = visit
+    repository.create.side_effect = DatabaseError("connection lost")
+
+    with pytest.raises(DatabaseError):
+        service.upload_scan(
+            Mock(),
+            visit.id,
+            _user(),
+            filename="scan.dcm",
+            content_type="application/dicom",
+            content=b"x",
+        )
+
+    storage.delete.assert_called_once_with(storage.save.return_value)
+
+
+def test_an_unsupported_file_type_is_rejected() -> None:
+    service, repository, visit_service, storage = _service()
+    visit = _visit()
+    visit_service.get_visit.return_value = visit
+
+    with pytest.raises(ValidationApplicationError):
+        service.upload_scan(
+            Mock(),
+            visit.id,
+            _user(),
+            filename="scan.exe",
+            content_type="application/octet-stream",
+            content=b"x",
+        )
+
+    storage.save.assert_not_called()
+    repository.create.assert_not_called()
+
+
+def test_a_double_extension_nifti_file_is_accepted() -> None:
+    service, repository, visit_service, storage = _service()
+    visit = _visit()
+    visit_service.get_visit.return_value = visit
+    repository.create.side_effect = lambda db, obj: obj
+
+    scan = service.upload_scan(
+        Mock(),
+        visit.id,
+        _user(),
+        filename="brain.nii.gz",
+        content_type="application/octet-stream",
+        content=b"x",
+    )
+
+    assert scan.original_filename == "brain.nii.gz"
 
 
 # --------------------------------------------------------------------------
