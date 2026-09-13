@@ -78,9 +78,9 @@
     "semantic_hash": "cec5ad4ff184df0af91b714217bc4fb6"
   },
   "backend/app/api/v1/auth.py": {
-    "mtime": 1789246805.8848665,
-    "seen": 1789247165.8725705,
-    "ast_hash": "0ed70b69d7ccabbb62dafd7c81d2d666",
+    "mtime": 1789247604.3438895,
+    "seen": 1789247763.3764663,
+    "ast_hash": "06d0c32bd98463613faf621e553bf0a7",
     "semantic_hash": ""
   },
   "backend/app/api/v1/patient_visits.py": {
@@ -294,16 +294,16 @@
     "semantic_hash": "8362da90ea02d18914cbe179f1f056e4"
   },
   "backend/app/utils/exceptions.py": {
-    "mtime": 1789151880.4096537,
-    "seen": 1789216769.2003405,
-    "ast_hash": "4b75bf09ebcefe1caecd4e4f4b2b42a1",
-    "semantic_hash": "4b75bf09ebcefe1caecd4e4f4b2b42a1"
+    "mtime": 1789247534.705236,
+    "seen": 1789247763.3764663,
+    "ast_hash": "e54af0dc06ea6b22e527a48a31915509",
+    "semantic_hash": ""
   },
   "backend/app/utils/handlers.py": {
-    "mtime": 1788946785.0121312,
-    "seen": 1789034581.8203945,
-    "ast_hash": "cc4f24b8fa9c2ecda1b5c1e1212559ec",
-    "semantic_hash": "cc4f24b8fa9c2ecda1b5c1e1212559ec"
+    "mtime": 1789247547.8939736,
+    "seen": 1789247763.3764663,
+    "ast_hash": "64320722d5361f9caa906e2b4332c843",
+    "semantic_hash": ""
   },
   "backend/app/utils/responses.py": {
     "mtime": 1789018076.3460033,
@@ -318,15 +318,15 @@
     "semantic_hash": "c62c6d7befe1db9d75a25c07f6957d3a"
   },
   "backend/tests/conftest.py": {
-    "mtime": 1789246813.2553477,
-    "seen": 1789247165.8725705,
-    "ast_hash": "b80321e319d344d0e57f7eba32806878",
+    "mtime": 1789247627.716827,
+    "seen": 1789247763.3764663,
+    "ast_hash": "6332b56760791fb832105cae54bd604e",
     "semantic_hash": ""
   },
   "backend/tests/test_auth_api.py": {
-    "mtime": 1789246872.7728486,
-    "seen": 1789247165.8725705,
-    "ast_hash": "f27dadcb6f1ad11f2a4c3e10496a39f3",
+    "mtime": 1789247726.3329706,
+    "seen": 1789247763.3764663,
+    "ast_hash": "85e1f5c9f3219d032cb21ce1ad528189",
     "semantic_hash": ""
   },
   "backend/tests/test_auth_service.py": {
@@ -1755,6 +1755,18 @@
     "mtime": 1789243012.9663048,
     "seen": 1789247165.8735812,
     "ast_hash": "4a6ffcae32d83906cd4bcd51c061f0f6",
+    "semantic_hash": ""
+  },
+  "backend/app/utils/rate_limit.py": {
+    "mtime": 1789247556.7335417,
+    "seen": 1789247763.3764663,
+    "ast_hash": "9db53b7e4686adae5d851baf5e08e02d",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_rate_limit.py": {
+    "mtime": 1789247658.8298652,
+    "seen": 1789247763.3764663,
+    "ast_hash": "e53afa1d5733056e67942d89f4176fbf",
     "semantic_hash": ""
   }
 }

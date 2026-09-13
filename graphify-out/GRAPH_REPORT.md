@@ -1,16 +1,16 @@
-# Graph Report - NeuroOne-V1  (2026-09-13)
+# Graph Report - audit-dependencies-api-container-268d38  (2026-09-13)
 
 ## Corpus Check
-- 286 files · ~196,445 words
+- 286 files · ~196,783 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3041 nodes · 7116 edges · 186 communities (133 shown, 46 thin omitted)
-- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 656 edges (avg confidence: 0.94)
+- 3038 nodes · 7120 edges · 192 communities (139 shown, 44 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 657 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5d391b1c`
+- Built from commit: `90d3a12b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -18,12 +18,12 @@
 - test_visit_service.py
 - UserRole
 - AnalysisRepository
-- test_ai_orchestrator.py
+- AnalysisOrchestrator
 - new/page.tsx
 - get_current_active_user
 - ReportService
 - v1/analysis.py
-- BaseModel
+- DiagnosisCandidate
 - test_ai_live_llm.py
 - patients.py
 - User
@@ -36,17 +36,17 @@
 - index.ts
 - build_backend_architecture_report.py
 - auth-provider.tsx
-- PatientService
+- PatientCreate
 - VisitService
 - frontend/package.json
 - test_ai_staging.py
 - test_report_service.py
 - Patient
-- v1/auth.py
+- BaseModel
 - Visit
 - detect_trends
-- dependencies.py
-- test_report_renderer.py
+- ScanService
+- report_service.py
 - RetrievedDocument
 - r3f-canvas-scene.tsx
 - NeuroOne Design System
@@ -56,13 +56,13 @@
 - NeuroOne Frontend — Design System
 - PLAN — AI-02b: Curated Retrieval Corpus
 - Clinician Sign-Off Gates the Report
-- .create_with_status
+- analysis_repository.py
 - compilerOptions
 - LocalScanStorage
 - queue-filter-cards.tsx
 - Base
 - SymptomRepository
-- seed_demo_case.py
+- visits.py
 - VisitStatus
 - ReportSnapshot (typed JSONB snapshot)
 - NeuroOne Frontend — Redesign Checklist
@@ -78,40 +78,40 @@
 - Ownership Violations Return 404, Not 403
 - dependencies
 - [id]/page.tsx
-- TriageService
+- build_clinical_context
 - web-page/src/lib/api.ts
 - AI-01 Contract-Real Provider-Mocked
 - test_otp_service.py
 - MVP Acceptance Journey
-- test_triage_service.py
+- dependencies.py
 - create_access_token
 - Per-Record Ownership Check
 - interactive-pipeline-demo.tsx
-- AnalysisOrchestrator
+- StagingResult
 - RateLimitedError
 - ADR-003: AI Analysis Contract and the Mocked-Provider Seam
 - REPORT-01D — Frontend Requirements & Backend Mapping Checklist
 - ADR-006-mri-primary-with-symptoms-as-context.md
-- Analysis
+- PatientService
 - test_ai_mock_providers.py
 - ADR-004: Clinical Report Snapshot and Rendering
 - ADR-005: Live LLM Provider Behind the AI-01 Seam
 - Current Development Status Table
-- FastAPI
+- utils.ts
 - devDependencies
 - Triage Queue Contract
 - get_db
 - Design boundaries
 - web-page/package.json
-- test_report_api.py
+- MockEvidenceRetriever
 - test_triage_api.py
 - NeuroOne Login Neurons Artwork v1
-- register_exception_handlers
+- ValidationApplicationError
 - ReportFindingSnapshot
 - neural-network.tsx
 - 2. Color system
 - UserRepository
-- frontend/.eslintrc.json
+- test_scan_service.py
 - FR-07 Clinical Report
 - web-page/next-env.d.ts
 - NeuroONE Frontend Redesign (parked)
@@ -119,7 +119,7 @@
 - UserService
 - .verify_credentials
 - test_deleted_at_timezone_migration.py
-- web-page/.eslintrc.json
+- Settings
 - get_triage_queue
 - 14056b8ec27d_create_scans.py
 - 1f74d19af1b8_widen_patient_email_and_promote_phone_.py
@@ -132,7 +132,7 @@
 - dcfbc7d5b2c9_create_reports.py
 - frontend/next.config.mjs
 - scripts
-- middleware.ts
+- test_scan_api.py
 - web-page/src/lib/validation.ts
 - Q: How are Alembic migrations and backend tests configured, and where should PR CI run pytest?
 - Q: The parallel AI-01 work is committed and pulled; plan our next work
@@ -167,11 +167,11 @@
 - app/main.py
 - AI Output Contract
 - reports.py
-- FindingCategory
+- mri-dropzone.tsx
 - .__init__
 - ADR-007: Curated Retrieval Corpus Behind the AI-01 Seam
 - likelihood_band_for
-- NeuroONE Agent Operating Contract
+- 17. Implementation Tasks
 - Three Provenance States and pipeline_note
 - pytest-asyncio
 - uvicorn
@@ -193,7 +193,11 @@
 - Radiology-Viewer Design Aesthetic
 - ADR-006 MRI Primary With Symptoms as Context
 - FR-01 Authentication
+- _rising_tremor_context
 - web-page/src/app/login/page.tsx
+- get_user_service
+- schemas/patient.py
+- proxy.ts
 
 ## God Nodes (most connected - your core abstractions)
 1. `User` - 129 edges
@@ -231,51 +235,51 @@
 - **Three Independently Swappable Provider Seams** — agents_ai_01_contract_real_provider_mocked, docs_neuroone_mvp_scope_ai_02a_live_llm, docs_neuroone_mvp_scope_ai_02b_real_retrieval_corpus, agents_scan_staging_seam, agents_provenance_pipeline_note [EXTRACTED 1.00]
 - **Frontend Reconnection Gap** — reports_progress_report_frontend_not_connected, docs_report_01d_frontend_checklist_baseline_finding, frontend_checklist_build_checklist, readme_dashboard_not_started, reports_progress_report_milestone_connect_frontend [INFERRED 0.95]
 
-## Communities (186 total, 46 thin omitted)
+## Communities (192 total, 44 thin omitted)
 
 ### Community 0 - "test_visit_service.py"
-Cohesion: 0.08
-Nodes (66): field_validator, Symptom request and response schemas., A whitespace-only observation is the same as no observation, rejected rather…, Fields shared by symptom request and response schemas., Payload used to record a symptom against a visit., Payload used to partially update a symptom., Public symptom data returned by the API., _reject_blank() (+58 more)
+Cohesion: 0.06
+Nodes (73): MessageResponse, PaginatedResponse, Schemas shared across application features., Generic response wrapper for paginated collection endpoints., A simple response containing a human-readable message., Public schema exports., field_validator, Symptom request and response schemas. (+65 more)
 
 ### Community 1 - "UserRole"
-Cohesion: 0.22
-Nodes (30): str, UserRole, PatientUpdate, PhoneNumber, A patient phone number., Payload used to partially update a patient., _create_payload(), _patient() (+22 more)
+Cohesion: 0.25
+Nodes (28): str, UserRole, PatientUpdate, Payload used to partially update a patient., _create_payload(), _patient(), PatientCreate, Unit tests for PatientService ownership and doctor_id resolution rules. (+20 more)
 
 ### Community 2 - "AnalysisRepository"
-Cohesion: 0.25
-Nodes (26): AnalysisRepository, Provide analysis-specific queries in addition to common CRUD., _analysis(), _engine(), _finding(), Real-database tests for analysis persistence. Run against SQLite because the…, AGENTS.md 8.5: a failure must not leave the record partly changed., Proves the .with_variant(JSON(), "sqlite") columns work as intended. (+18 more)
+Cohesion: 0.22
+Nodes (29): AnalysisFinding, One ranked candidate condition. Decision support, never a definitive diagnosis:…, AnalysisRepository, Provide analysis-specific queries in addition to common CRUD., _analysis(), _engine(), _evidence(), _finding() (+21 more)
 
-### Community 3 - "test_ai_orchestrator.py"
+### Community 3 - "AnalysisOrchestrator"
 Cohesion: 0.11
-Nodes (42): What the LLM provider returns. Validated at the seam, so a real provider in…, ReasoningResult, AIError, _candidate(), _context(), _document(), _orchestrator(), Pipeline tests covering the AI test category (AGENTS.md section 10, TRD 12).… (+34 more)
+Nodes (43): AnalysisOrchestrator, Re-attach evidence from the orchestrator's own retrieved set. A provider names…, Runs the pipeline for one clinical context., AIError, _candidate(), _context(), _document(), _orchestrator() (+35 more)
 
 ### Community 4 - "new/page.tsx"
 Cohesion: 0.06
-Nodes (46): EMPTY_SYMPTOM, StepKey, STEPS, ADR-0006, IntakeInput, intakeSchema, splitList(), StepKey (+38 more)
+Nodes (43): EMPTY_SYMPTOM, StepKey, STEPS, ADR-0006, IntakeInput, intakeSchema, splitList(), StepKey (+35 more)
 
 ### Community 5 - "get_current_active_user"
-Cohesion: 0.10
-Nodes (49): get_current_active_user(), get_scan_service(), get_visit_service(), Provide the configured scan service., Return the current user only when the account is active., Provide the configured visit service., add_symptom(), _analysis_page() (+41 more)
+Cohesion: 0.12
+Nodes (33): get_current_active_user(), get_scan_service(), Provide the configured scan service., Return the current user only when the account is active., add_symptom(), create_analysis(), delete_symptom(), delete_visit() (+25 more)
 
 ### Community 6 - "ReportService"
-Cohesion: 0.11
-Nodes (23): Clinical report contract (FR-07, ADR-004). ``ReportSnapshot`` is exactly what…, One clinical input as recorded for the visit (FR-03)., The clinical case the analysis was run against., Everything the renderer may draw on. Nothing else reaches the PDF., ReportSnapshot, ReportSymptomSnapshot, ReportVisitSnapshot, _age_years() (+15 more)
+Cohesion: 0.20
+Nodes (12): Report, Session, UUID, Build, render, and persist a new report for an analysis. Render-before-persist…, Retrieve one report by ID. The caller named only the report, so an…, List an analysis's reports, newest first., Re-render a report's PDF bytes from its immutable snapshot., Builds report snapshots, renders them, and persists the metadata. (+4 more)
 
 ### Community 7 - "v1/analysis.py"
-Cohesion: 0.13
-Nodes (25): get_analysis_service(), get_report_service(), Provide the configured analysis service., Provide the configured report service., create_report(), get_analysis(), list_reports(), Depends (+17 more)
+Cohesion: 0.14
+Nodes (23): get_analysis_service(), Provide the configured analysis service., create_report(), get_analysis(), list_reports(), Depends, ge, get (+15 more)
 
-### Community 8 - "BaseModel"
-Cohesion: 0.05
-Nodes (59): LiveReasoningPayload, The model's whole response. ``extra="forbid"`` is the structural half of the…, BaseModel, Base model definition., AnalysisCreateRequest, AnalysisResponse, AnalysisResult, DiagnosisCandidate (+51 more)
+### Community 8 - "DiagnosisCandidate"
+Cohesion: 0.08
+Nodes (43): Drop uncited candidates, then rank and trim. A ranked condition without a…, cap_evidence_per_candidate(), rank_candidates(), rank_evidence(), Rank Evidence (TRD section 8, stage 4). Real now and unchanged by AI-02:…, Order documents by relevance, then source trust, then recency. ``document_id``…, Order candidates by descending confidence, name breaking ties., Trim each candidate's citations to the configured maximum. Trimming never… (+35 more)
 
 ### Community 9 - "test_ai_live_llm.py"
-Cohesion: 0.07
-Nodes (82): MockEvidenceRetriever, Keyword retriever over the frozen mock corpus., model_validator, Settings, _analyze(), _candidates(), _context(), _evidence() (+74 more)
+Cohesion: 0.13
+Nodes (52): _analyze(), _candidates(), _context(), _evidence(), _llm(), Tests for the live reasoning provider (AI-02 slice 1, ADR-005). A live model is…, A client whose model always answers with ``content``., One well-formed candidate payload, JSON-encoded as a model would. (+44 more)
 
 ### Community 10 - "patients.py"
-Cohesion: 0.11
-Nodes (34): get_patient_service(), Provide the configured patient service., create_patient(), delete_patient(), get_patient(), list_patients(), _paginated_response(), delete (+26 more)
+Cohesion: 0.14
+Nodes (29): get_patient_service(), Provide the configured patient service., create_patient(), delete_patient(), get_patient(), list_patients(), _paginated_response(), delete (+21 more)
 
 ### Community 11 - "User"
 Cohesion: 0.14
@@ -286,12 +290,12 @@ Cohesion: 0.09
 Nodes (28): ForgotPasswordPage(), LoginForm(), handleOtpLogin(), handleSubmit(), validate(), ResetPasswordForm(), SignupPage(), VerifyOtpForm() (+20 more)
 
 ### Community 13 - "build_providers"
-Cohesion: 0.16
-Nodes (16): EvidenceRetriever, ImagingStager, LLMClient, Protocol, The provider seam. This module is the entire surface AI-02 replaces. Everything…, Retrieves candidate literature for a clinical context. Implementations must…, Return documents relevant to the query, most relevant first. Returning an empty…, Produces ranked candidate conditions from context plus evidence. The return… (+8 more)
+Cohesion: 0.11
+Nodes (22): AI orchestration. Layering rule: nothing in this package imports a repository…, The AI pipeline (TRD section 8, APP-FLOW section 5). Clinical Case -> Normalize…, EvidenceRetriever, ImagingStager, LLMClient, Protocol, The provider seam. This module is the entire surface AI-02 replaces. Everything…, Retrieves candidate literature for a clinical context. Implementations must… (+14 more)
 
 ### Community 14 - "EntityNotFoundError"
 Cohesion: 0.06
-Nodes (95): EntityNotFoundError, Raised when a requested entity does not exist., _candidate(), _deny_visit(), _evidence(), Unit tests for AnalysisService. Two properties carry the weight here: that a…, AGENTS.md 8.4.4: source metadata must survive to persistence., The masked 404 must not disclose the visit or the patient behind it. (+87 more)
+Nodes (89): EntityNotFoundError, Raised when a requested entity does not exist., _candidate(), _deny_visit(), _evidence(), Unit tests for AnalysisService. Two properties carry the weight here: that a…, AGENTS.md 8.4.4: source metadata must survive to persistence., The masked 404 must not disclose the visit or the patient behind it. (+81 more)
 
 ### Community 15 - "ReportRepository"
 Cohesion: 0.17
@@ -302,68 +306,68 @@ Cohesion: 0.15
 Nodes (31): _analysis(), _client(), _db_override(), _evidence(), _finding(), TestClient, Contract tests for the analysis endpoints. Beyond the usual status/shape…, A consumer must be able to tell simulated evidence from live evidence. (+23 more)
 
 ### Community 17 - "types.ts"
-Cohesion: 0.04
-Nodes (57): AnalysisFindings(), BAND_TONE, BAR_TONE, FindingRow(), PointList(), AnalysisProvenance(), ADR-0006, ChevronDown() (+49 more)
+Cohesion: 0.05
+Nodes (49): AnalysisFindings(), BAND_TONE, BAR_TONE, FindingRow(), PointList(), AnalysisProvenance(), ADR-0006, IconProps (+41 more)
 
 ### Community 18 - "index.ts"
 Cohesion: 0.03
-Nodes (69): NAV_ITEMS, Activity(), IconProps, IconProps, Bell(), IconProps, Calendar(), IconProps (+61 more)
+Nodes (62): NAV_ITEMS, Activity(), IconProps, IconProps, Bell(), IconProps, Calendar(), IconProps (+54 more)
 
 ### Community 19 - "build_backend_architecture_report.py"
 Cohesion: 0.18
 Nodes (31): Document, RGBColor, add_body(), add_bullets(), add_callout(), add_code(), add_cover(), add_field() (+23 more)
 
 ### Community 20 - "auth-provider.tsx"
-Cohesion: 0.13
-Nodes (22): VisitAnalysis(), downloadReport(), runAnalysis(), signOff(), onSubmit(), AuthContext, AuthContextValue, AuthProvider() (+14 more)
-
-### Community 21 - "PatientService"
 Cohesion: 0.11
-Nodes (24): PhoneNumber, BaseService, Shared service-layer infrastructure., Base service providing access to the repository., Public service-layer exports., PatientService, Patient, Session (+16 more)
+Nodes (25): VisitAnalysis(), downloadReport(), runAnalysis(), signOff(), onSubmit(), AuthContext, AuthContextValue, AuthProvider() (+17 more)
+
+### Community 21 - "PatientCreate"
+Cohesion: 0.16
+Nodes (15): PatientCreate, Payload used to create a patient., Patient, Session, User, UUID, List patients, scoped to the caller's role. CLINICIAN always sees only their…, Return every patient the caller may triage, unpaginated. Mirrors list_patients'… (+7 more)
 
 ### Community 22 - "VisitService"
-Cohesion: 0.13
-Nodes (19): Session, Symptom, UUID, Visit, Open a clinical case for a patient the caller owns. The patient id came from…, Retrieve a visit by ID. Ownership violations read as 404., List a patient's visits, newest first., Return a patient's visit history ordered for trend comparison. This is the in-… (+11 more)
+Cohesion: 0.12
+Nodes (22): A neurological symptom recorded against a clinical case., Symptom, Session, Symptom, UUID, Visit, Business logic for clinical cases (visits) and their symptoms., Open a clinical case for a patient the caller owns. The patient id came from… (+14 more)
 
 ### Community 23 - "frontend/package.json"
-Cohesion: 0.07
-Nodes (27): autoprefixer, axios, eslint, eslint-config-next, js-cookie, lucide-react, next, postcss (+19 more)
+Cohesion: 0.06
+Nodes (29): autoprefixer, axios, eslint, eslint-config-next, js-cookie, lucide-react, next, postcss (+21 more)
 
 ### Community 24 - "test_ai_staging.py"
-Cohesion: 0.12
-Nodes (32): MockImagingStager, Deterministic stand-in for an MRI staging model (ADR-006). The stage estimate…, Deterministic stage estimate derived from the scan's checksum., Derive a stage, confidence and region breakdown from the checksum., Imaging staging contract (ADR-006). A third provider seam alongside the…, One anatomical region's weight in a staging estimate. Descriptive detail only.…, What the orchestrator hands the imaging staging provider. Deliberately narrow:…, RegionContribution (+24 more)
+Cohesion: 0.11
+Nodes (36): MockImagingStager, Deterministic stand-in for an MRI staging model (ADR-006). The stage estimate…, Deterministic stage estimate derived from the scan's checksum., Derive a stage, confidence and region breakdown from the checksum., The MRI scan attached to a visit, as the AI layer sees it. PHI-minimal like the…, ScanSummary, Imaging staging contract (ADR-006). A third provider seam alongside the…, One anatomical region's weight in a staging estimate. Descriptive detail only.… (+28 more)
 
 ### Community 25 - "test_report_service.py"
-Cohesion: 0.19
-Nodes (27): One generated PDF report, snapshotting its source analysis. Never mutated after…, Report, _analysis(), _evidence(), _finding(), _patient(), Unit tests for ReportService. Two properties carry the weight, mirroring…, ADR-006 decision 6: sign-off gates the report. (+19 more)
+Cohesion: 0.17
+Nodes (29): One generated PDF report, snapshotting its source analysis. Never mutated after…, Report, _analysis(), _evidence(), _finding(), _patient(), Unit tests for ReportService. Two properties carry the weight, mirroring…, ADR-006 decision 6: sign-off gates the report. (+21 more)
 
 ### Community 26 - "Patient"
-Cohesion: 0.09
-Nodes (36): _age_years(), build_clinical_context(), date, Whole years, so a date of birth never reaches the reasoning layer., Assemble the context the AI pipeline reasons over. ``prior_visits`` must be…, Patient, Patient model definitions., PatientRepository (+28 more)
+Cohesion: 0.12
+Nodes (18): Patient, PhoneNumber, Patient model definitions., Enum, PatientRepository, Session, UUID, Patient persistence operations. (+10 more)
 
-### Community 27 - "v1/auth.py"
-Cohesion: 0.14
-Nodes (29): get_auth_service(), Provide the configured authentication service., forgot_password(), login(), BackgroundTasks, Depends, get, post (+21 more)
+### Community 27 - "BaseModel"
+Cohesion: 0.12
+Nodes (33): LiveReasoningPayload, The model's whole response. ``extra="forbid"`` is the structural half of the…, get_auth_service(), Provide the configured authentication service., forgot_password(), login(), BackgroundTasks, Depends (+25 more)
 
 ### Community 28 - "Visit"
-Cohesion: 0.14
-Nodes (13): Immutable snapshot of a generated clinical report (ADR-004)., MRI scan metadata for a visit (ADR-006). The scan's bytes are not a column here…, One MRI scan attached to a visit. Attaches to the Visit, not the Patient…, Scan, Symptom model definitions., Clinical case / visit model definitions., A clinical case / visit belonging to a patient. Ownership is derived from the…, Visit (+5 more)
+Cohesion: 0.13
+Nodes (13): Enum, Persisted AI analysis, its ranked findings, and their citations. Naming is…, Immutable snapshot of a generated clinical report (ADR-004)., MRI scan metadata for a visit (ADR-006). The scan's bytes are not a column here…, Symptom model definitions., Clinical case / visit model definitions., A clinical case / visit belonging to a patient. Ownership is derived from the…, Visit (+5 more)
 
 ### Community 29 - "detect_trends"
-Cohesion: 0.11
-Nodes (33): Normalize Input + Build Clinical Context (TRD section 8, stages 1-2). This is…, Map a Visit and its live symptoms into the AI-facing shape., _to_context_visit(), detect_trends(), Normalized names of symptoms that are getting worse across visits. This is the…, Detect per-symptom severity trends across a patient's visits. ``visits`` must…, worsening_symptom_names(), ContextSymptom (+25 more)
-
-### Community 30 - "dependencies.py"
 Cohesion: 0.09
-Nodes (21): Reusable FastAPI dependencies for database and access control., Session, UUID, Scan persistence operations., Provide scan-specific queries in addition to common CRUD., Return the active scan attached to a visit, if any., ScanRepository, Scan (+13 more)
+Nodes (37): Normalize Input + Build Clinical Context (TRD section 8, stages 1-2). This is…, Map a Visit and its live symptoms into the AI-facing shape., _to_context_visit(), detect_trends(), Normalized names of symptoms that are getting worse across visits. This is the…, Detect per-symptom severity trends across a patient's visits. ``visits`` must…, worsening_symptom_names(), ContextSymptom (+29 more)
 
-### Community 31 - "test_report_renderer.py"
-Cohesion: 0.19
-Nodes (23): Render a complete, multi-page clinical report PDF. Raises whatever ReportLab…, render(), The patient/case identification FR-07 requires a report to carry., A citation as it must appear in the PDF (FR-05/06)., ReportEvidenceSnapshot, ReportPatientSnapshot, _evidence(), _finding() (+15 more)
+### Community 30 - "ScanService"
+Cohesion: 0.11
+Nodes (20): One MRI scan attached to a visit. Attaches to the Visit, not the Patient…, Scan, Session, UUID, Scan persistence operations., Provide scan-specific queries in addition to common CRUD., Return the active scan attached to a visit, if any., ScanRepository (+12 more)
+
+### Community 31 - "report_service.py"
+Cohesion: 0.12
+Nodes (34): Render a complete, multi-page clinical report PDF. Raises whatever ReportLab…, render(), Clinical report contract (FR-07, ADR-004). ``ReportSnapshot`` is exactly what…, The patient/case identification FR-07 requires a report to carry., One clinical input as recorded for the visit (FR-03)., The clinical case the analysis was run against., A citation as it must appear in the PDF (FR-05/06)., Everything the renderer may draw on. Nothing else reaches the PDF. (+26 more)
 
 ### Community 32 - "RetrievedDocument"
-Cohesion: 0.06
-Nodes (38): _document(), MockCondition, Deterministic stand-in for a retrieval corpus and a reasoning model. Everything…, A rule mapping clinical findings to a candidate condition., Reason over the supplied context and evidence., LiveCandidatePayload, LiveLLMClient, Any (+30 more)
+Cohesion: 0.07
+Nodes (44): _document(), MockCondition, Deterministic stand-in for a retrieval corpus and a reasoning model. Everything…, A rule mapping clinical findings to a candidate condition., Reason over the supplied context and evidence., LiveCandidatePayload, LiveLLMClient, Any (+36 more)
 
 ### Community 33 - "r3f-canvas-scene.tsx"
 Cohesion: 0.14
@@ -374,12 +378,12 @@ Cohesion: 0.12
 Nodes (20): 1. Brand identity, 3. Typography, 4. Login screen, 5. Open items, Brand Color Palette, Cormorant Garamond Fallback, IBM Plex Sans UI Font, Login Screen Spec (+12 more)
 
 ### Community 35 - "patient_visits.py"
-Cohesion: 0.11
-Nodes (27): alias, create_visit(), get_visit_history(), list_patient_visits(), Depends, ge, get, le (+19 more)
+Cohesion: 0.14
+Nodes (25): alias, get_visit_service(), Provide the configured visit service., create_visit(), get_visit_history(), list_patient_visits(), Depends, ge (+17 more)
 
 ### Community 36 - "BaseRepository"
-Cohesion: 0.16
-Nodes (12): BaseRepository, Session, UUID, Generic repository providing reusable CRUD operations. This base repository…, Soft-delete an entity. Marks the entity as deleted by setting the `is_deleted`…, Check whether a record exists. Returns True if an active record with the given…, Create a new database record and persist it. Adds the model instance to the…, Retrieve a single record by its unique identifier. Returns the entity if it… (+4 more)
+Cohesion: 0.13
+Nodes (19): BaseRepository, Session, UUID, Generic repository providing reusable CRUD operations. This base repository…, Soft-delete an entity. Marks the entity as deleted by setting the `is_deleted`…, Check whether a record exists. Returns True if an active record with the given…, Create a new database record and persist it. Adds the model instance to the…, Retrieve a single record by its unique identifier. Returns the entity if it… (+11 more)
 
 ### Community 37 - "components.json"
 Cohesion: 0.10
@@ -390,24 +394,24 @@ Cohesion: 0.09
 Nodes (21): 10. Data layer, 11. Writing, 1. The idea, 2. Color, 3. Typography, 4. Shape and spacing, 5. Components, 6. Icons (+13 more)
 
 ### Community 39 - "PLAN — AI-02b: Curated Retrieval Corpus"
-Cohesion: 0.06
-Nodes (34): 10. Recommended Design, 11. Data / Schema Impact, 12. API / Contract Impact, 13. AI / RAG Impact, 14. Security / Privacy Impact, 15. Clinical Safety Impact, 16. Failure / Recovery Behavior, 17. Implementation Tasks (+26 more)
+Cohesion: 0.09
+Nodes (23): 10. Recommended Design, 11. Data / Schema Impact, 12. API / Contract Impact, 13. AI / RAG Impact, 14. Security / Privacy Impact, 15. Clinical Safety Impact, 16. Failure / Recovery Behavior, 18. Task Dependencies (+15 more)
 
 ### Community 40 - "Clinician Sign-Off Gates the Report"
 Cohesion: 0.15
 Nodes (14): ClinicalContext, Database-Free app/ai Package, Re-Running Analysis Creates a New Row, Multiple Immutable Reports per Analysis, Render Before Persist, ReportLab (Platypus) Renderer, ReportService, Clinical Context Leaves the Machine (+6 more)
 
-### Community 41 - ".create_with_status"
-Cohesion: 0.19
-Nodes (9): Session, UUID, Return the most recent analysis for a visit, if any., Return each patient's most recent analysis, across all their visits. The triage…, Eager-load findings and their citations in two extra queries. Every read path…, Persist an analysis and advance the visit status in one transaction. Both…, Return an active analysis with its findings and citations loaded., Return a visit's analyses, newest first. (+1 more)
+### Community 41 - "analysis_repository.py"
+Cohesion: 0.16
+Nodes (10): Session, UUID, Analysis persistence operations., Return the most recent analysis for a visit, if any., Return each patient's most recent analysis, across all their visits. The triage…, Eager-load findings and their citations in two extra queries. Every read path…, Persist an analysis and advance the visit status in one transaction. Both…, Return an active analysis with its findings and citations loaded. (+2 more)
 
 ### Community 42 - "compilerOptions"
 Cohesion: 0.09
 Nodes (21): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+13 more)
 
 ### Community 43 - "LocalScanStorage"
-Cohesion: 0.13
-Nodes (14): Storage backends for artifacts that do not belong in the database., LocalScanStorage, Path, UUID, Storage for MRI scan bytes, outside the database (ADR-006 decision 5). A PDF…, Persist ``content`` and return its storage key., Filesystem-backed storage under a configured base directory. The concrete…, Tests for LocalScanStorage (ADR-006 decision 5). (+6 more)
+Cohesion: 0.08
+Nodes (31): Storage backends for artifacts that do not belong in the database., LocalScanStorage, Path, UUID, Storage for MRI scan bytes, outside the database (ADR-006 decision 5). A PDF…, Persist ``content`` and return its storage key., Filesystem-backed storage under a configured base directory. The concrete…, Tests for LocalScanStorage (ADR-006 decision 5). (+23 more)
 
 ### Community 44 - "queue-filter-cards.tsx"
 Cohesion: 0.18
@@ -421,13 +425,13 @@ Nodes (7): Run migrations in 'offline' mode. This configures the context with ju
 Cohesion: 0.23
 Nodes (7): Session, UUID, Symptom persistence operations., Provide symptom-specific queries in addition to common CRUD operations., Return a visit's active symptoms in recording order., Count a visit's active symptoms., SymptomRepository
 
-### Community 47 - "seed_demo_case.py"
-Cohesion: 0.17
-Nodes (19): DemoClinician, DemoPatient, DemoSymptom, DemoVisit, _flag_line(), Flags, main(), datetime (+11 more)
+### Community 47 - "visits.py"
+Cohesion: 0.12
+Nodes (24): _analysis_page(), list_analyses(), list_symptoms(), ge, le, Query, Visit endpoints. Item-level operations are flat rather than nested under the…, List the symptoms recorded against a visit. (+16 more)
 
 ### Community 48 - "VisitStatus"
-Cohesion: 0.12
-Nodes (31): A neurological symptom recorded against a clinical case., Symptom, Enum, str, Lifecycle of a clinical case. ANALYZED is written by the AI pipeline (AI-01),…, VisitStatus, Session, UUID (+23 more)
+Cohesion: 0.13
+Nodes (29): Enum, str, Lifecycle of a clinical case. ANALYZED is written by the AI pipeline (AI-01),…, VisitStatus, Session, UUID, Clinical case / visit persistence operations., Provide visit-specific queries in addition to common CRUD operations. (+21 more)
 
 ### Community 49 - "ReportSnapshot (typed JSONB snapshot)"
 Cohesion: 0.13
@@ -470,8 +474,8 @@ Cohesion: 0.50
 Nodes (3): Scan wire schema (ADR-006). No storage_key: that is an internal reference into…, A persisted scan's metadata, as returned by the API., ScanResponse
 
 ### Community 59 - "UserResponse"
-Cohesion: 0.08
-Nodes (27): Require the current user to have the administrator role., require_admin(), create_user(), Depends, post, Session, User, Administrator-only endpoints. (+19 more)
+Cohesion: 0.10
+Nodes (23): Require the current user to have the administrator role., require_admin(), create_user(), Depends, post, Session, User, Administrator-only endpoints. (+15 more)
 
 ### Community 60 - "Ownership Violations Return 404, Not 403"
 Cohesion: 0.14
@@ -482,12 +486,12 @@ Cohesion: 0.11
 Nodes (18): dependencies, axios, clsx, framer-motion, @hookform/resolvers, js-cookie, lucide-react, next (+10 more)
 
 ### Community 62 - "[id]/page.tsx"
-Cohesion: 0.07
-Nodes (53): DashboardLayout(), DashboardPage(), filterEyebrow(), matchesFilter(), QueueRow(), REASON_STYLE, Signal(), summarise() (+45 more)
+Cohesion: 0.08
+Nodes (46): DashboardLayout(), DashboardPage(), filterEyebrow(), matchesFilter(), QueueRow(), REASON_STYLE, Signal(), summarise() (+38 more)
 
-### Community 63 - "TriageService"
-Cohesion: 0.15
-Nodes (13): Triage queue wire schema (ADR-006). No stat tiles: this is a ranked queue, not…, One patient's position in the triage queue. Not an ORM-backed response: there…, TriageEntry, _awaiting_sign_off(), _has_open_early_watch(), _has_worsening_trend(), Session, TriageEntry (+5 more)
+### Community 63 - "build_clinical_context"
+Cohesion: 0.21
+Nodes (21): _age_years(), build_clinical_context(), date, Whole years, so a date of birth never reaches the reasoning layer., Assemble the context the AI pipeline reasons over. ``prior_visits`` must be…, _patient(), Tests for the ORM -> ClinicalContext normalize stage. The PHI-minimization…, The current severity is part of the trajectory, not outside it. (+13 more)
 
 ### Community 64 - "web-page/src/lib/api.ts"
 Cohesion: 0.15
@@ -498,16 +502,16 @@ Cohesion: 0.13
 Nodes (16): AI-01 Contract-Real Provider-Mocked, AI / RAG Pipeline, Locked Roadmap and Sequencing, httpx, ADR-005 Live LLM Provider, AI-02a Live LLM Provider, AI-02b Real Retrieval Corpus (deferred), AI Phasing Decision (+8 more)
 
 ### Community 66 - "test_otp_service.py"
-Cohesion: 0.18
-Nodes (25): generate_and_send_otp(), _OtpEntry, OtpPurpose, Checks a submitted OTP against the one stored for this identity and purpose.…, Generates a 6-digit OTP scoped to `purpose`, stores it, and delivers it via…, Fire-and-forget wrapper meant for BackgroundTasks.add_task. Swallows delivery…, send_otp_background(), _store_key() (+17 more)
+Cohesion: 0.17
+Nodes (27): generate_and_send_otp(), _OtpEntry, OtpPurpose, Fire-and-forget wrapper meant for BackgroundTasks.add_task. Swallows delivery…, Checks a submitted OTP against the one stored for this identity and purpose.…, Generates a 6-digit OTP scoped to `purpose`, stores it, and delivers it via…, send_otp_background(), _store_key() (+19 more)
 
 ### Community 67 - "MVP Acceptance Journey"
 Cohesion: 0.15
 Nodes (13): Demo-Ready Definition, Definition of Demo-Ready MVP, FR-02 Patient Management, FR-03 Clinical Input, MVP Acceptance Journey, Product Goal Clinician Journey, AI-Owned analyzed Visit Status, Patient Endpoint Contract (+5 more)
 
-### Community 68 - "test_triage_service.py"
-Cohesion: 0.45
-Nodes (12): _analysis(), _finding(), _patient(), Unit tests for TriageService (ADR-006 decision 7). The ranking order is the…, ADR-006: the scan-derived trend has no column of its own -- it is read back…, _service(), test_a_patient_with_no_analysis_sorts_last(), test_a_reviewed_analysis_is_not_awaiting_sign_off() (+4 more)
+### Community 68 - "dependencies.py"
+Cohesion: 0.17
+Nodes (21): get_triage_service(), Reusable FastAPI dependencies for database and access control., Provide the configured triage service., One patient's position in the triage queue. Not an ORM-backed response: there…, TriageEntry, Session, Return the caller's panel, ranked, then paginated. Ranking runs over the whole…, Ranks a clinician's patient panel by what needs attention. (+13 more)
 
 ### Community 69 - "create_access_token"
 Cohesion: 0.21
@@ -518,12 +522,12 @@ Cohesion: 0.13
 Nodes (15): Coding Standards (type hints, PEP 8, services own business logic), Feature → API → Service → Repository → Model → Schema Flow, EntityNotFoundError, PatientService._authorize_access, Per-Record Ownership Check, require_roles Role-Level 403 Signaling, detect_trends Must Be Extended for Scan Metrics, Intake Splits Into New Patient and New Visit (+7 more)
 
 ### Community 71 - "interactive-pipeline-demo.tsx"
-Cohesion: 0.26
-Nodes (9): ConfidenceDial(), ConfidenceDialProps, CASESHOTS, InteractivePipelineDemo(), SampleCase, DemoDiseaseLabel, DemoDiseaseStage, DemoRegion (+1 more)
+Cohesion: 0.42
+Nodes (7): CASESHOTS, InteractivePipelineDemo(), SampleCase, DemoDiseaseLabel, DemoDiseaseStage, DemoRegion, RegionBars()
 
-### Community 72 - "AnalysisOrchestrator"
-Cohesion: 0.07
-Nodes (39): AI orchestration. Layering rule: nothing in this package imports a repository…, AnalysisOrchestrator, The AI pipeline (TRD section 8, APP-FLOW section 5). Clinical Case -> Normalize…, Re-attach evidence from the orchestrator's own retrieved set. A provider names…, Drop uncited candidates, then rank and trim. A ranked condition without a…, Describe what actually produced this analysis. Derived from every provider that…, Execute the pipeline and return validated, ranked output., Runs the pipeline for one clinical context. (+31 more)
+### Community 72 - "StagingResult"
+Cohesion: 0.11
+Nodes (18): Describe what actually produced this analysis. Derived from every provider that…, Execute the pipeline and return validated, ranked output., Run imaging staging for the current visit, and a trend across it. Symptoms…, Return a stage estimate for the supplied scan metadata., detect_stage_trend(), _direction(), datetime, UUID (+10 more)
 
 ### Community 73 - "RateLimitedError"
 Cohesion: 0.15
@@ -534,16 +538,20 @@ Cohesion: 0.14
 Nodes (14): Addendum: evidence-resolution correction (pre-`REPORT-01`), ADR-003: AI Analysis Contract and the Mocked-Provider Seam, Alternatives Rejected, Consequences, Constraints, Context, Decision, Migration / Rollback Impact (+6 more)
 
 ### Community 75 - "REPORT-01D — Frontend Requirements & Backend Mapping Checklist"
-Cohesion: 0.22
+Cohesion: 0.18
 Nodes (14): 0. Baseline finding: this is not a "reconcile," it's mostly new pages, 1. Auth, 1A. Triage queue — the dashboard (ADR-006 decision 7), 2. Patients, 3. Clinical Case (Visit) + Symptoms, 3A. Scan intake (ADR-006 decisions 1, 2, 5), 4. AI Analysis + Differential Diagnosis + Evidence, 5. Clinician Sign-off → PDF Report (+6 more)
 
-### Community 77 - "Analysis"
-Cohesion: 0.14
-Nodes (16): Analysis, AnalysisFinding, One ranked candidate condition. Decision support, never a definitive diagnosis:…, One run of the AI pipeline against one clinical case. Re-running creates a new…, Analysis persistence operations., AnalysisService, Analysis, Session (+8 more)
+### Community 76 - "ADR-006-mri-primary-with-symptoms-as-context.md"
+Cohesion: 0.27
+Nodes (6): NeuroONE Agent Operating Contract, BUILD Mode, DEBUG Mode, PLAN Mode, TEST Mode, ADR-002 — Visit Ownership Derives From Parent Patient
+
+### Community 77 - "PatientService"
+Cohesion: 0.08
+Nodes (33): Analysis, AnalysisEvidence, FindingCategory, str, One citation supporting one ranked finding. Scoped to a finding rather than to…, Whether a ranked condition sits in the differential or is flagged early.…, One run of the AI pipeline against one clinical case. Re-running creates a new…, AnalysisService (+25 more)
 
 ### Community 78 - "test_ai_mock_providers.py"
-Cohesion: 0.10
-Nodes (32): What the orchestrator asks the retriever for., RetrievalQuery, _analyze(), _context(), Tests for the mocked retriever and reasoner. Two properties matter most here.…, A stage estimate with no resolvable citation would be silently dropped., The fixture must not read as real literature., An empty result is a legitimate outcome, not an exception. (+24 more)
+Cohesion: 0.14
+Nodes (23): _analyze(), _context(), Tests for the mocked retriever and reasoner. Two properties matter most here.…, A stage estimate with no resolvable citation would be silently dropped., The fixture must not read as real literature., AGENTS.md 8.2: confidence is likelihood, never certainty., The property a seeded RNG or a canned fixture would not have., AGENTS.md 8.1: schema-valid deterministic results. (+15 more)
 
 ### Community 79 - "ADR-004: Clinical Report Snapshot and Rendering"
 Cohesion: 0.15
@@ -557,9 +565,9 @@ Nodes (13): ADR-005: Live LLM Provider Behind the AI-01 Seam, Alternatives Rejec
 Cohesion: 0.17
 Nodes (13): Repository Inspection Rules, REPORT-01D Contract Map, AI Pipeline Contract Complete, Providers Simulated, Authentication Complete, Backend APIs Complete (35 endpoints, 400 tests), Dashboard Not Started Against Real Data, Explainable AI in the API, Not the UI, Current Development Status Table (+5 more)
 
-### Community 82 - "FastAPI"
-Cohesion: 0.29
-Nodes (8): Top-level API router., Tests for soft-delete semantics and transactional failure handling., RepositoryRecord, _session(), test_create_rolls_back_and_raises_controlled_database_error(), test_mid_write_failure_persists_nothing_and_translates_database_error(), test_soft_deleted_records_are_hidden_unless_explicitly_requested(), FastAPI
+### Community 82 - "utils.ts"
+Cohesion: 0.13
+Nodes (13): ConfidenceDial(), ConfidenceDialProps, InteractiveMriViewer(), RegionInfo, REGIONS, TriageEntry, confidencePercent(), formatConfidence() (+5 more)
 
 ### Community 83 - "devDependencies"
 Cohesion: 0.11
@@ -581,9 +589,9 @@ Nodes (8): pipeline_note Provenance Label, provider_mode, HYBRID_PIPELINE_NOTE, 
 Cohesion: 0.04
 Nodes (45): dependencies, axios, js-cookie, lucide-react, next, react, react-dom, zod (+37 more)
 
-### Community 88 - "test_report_api.py"
-Cohesion: 0.19
-Nodes (21): _client(), _db_override(), TestClient, Contract tests for the report endpoints. Beyond the usual status/shape…, ADR-006 decision 6: sign-off gates the report., AGENTS.md 8.2: not in the schema, not in API field naming., _report(), _snapshot() (+13 more)
+### Community 88 - "MockEvidenceRetriever"
+Cohesion: 0.12
+Nodes (17): MockEvidenceRetriever, Keyword retriever over the frozen mock corpus., Section 8.5: the clinical record survives a provider failure., AI-02 slice 1 swaps reasoning only (ADR-005)., _settings(), test_a_model_failure_is_a_controlled_ai_error(), test_build_providers_rejects_a_live_selection_without_a_key(), test_build_providers_returns_the_live_pair_when_configured() (+9 more)
 
 ### Community 89 - "test_triage_api.py"
 Cohesion: 0.27
@@ -593,9 +601,9 @@ Nodes (11): _client(), _db_override(), _entry(), TestClient, TriageEntry, Contra
 Cohesion: 0.38
 Nodes (10): NeuroOne Login Neurons Artwork v1, Dark Indigo Gradient Background, Decorative Non-Informational Asset Role, Dual Neuron Diagonal Composition, Neural Brand Identity Signal, Parked Login Design Reference, Portrait Split-Panel Login Slot, Golden Synapse Spark Focal Point (+2 more)
 
-### Community 91 - "register_exception_handlers"
-Cohesion: 0.23
-Nodes (20): ErrorResponse, The standard shape returned for API errors., ApplicationError, AuthenticationError, ConflictError, DatabaseError, ExternalServiceError, InternalServerError (+12 more)
+### Community 91 - "ValidationApplicationError"
+Cohesion: 0.20
+Nodes (23): Top-level API router., ErrorResponse, The standard shape returned for API errors., ApplicationError, AuthenticationError, AuthorizationError, ConflictError, ExternalServiceError (+15 more)
 
 ### Community 92 - "ReportFindingSnapshot"
 Cohesion: 0.28
@@ -608,6 +616,10 @@ Nodes (6): Edge, EDGES, findNode(), NeuralNetwork(), Node, NODES
 ### Community 94 - "2. Color system"
 Cohesion: 0.50
 Nodes (4): 2. Color system, Brand (login screen, decorative panel, marketing surfaces), Product (dashboard, forms, tables, reports), Status colors (diagnosis output, case flags)
+
+### Community 96 - "test_scan_service.py"
+Cohesion: 0.34
+Nodes (16): _deny_visit(), Unit tests for ScanService (ADR-006). Mirrors test_report_service.py's shape:…, ADR-006 decision 2: one scan per visit., _service(), test_a_second_scan_on_the_same_visit_is_a_conflict_and_cleans_up_storage(), test_an_empty_file_is_rejected(), test_an_oversized_file_is_rejected(), test_get_scan_on_a_scanless_visit_is_a_missing_scan() (+8 more)
 
 ### Community 97 - "FR-07 Clinical Report"
 Cohesion: 0.29
@@ -622,8 +634,8 @@ Cohesion: 0.30
 Nodes (12): _error_response(), http_exception_handler(), Exception, Request, rate_limited_handler(), request_validation_error_handler(), unhandled_error_handler(), validation_error_handler() (+4 more)
 
 ### Community 101 - "UserService"
-Cohesion: 0.23
-Nodes (8): get_user_service(), Provide the configured user service., UserUpdate, Session, User, UUID, Business logic for user management., UserService
+Cohesion: 0.28
+Nodes (6): UserUpdate, Session, User, UUID, Business logic for user management., UserService
 
 ### Community 102 - ".verify_credentials"
 Cohesion: 0.16
@@ -633,13 +645,13 @@ Nodes (9): Token, LoginResponse, Token, User, Authenticate a user and, per AUTH_
 Cohesion: 0.43
 Nodes (6): _load_migration(), Regression tests for the deleted_at timezone migration., test_downgrade_restores_naive_timestamps(), test_migration_chains_from_case_01(), test_upgrade_uses_implicit_timezone_cast(), ModuleType
 
-### Community 104 - "web-page/.eslintrc.json"
-Cohesion: 0.50
-Nodes (3): extends, next/core-web-vitals, root
+### Community 104 - "Settings"
+Cohesion: 0.28
+Nodes (10): model_validator, Settings, _base_kwargs(), Startup safety checks on Settings (app/core/config.py)., test_allows_otp_off_in_development(), test_allows_otp_on_in_production(), test_console_delivery_does_not_require_gmail_credentials(), test_refuses_email_delivery_without_gmail_credentials() (+2 more)
 
 ### Community 105 - "get_triage_queue"
-Cohesion: 0.16
-Nodes (13): get_triage_service(), Provide the configured triage service., get_triage_queue(), Depends, ge, get, le, Query (+5 more)
+Cohesion: 0.18
+Nodes (11): get_triage_queue(), Depends, ge, get, le, Query, Session, Triage queue endpoint (ADR-006). Deliberately not called "dashboard": this… (+3 more)
 
 ### Community 106 - "14056b8ec27d_create_scans.py"
 Cohesion: 0.40
@@ -681,9 +693,9 @@ Nodes (4): downgrade(), Create the reports table (ADR-004). No pdf_path and no b
 Cohesion: 0.29
 Nodes (7): scripts, build, dev, lint, start, test, typecheck
 
-### Community 117 - "middleware.ts"
-Cohesion: 0.40
-Nodes (3): AUTH_PAGES, config, PROTECTED_PREFIXES
+### Community 117 - "test_scan_api.py"
+Cohesion: 0.33
+Nodes (11): _client(), _db_override(), TestClient, Contract tests for the scan endpoints (ADR-006)., _scan(), test_getting_a_scan_on_a_scanless_visit_is_404(), test_getting_a_visits_scan_succeeds(), test_uploading_a_scan_returns_201_with_metadata() (+3 more)
 
 ### Community 118 - "web-page/src/lib/validation.ts"
 Cohesion: 0.40
@@ -702,8 +714,8 @@ Cohesion: 0.25
 Nodes (6): body, display, metadata, mono, ThemeProvider(), next-themes
 
 ### Community 124 - "test_patients_api.py"
-Cohesion: 0.28
-Nodes (15): AuthorizationError, _client(), _db_override(), _patient(), TestClient, Integration-style contract tests for patient endpoints. Covers the ownership-…, test_clinician_cannot_create_patient_for_another_doctor(), test_delete_on_other_doctors_patient_is_404() (+7 more)
+Cohesion: 0.30
+Nodes (14): _client(), _db_override(), _patient(), TestClient, Integration-style contract tests for patient endpoints. Covers the ownership-…, test_clinician_cannot_create_patient_for_another_doctor(), test_delete_on_other_doctors_patient_is_404(), test_delete_own_patient_returns_204() (+6 more)
 
 ### Community 125 - "RAG Requirements"
 Cohesion: 1.00
@@ -734,24 +746,24 @@ Cohesion: 0.13
 Nodes (16): AI Output Contract, Clinical Safety Boundary, Definition of Done, Document Precedence, Sources of Truth, trend_basis Distinct from evidence, MVP Definition (locked), USP Framing as Vision Narrative (+8 more)
 
 ### Community 156 - "reports.py"
-Cohesion: 0.27
-Nodes (10): download_report_pdf(), get_report(), Depends, get, Session, UUID, Report item endpoints. Flat rather than nested under the analysis: a report id…, Retrieve one report's metadata. Ownership violations read as 404. (+2 more)
+Cohesion: 0.24
+Nodes (12): get_report_service(), Provide the configured report service., download_report_pdf(), get_report(), Depends, get, Session, UUID (+4 more)
 
-### Community 157 - "FindingCategory"
-Cohesion: 0.25
-Nodes (8): AnalysisEvidence, FindingCategory, Enum, str, Persisted AI analysis, its ranked findings, and their citations. Naming is…, One citation supporting one ranked finding. Scoped to a finding rather than to…, Whether a ranked condition sits in the differential or is flagged early.…, _evidence()
+### Community 157 - "mri-dropzone.tsx"
+Cohesion: 0.15
+Nodes (9): IconProps, Scan(), IconProps, Upload(), IconProps, X(), ACCEPTED, MriDropzone() (+1 more)
 
 ### Community 159 - "ADR-007: Curated Retrieval Corpus Behind the AI-01 Seam"
 Cohesion: 0.15
 Nodes (13): ADR-007: Curated Retrieval Corpus Behind the AI-01 Seam, Alternatives Rejected, Consequences, Constraints, Context, Decision, Migration / Rollback Impact, Options Considered (+5 more)
 
 ### Community 160 - "likelihood_band_for"
-Cohesion: 0.33
-Nodes (5): likelihood_band_for(), Confidence-tiered output (section 8.3). This is what UI copy and the PDF should…, Derived from confidence, never read from the row., Tier a confidence value (AGENTS.md section 8.3). Derived, never stored: a…, computed_field
+Cohesion: 0.25
+Nodes (7): FindingResponse, likelihood_band_for(), Confidence-tiered output (section 8.3). This is what UI copy and the PDF should…, A ranked candidate as returned by the API., Derived from confidence, never read from the row., Tier a confidence value (AGENTS.md section 8.3). Derived, never stored: a…, computed_field
 
-### Community 161 - "NeuroONE Agent Operating Contract"
-Cohesion: 0.70
-Nodes (5): NeuroONE Agent Operating Contract, BUILD Mode, DEBUG Mode, PLAN Mode, TEST Mode
+### Community 161 - "17. Implementation Tasks"
+Cohesion: 0.18
+Nodes (11): 17. Implementation Tasks, TASK AI-02b-10 — Documentation reconciliation and graph refresh, TASK AI-02b-1 — Accept ADR-007, TASK AI-02b-2 — Corpus source schema and ingestion policy, TASK AI-02b-3 — `corpus_documents` model and migration, TASK AI-02b-4 — Corpus repository and search adapter, TASK AI-02b-5 — `CorpusEvidenceRetriever` and `CorpusSearch` protocol, TASK AI-02b-6 — Configuration, registry, orchestrator note, wiring, prompt (+3 more)
 
 ### Community 162 - "Three Provenance States and pipeline_note"
 Cohesion: 0.38
@@ -764,6 +776,22 @@ Nodes (7): V1 Scope Guard, APP-FLOW V1 Boundary, ADR-006 MRI Primary With Sympto
 ### Community 184 - "FR-01 Authentication"
 Cohesion: 0.33
 Nodes (7): bcrypt, passlib, python-jose, FR-01 Authentication, Auth Endpoint Contract, No Self-Registration, Auth Screens
+
+### Community 185 - "_rising_tremor_context"
+Cohesion: 0.20
+Nodes (10): The seam exists so a category cannot mean two things (ADR-005)., No UUID reaches the model, so none can come back (ADR-005)., The retriever is still mocked, so the note must not claim otherwise., The canonical demo case: tremor 3 -> 5 -> 8 across three visits., _rising_tremor_context(), test_both_providers_agree_on_what_an_early_watch_means(), test_live_reasoning_over_a_simulated_corpus_is_labelled_hybrid(), test_the_mock_pair_is_still_labelled_simulated() (+2 more)
+
+### Community 187 - "get_user_service"
+Cohesion: 0.40
+Nodes (5): get_user_service(), Provide the configured user service., main(), Create NeuroONE's first administrator without a public endpoint., _value()
+
+### Community 188 - "schemas/patient.py"
+Cohesion: 0.33
+Nodes (5): PatientBase, PhoneNumber, Patient request and response schemas., A patient phone number., Fields shared by patient request and response schemas.
+
+### Community 189 - "proxy.ts"
+Cohesion: 0.40
+Nodes (3): AUTH_PAGES, config, PROTECTED_PREFIXES
 
 ## Ambiguous Edges - Review These
 - `Standard API Response Envelope` → `Assumed Backend API Contract`  [AMBIGUOUS]
@@ -778,9 +806,9 @@ Nodes (7): bcrypt, passlib, python-jose, FR-01 Authentication, Auth Endpoint Con
   frontend/web-page/public/images/neuroone-login-neurons-v1.png · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **519 isolated node(s):** `extends`, `next/core-web-vitals`, `$schema`, `style`, `rsc` (+514 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1233 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **46 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **514 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+509 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1231 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **44 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -795,7 +823,7 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **What is the exact relationship between `Teal and Violet Accent Pair` and `Neural Brand Identity Signal`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `BaseModel` connect `BaseModel` to `test_visit_service.py`, `UserRole`, `test_ai_orchestrator.py`, `ReportService`, `v1/analysis.py`, `patients.py`, `User`, `PatientService`, `test_ai_staging.py`, `test_report_service.py`, `Patient`, `v1/auth.py`, `Visit`, `detect_trends`, `FindingCategory`, `test_report_renderer.py`, `RetrievedDocument`, `patient_visits.py`, `BaseRepository`, `Base`, `VisitStatus`, `test_auth_api.py`, `ScanResponse`, `UserResponse`, `TriageService`, `AnalysisOrchestrator`, `Analysis`, `test_ai_mock_providers.py`, `FastAPI`, `register_exception_handlers`, `ReportFindingSnapshot`, `UserService`, `.verify_credentials`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
-- **Why does `User` connect `User` to `test_visit_service.py`, `UserRole`, `get_current_active_user`, `ReportService`, `v1/analysis.py`, `BaseModel`, `patients.py`, `EntityNotFoundError`, `test_analysis_api.py`, `PatientService`, `VisitService`, `test_report_service.py`, `v1/auth.py`, `Visit`, `reports.py`, `dependencies.py`, `patient_visits.py`, `seed_demo_case.py`, `test_auth_api.py`, `UserResponse`, `TriageService`, `test_triage_service.py`, `Analysis`, `test_report_api.py`, `test_triage_api.py`, `UserRepository`, `get_triage_queue`, `test_patients_api.py`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
+- **Why does `BaseModel` connect `BaseModel` to `test_visit_service.py`, `UserRole`, `AnalysisRepository`, `v1/analysis.py`, `DiagnosisCandidate`, `User`, `build_providers`, `VisitService`, `test_ai_staging.py`, `test_report_service.py`, `Patient`, `Visit`, `detect_trends`, `ScanService`, `report_service.py`, `RetrievedDocument`, `likelihood_band_for`, `patient_visits.py`, `BaseRepository`, `Base`, `visits.py`, `test_auth_api.py`, `ScanResponse`, `UserResponse`, `schemas/patient.py`, `dependencies.py`, `StagingResult`, `PatientService`, `ValidationApplicationError`, `ReportFindingSnapshot`, `UserService`, `.verify_credentials`?**
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
+- **Why does `User` connect `User` to `test_visit_service.py`, `UserRole`, `get_current_active_user`, `ReportService`, `v1/analysis.py`, `patients.py`, `EntityNotFoundError`, `test_analysis_api.py`, `VisitService`, `test_report_service.py`, `Patient`, `BaseModel`, `Visit`, `reports.py`, `ScanService`, `report_service.py`, `patient_visits.py`, `LocalScanStorage`, `visits.py`, `test_auth_api.py`, `dependencies.py`, `PatientService`, `test_triage_api.py`, `UserRepository`, `test_scan_service.py`, `get_triage_queue`, `test_scan_api.py`, `test_patients_api.py`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
