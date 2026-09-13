@@ -16,6 +16,20 @@ Feature -> API -> Service -> Repository -> Model -> Schema
 Keep business logic out of API routes and avoid direct database access from
 endpoints.
 
+## Local Setup
+
+The backend targets **Python 3.11**, the version CI and `backend/Dockerfile`
+use, and `.python-version` pins it. Newer interpreters can resolve different
+dependency wheels and pass locally while CI fails, so build your virtual
+environment from 3.11:
+
+```bash
+py -3.11 -m venv .venv          # Windows; use python3.11 elsewhere
+.venv/Scripts/python -m pip install -r backend/requirements-dev.txt
+```
+
+The frontend targets Node 22, matching `.github/workflows/frontend-tests.yml`.
+
 ## Branch Strategy
 
 The protected main branch is:

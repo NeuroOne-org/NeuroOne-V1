@@ -133,7 +133,10 @@ def verify_otp(identity: str, submitted_code: str, purpose: OtpPurpose) -> bool:
         del _otp_store[key]
         return False
 
-    if submitted_code != entry.code:
+    # Constant-time comparison so response timing doesn't leak how many
+    # leading digits were right. Bytes, because compare_digest rejects
+    # non-ASCII str and the submitted code is untrusted input.
+    if not secrets.compare_digest(submitted_code.encode(), entry.code.encode()):
         entry.attempts_remaining -= 1
         if entry.attempts_remaining <= 0:
             del _otp_store[key]

@@ -109,6 +109,14 @@ def test_wrong_guess_does_not_burn_a_still_valid_code(monkeypatch) -> None:
     assert otp_service.verify_otp("user@example.com", code, purpose="password_reset") is True
 
 
+def test_non_ascii_guess_fails_without_raising(monkeypatch) -> None:
+    _stub_smtp(monkeypatch)
+    otp_service.generate_and_send_otp("user@example.com", "user@example.com", purpose="login")
+
+    # Full-width digits: compare_digest raises TypeError on non-ASCII str.
+    assert otp_service.verify_otp("user@example.com", "１２３４５６", purpose="login") is False
+
+
 def test_code_is_burned_after_max_attempts(monkeypatch) -> None:
     _stub_smtp(monkeypatch)
     otp_service.generate_and_send_otp(

@@ -229,12 +229,16 @@ class AuthService:
         Verify credentials and OTP together, then issue an access token.
         Accepts only a code issued for purpose="login" -- a password-reset
         code cannot be replayed here.
+
+        The password is checked first: a correct code is consumed on use, so
+        checking it first would let a mistyped password burn a valid code.
         """
+
+        user = self.verify_credentials(db, email, password)
 
         if not otp_service.verify_otp(identity=email, submitted_code=otp, purpose="login"):
             raise InvalidOtpError("Invalid or expired verification code.")
 
-        user = self.verify_credentials(db, email, password)
         return Token(access_token=self.create_access_token(user))
 
     def reset_password(

@@ -9,11 +9,11 @@ import {
   useState,
 } from "react";
 import Cookies from "js-cookie";
-import { api, TOKEN_COOKIE, extractApiError } from "@/lib/api";
+import { TOKEN_COOKIE, extractApiError } from "@/lib/api";
 import { auth as authApi } from "@/lib/endpoints";
 import { useHydrated } from "@/hooks/use-hydrated";
 import type { User } from "@/lib/types";
-import type { LoginInput, SignupInput } from "@/lib/validation";
+import type { LoginInput } from "@/lib/validation";
 
 interface AuthContextValue {
   user: User | null;
@@ -32,7 +32,6 @@ interface AuthContextValue {
   cancelOtpLogin: () => void;
   /** The address a code was sent to, or null if no OTP sign-in is in flight. */
   pendingOtpEmail: string | null;
-  signup: (input: SignupInput) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   resetPassword: (
     email: string,
@@ -152,30 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPendingOtpEmail(null);
   }, []);
 
-  const signup = useCallback(async (input: SignupInput) => {
-    try {
-      const spaceIndex = input.full_name.trim().indexOf(" ");
-      const first_name =
-        spaceIndex === -1 ? input.full_name.trim() : input.full_name.slice(0, spaceIndex);
-      const last_name =
-        spaceIndex === -1 ? "" : input.full_name.slice(spaceIndex + 1).trim();
-
-      // NOTE: the backend exposes no public registration route -- accounts
-      // are created by an admin through POST /admin/users. This call has no
-      // endpoint behind it and the sign-in page no longer links here.
-      await api.post("/auth/register", {
-        username: input.username,
-        email: input.email,
-        password: input.password,
-        first_name: first_name || input.full_name.trim(),
-        last_name: last_name || first_name,
-        role: input.role,
-      });
-    } catch (error) {
-      throw new Error(extractApiError(error));
-    }
-  }, []);
-
   const requestPasswordReset = useCallback(async (email: string) => {
     try {
       await authApi.forgotPassword(email);
@@ -214,7 +189,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         completeOtpLogin,
         cancelOtpLogin,
         pendingOtpEmail,
-        signup,
         requestPasswordReset,
         resetPassword,
         logout,

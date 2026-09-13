@@ -89,20 +89,22 @@ F --> G[Healthcare Intelligence OS]
 
 | Module | Progress | What that actually means |
 |:--|:--:|:--|
-| 🔐 Authentication | 🟢 Complete | Login, JWT, OTP sign-in, password reset. Accounts are admin-provisioned; there is no self-registration. |
+| 🔐 Authentication | 🟢 Complete | Login, JWT, an emailed OTP second factor (on by default, mandatory in production), purpose-scoped codes, password reset, and rate-limited auth endpoints. Accounts are admin-provisioned; there is no self-registration. |
 | ⚙️ Backend APIs | 🟢 Complete | 35 endpoints across patients, visits, symptoms, scans, analyses, reports and triage. 400 tests, run in CI. |
 | 🧠 AI Pipeline | 🟡 Contract complete, providers simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Literature retrieval and MRI staging are **mocked**; reasoning can run against a live model. Every analysis states which parts were simulated. |
-| 🖥️ Dashboard | 🔴 Not started against real data | The current screens render hardcoded arrays and call no clinical endpoint. Being replaced by a triage queue. |
-| 📊 Explainable AI | 🟡 In the API, not yet in the UI | Ranked differentials, supporting and contradicting findings, citations, and per-patient trend references are all returned today. Nothing renders them yet. |
+| 🖥️ Dashboard | 🟢 Connected to the API | A triage queue ranked by `GET /triage`, patient records, new-patient intake, follow-up visits with symptoms and a scan, analysis runs, clinician sign-off and PDF report download, all against real endpoints. Lint, typecheck, tests and build run in CI. |
+| 📊 Explainable AI | 🟢 In the API and the UI | The patient record renders ranked differentials with supporting and contradicting findings and their citations, under a provenance line stating which parts of the analysis were simulated. |
 | ☁️ Deployment | 🟡 Partial | Compose runs Postgres, applies migrations, then starts the API with scans on a named volume. OTP codes are logged to the API container by default (`OTP_DELIVERY=console`); set `OTP_DELIVERY=email` plus `GMAIL_ADDRESS`/`GMAIL_APP_PASSWORD` on the host to email them. The frontend is not in Compose yet. |
 
 </div>
 
 > **Status, stated plainly.** The backend implements the full clinical journey and is
-> tested. The frontend is not connected to it. NeuroOne is not clinically validated, is
-> not a diagnostic device, and assists clinicians rather than diagnosing. Demo data is
-> synthetic. See [`reports/PROGRESS_REPORT.md`](reports/PROGRESS_REPORT.md) for the
-> detailed state and [`docs/decisions/`](docs/decisions/) for the decisions behind it.
+> tested, and the frontend drives that journey against it. Literature retrieval and MRI
+> staging are still simulated. NeuroOne is not clinically validated, is not a diagnostic
+> device, and assists clinicians rather than diagnosing. Demo data is synthetic. See
+> [`reports/PROGRESS_REPORT.md`](reports/PROGRESS_REPORT.md) for the backend detail
+> (written before the frontend was connected) and [`docs/decisions/`](docs/decisions/)
+> for the decisions behind it.
 
 ---
 
