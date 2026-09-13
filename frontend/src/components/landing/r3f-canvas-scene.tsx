@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { useScroll, useTransform, useSpring, motion, MotionValue } from "framer-motion";
@@ -10,42 +10,47 @@ import { Activity, ArrowRight, ShieldCheck, Zap, Microscope, Brain } from "lucid
 import { cn } from "@/lib/utils";
 
 // --- 3D NEURAL MESH BACKGROUND (WebGL R3F Geometry) ---
+
+// Random node positions and the line segments connecting nearby nodes.
+// Impure, so it runs once per mount from a useState initializer, never
+// during a render.
+function createNeuralMesh() {
+  const nodes: THREE.Vector3[] = [];
+  const count = 38;
+  const radius = 4.2;
+
+  for (let i = 0; i < count; i++) {
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = radius * (0.65 + Math.random() * 0.45);
+    const x = r * Math.sin(phi) * Math.cos(theta);
+    const y = r * Math.sin(phi) * Math.sin(theta);
+    const z = r * Math.cos(phi);
+    nodes.push(new THREE.Vector3(x, y, z));
+  }
+
+  const linePoints: THREE.Vector3[] = [];
+  for (let i = 0; i < count; i++) {
+    for (let j = i + 1; j < count; j++) {
+      const dist = nodes[i].distanceTo(nodes[j]);
+      if (dist < 2.6) {
+        linePoints.push(nodes[i]);
+        linePoints.push(nodes[j]);
+      }
+    }
+  }
+
+  const geom = new THREE.BufferGeometry().setFromPoints(linePoints);
+  return { nodePositions: nodes, lineGeometry: geom };
+}
+
 function NeuralMesh3D({ smoothProgress }: { smoothProgress: MotionValue<number> }) {
   const meshGroupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Group>(null);
 
-  // Generate node positions and connecting line segments
-  const { nodePositions, lineGeometry } = useMemo(() => {
-    const nodes: THREE.Vector3[] = [];
-    const count = 38;
-    const radius = 4.2;
-
-    for (let i = 0; i < count; i++) {
-      const u = Math.random();
-      const v = Math.random();
-      const theta = u * 2.0 * Math.PI;
-      const phi = Math.acos(2.0 * v - 1.0);
-      const r = radius * (0.65 + Math.random() * 0.45);
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi);
-      nodes.push(new THREE.Vector3(x, y, z));
-    }
-
-    const linePoints: THREE.Vector3[] = [];
-    for (let i = 0; i < count; i++) {
-      for (let j = i + 1; j < count; j++) {
-        const dist = nodes[i].distanceTo(nodes[j]);
-        if (dist < 2.6) {
-          linePoints.push(nodes[i]);
-          linePoints.push(nodes[j]);
-        }
-      }
-    }
-
-    const geom = new THREE.BufferGeometry().setFromPoints(linePoints);
-    return { nodePositions: nodes, lineGeometry: geom };
-  }, []);
+  const [{ nodePositions, lineGeometry }] = useState(createNeuralMesh);
 
   useFrame((state, delta) => {
     if (!meshGroupRef.current) return;

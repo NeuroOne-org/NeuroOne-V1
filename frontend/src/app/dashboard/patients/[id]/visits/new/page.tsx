@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -57,7 +57,7 @@ export default function NewVisitPage() {
 
   // A failure after the visit exists must not create a second visit on
   // retry, so each completed step is remembered and skipped next time.
-  const createdVisitId = useRef<string | null>(null);
+  const [createdVisitId, setCreatedVisitId] = useState<string | null>(null);
 
   const {
     control,
@@ -76,14 +76,14 @@ export default function NewVisitPage() {
   const symptoms = useFieldArray({ control, name: "symptoms" });
 
   const isSubmitting = activeStep !== null;
-  const isResuming = createdVisitId.current !== null;
+  const isResuming = createdVisitId !== null;
   const markDone = (step: StepKey) => setDoneSteps((s) => [...s, step]);
 
   async function onSubmit(values: FollowUpVisitInput) {
     setServerError(null);
 
     try {
-      let visitId = createdVisitId.current;
+      let visitId = createdVisitId;
       if (!visitId) {
         setActiveStep("visit");
         const visit = await patientsApi.createVisit(id, {
@@ -98,7 +98,7 @@ export default function NewVisitPage() {
           })),
         });
         visitId = visit.id;
-        createdVisitId.current = visit.id;
+        setCreatedVisitId(visit.id);
         markDone("visit");
       }
 
