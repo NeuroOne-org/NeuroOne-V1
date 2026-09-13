@@ -11,6 +11,7 @@ import {
 import Cookies from "js-cookie";
 import { TOKEN_COOKIE, extractApiError } from "@/lib/api";
 import { auth as authApi } from "@/lib/endpoints";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type { User } from "@/lib/types";
 import type { LoginInput } from "@/lib/validation";
 
@@ -48,8 +49,17 @@ function persistToken(token: string) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [pendingOtpEmail, setPendingOtpEmail] = useState<string | null>(null);
+
+  // The session is loading until hydration, and after it only while a token
+  // found at startup is being checked. With no token there is nothing to
+  // wait for, which is derived here rather than set from the mount effect.
+  const hydrated = useHydrated();
+  const [startedWithToken] = useState(
+    () => typeof document !== "undefined" && Boolean(Cookies.get(TOKEN_COOKIE))
+  );
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const isLoading = !hydrated || (startedWithToken && !sessionChecked);
 
   // Kept in memory only. /auth/verify-otp checks password and code together,
   // so the OTP step needs the password a second time -- and a password must
@@ -57,26 +67,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // this, which the verify screen reports as an expired attempt.
   const pendingLogin = useRef<{ email: string; password: string } | null>(null);
 
+  // Assumes a token is stored; callers check for one first.
+  const loadUser = useCallback(
+    () =>
+      authApi.me().then(
+        (me) => setUser(me),
+        () => {
+          Cookies.remove(TOKEN_COOKIE);
+          setUser(null);
+        }
+      ),
+    []
+  );
+
   const fetchCurrentUser = useCallback(async () => {
-    const token = Cookies.get(TOKEN_COOKIE);
-    if (!token) {
+    if (!Cookies.get(TOKEN_COOKIE)) {
       setUser(null);
-      setIsLoading(false);
       return;
     }
-    try {
-      setUser(await authApi.me());
-    } catch {
-      Cookies.remove(TOKEN_COOKIE);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    await loadUser();
+  }, [loadUser]);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, [fetchCurrentUser]);
+    if (!startedWithToken) return;
+    loadUser().finally(() => setSessionChecked(true));
+  }, [startedWithToken, loadUser]);
 
   const login = useCallback(
     async (input: LoginInput) => {

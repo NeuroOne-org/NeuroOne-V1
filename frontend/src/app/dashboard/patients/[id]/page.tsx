@@ -214,32 +214,42 @@ function VisitAnalysis({ visitId }: { visitId: string }) {
     };
   }, []);
 
-  const load = useCallback(async () => {
-    setStatus("loading");
-    setError(null);
-    try {
-      const latest = await visitsApi.latestAnalysis(visitId);
-      if (cancelled.current) return;
-      setAnalysis(latest);
-      setStatus("ready");
-    } catch (err) {
-      if (cancelled.current) return;
-      // A visit with no analysis yet is a 404, which is a normal state
-      // here rather than a failure worth showing as one.
-      const message = extractApiError(err);
-      if (/not found/i.test(message)) {
-        setAnalysis(null);
-        setStatus("none");
-      } else {
-        setError(message);
-        setStatus("error");
-      }
-    }
-  }, [visitId]);
+  // The panel is keyed by visit, so it mounts already "loading" and the
+  // first fetch has nothing to reset; only a retry does.
+  const fetchLatest = useCallback(
+    () =>
+      visitsApi.latestAnalysis(visitId).then(
+        (latest) => {
+          if (cancelled.current) return;
+          setAnalysis(latest);
+          setStatus("ready");
+        },
+        (err) => {
+          if (cancelled.current) return;
+          // A visit with no analysis yet is a 404, which is a normal state
+          // here rather than a failure worth showing as one.
+          const message = extractApiError(err);
+          if (/not found/i.test(message)) {
+            setAnalysis(null);
+            setStatus("none");
+          } else {
+            setError(message);
+            setStatus("error");
+          }
+        }
+      ),
+    [visitId]
+  );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    fetchLatest();
+  }, [fetchLatest]);
+
+  const load = useCallback(() => {
+    setStatus("loading");
+    setError(null);
+    return fetchLatest();
+  }, [fetchLatest]);
 
   async function runAnalysis() {
     setActionError(null);

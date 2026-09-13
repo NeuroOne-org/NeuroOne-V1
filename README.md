@@ -94,7 +94,7 @@ F --> G[Healthcare Intelligence OS]
 | 🧠 AI Pipeline | 🟡 Contract complete, providers simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Literature retrieval and MRI staging are **mocked**; reasoning can run against a live model. Every analysis states which parts were simulated. |
 | 🖥️ Dashboard | 🟢 Connected to the API | A triage queue ranked by `GET /triage`, patient records, new-patient intake, follow-up visits with symptoms and a scan, analysis runs, clinician sign-off and PDF report download, all against real endpoints. Lint, typecheck, tests and build run in CI. |
 | 📊 Explainable AI | 🟢 In the API and the UI | The patient record renders ranked differentials with supporting and contradicting findings and their citations, under a provenance line stating which parts of the analysis were simulated. |
-| ☁️ Deployment | 🟡 Partial | Compose runs the API and Postgres. Scan storage has no volume, so uploaded scans do not survive a container restart. |
+| ☁️ Deployment | 🟡 Partial | Compose runs Postgres, applies migrations, then starts the API with scans on a named volume. OTP codes are logged to the API container by default (`OTP_DELIVERY=console`); set `OTP_DELIVERY=email` plus `GMAIL_ADDRESS`/`GMAIL_APP_PASSWORD` on the host to email them. The frontend is not in Compose yet. |
 
 </div>
 

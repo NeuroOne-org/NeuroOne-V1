@@ -4,7 +4,10 @@ password reset."""
 import logging
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.services import otp_service
+from app.utils.exceptions import ExternalServiceError
 
 
 def teardown_function() -> None:
@@ -53,6 +56,25 @@ def test_correct_code_verifies_and_is_consumed(monkeypatch) -> None:
     assert otp_service._store_key("user@example.com", "password_reset") not in otp_service._otp_store
     # Re-submitting the now-consumed code fails.
     assert otp_service.verify_otp("user@example.com", code, purpose="password_reset") is False
+
+
+@pytest.mark.parametrize("unset", [None, ""])
+@pytest.mark.parametrize("field", ["GMAIL_ADDRESS", "GMAIL_APP_PASSWORD"])
+def test_unconfigured_email_raises_without_sending_or_storing(
+    monkeypatch, field: str, unset: str | None
+) -> None:
+    # "" is what docker-compose's ${GMAIL_ADDRESS:-} yields when unset.
+    smtp = _stub_smtp(monkeypatch)
+    monkeypatch.setattr(otp_service.settings, field, unset)
+
+    with pytest.raises(ExternalServiceError):
+        otp_service.generate_and_send_otp(
+            "user@example.com", "user@example.com", purpose="login"
+        )
+
+    otp_service.smtplib.SMTP.assert_not_called()
+    smtp.login.assert_not_called()
+    assert otp_service._store_key("user@example.com", "login") not in otp_service._otp_store
 
 
 def test_unknown_identity_fails_without_raising() -> None:

@@ -1,11 +1,11 @@
 # NeuroOne — Frontend
 
-Next.js 14 (App Router) + TypeScript frontend for the NeuroOne clinical
+Next.js 16 (App Router) + TypeScript frontend for the NeuroOne clinical
 decision-support platform, built against the team's FastAPI backend.
 
 ## Stack
 
-- **Next.js 14** (App Router, middleware-based route protection)
+- **Next.js 16** (App Router, proxy-based route protection)
 - **TypeScript**
 - **Tailwind CSS** — custom design tokens in `tailwind.config.ts` (no shadcn
   dependency; a small set of hand-built primitives lives in
@@ -24,7 +24,7 @@ npm run dev
 ```
 
 Visit `http://localhost:3000`. You'll land on `/login` until authenticated;
-`/dashboard/*` is protected by `src/middleware.ts`.
+`/dashboard/*` is protected by `src/proxy.ts` (Next 16's renamed middleware).
 
 ## Backend contract this frontend expects
 
@@ -61,7 +61,7 @@ src/
     types.ts      — shared TS types (Patient, PredictionResult, User…)
     validation.ts — Zod schemas for every form
     utils.ts      — cn(), formatters
-  middleware.ts   — redirects based on auth cookie
+  proxy.ts        — redirects based on auth cookie
 ```
 
 ## Design notes
@@ -74,9 +74,9 @@ donut chart, deliberately evoking a monitoring display.
 
 ## Docker
 
-The repo's root `docker-compose.yml` is currently empty, so once your
-teammate fills in the backend service, add something like this to wire
-the frontend in alongside it:
+The repo's root `docker-compose.yml` runs Postgres, a one-shot `migrate`
+job and the `api` service, but not the frontend yet. To wire it in, add
+something like this:
 
 ```yaml
 services:
@@ -85,10 +85,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
-      - backend
+      - api
 ```
+
+`NEXT_PUBLIC_API_URL` is read by the browser, so it must be an address the
+browser can reach, not the in-network `api` hostname.
 
 `frontend/Dockerfile` is a standard multi-stage Next.js build
 (`output: "standalone"` is already set in `next.config.mjs` to keep the

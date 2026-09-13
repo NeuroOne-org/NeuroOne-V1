@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -76,7 +76,11 @@ export default function DashboardPage() {
   );
 
   // Changing the filter while on page 3 of the old result set looks broken.
-  useEffect(() => setPage(1), [filter]);
+  const changeFilter = (next: QueueFilter) => {
+    if (next === filter) return;
+    setFilter(next);
+    setPage(1);
+  };
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -150,7 +154,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="mb-6">
-        <QueueFilterCards cards={cards} active={filter} onChange={setFilter} />
+        <QueueFilterCards cards={cards} active={filter} onChange={changeFilter} />
         {totalRecords !== undefined && totalRecords > QUEUE_FETCH_LIMIT && (
           <p className="mt-2.5 text-[12px] text-text-faint">
             Counts cover the {QUEUE_FETCH_LIMIT} most urgent of {totalRecords}{" "}
@@ -166,7 +170,7 @@ export default function DashboardPage() {
           action={
             filter !== "all" && (
               <button
-                onClick={() => setFilter("all")}
+                onClick={() => changeFilter("all")}
                 className={cn(
                   "rounded border border-line px-2.5 py-1 text-[12px] text-text-muted",
                   "transition-[background-color,border-color,color,transform] duration-150 ease-out",
@@ -198,7 +202,7 @@ export default function DashboardPage() {
             }
             action={
               entries.length > 0 && (
-                <Button size="sm" variant="secondary" onClick={() => setFilter("all")}>
+                <Button size="sm" variant="secondary" onClick={() => changeFilter("all")}>
                   Show all cases
                 </Button>
               )
@@ -303,19 +307,19 @@ function filterEyebrow(filter: QueueFilter): string {
   }
 }
 
-/** Today's date, rendered after mount so the server and client agree. */
-function TodayLine() {
-  const [today, setToday] = useState<string | null>(null);
+const subscribeNever = () => () => {};
 
-  useEffect(() => {
-    setToday(
-      new Date().toLocaleDateString(undefined, {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      })
-    );
-  }, []);
+function formatToday() {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+/** Today's date, rendered after hydration so the server and client agree. */
+function TodayLine() {
+  const today = useSyncExternalStore(subscribeNever, formatToday, () => null);
 
   return (
     <p className="label-eyebrow mb-1.5 h-4">
