@@ -8,9 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
-import Cookies from "js-cookie";
-import { TOKEN_COOKIE, extractApiError } from "@/lib/api";
+import { extractApiError } from "@/lib/api";
 import { auth as authApi } from "@/lib/endpoints";
+import { isProtectedPath } from "@/lib/session";
 import { useHydrated } from "@/hooks/use-hydrated";
 import type { User } from "@/lib/types";
 import type { LoginInput } from "@/lib/validation";
@@ -38,28 +38,29 @@ interface AuthContextValue {
     otp: string,
     newPassword: string
   ) => Promise<void>;
-  logout: () => void;
+  /** Asks the backend to clear the session cookie, then leaves for /login. */
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-function persistToken(token: string) {
-  Cookies.set(TOKEN_COOKIE, token, { expires: 1, sameSite: "strict" });
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [pendingOtpEmail, setPendingOtpEmail] = useState<string | null>(null);
 
-  // The session is loading until hydration, and after it only while a token
-  // found at startup is being checked. With no token there is nothing to
-  // wait for, which is derived here rather than set from the mount effect.
+  // The session is loading until hydration, and after it only while the
+  // session found at startup is being checked. The token is an HttpOnly
+  // cookie this code cannot see, so starting on a protected route stands in
+  // for "a session exists": proxy.ts only serves one when the cookie is
+  // present. Anywhere else there is nothing to wait for -- signing in loads
+  // the user itself -- which is derived here rather than set from the mount
+  // effect.
   const hydrated = useHydrated();
-  const [startedWithToken] = useState(
-    () => typeof document !== "undefined" && Boolean(Cookies.get(TOKEN_COOKIE))
+  const [startedWithSession] = useState(
+    () => typeof window !== "undefined" && isProtectedPath(window.location.pathname)
   );
   const [sessionChecked, setSessionChecked] = useState(false);
-  const isLoading = !hydrated || (startedWithToken && !sessionChecked);
+  const isLoading = !hydrated || (startedWithSession && !sessionChecked);
 
   // Kept in memory only. /auth/verify-otp checks password and code together,
   // so the OTP step needs the password a second time -- and a password must
@@ -67,31 +68,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // this, which the verify screen reports as an expired attempt.
   const pendingLogin = useRef<{ email: string; password: string } | null>(null);
 
-  // Assumes a token is stored; callers check for one first.
+  // Resolves either way. A rejected session leaves the user null; the backend
+  // has cleared its cookie and the api interceptor has sent the browser to
+  // /login.
   const loadUser = useCallback(
     () =>
       authApi.me().then(
         (me) => setUser(me),
-        () => {
-          Cookies.remove(TOKEN_COOKIE);
-          setUser(null);
-        }
+        () => setUser(null)
       ),
     []
   );
 
-  const fetchCurrentUser = useCallback(async () => {
-    if (!Cookies.get(TOKEN_COOKIE)) {
-      setUser(null);
-      return;
-    }
-    await loadUser();
-  }, [loadUser]);
-
   useEffect(() => {
-    if (!startedWithToken) return;
+    if (!startedWithSession) return;
     loadUser().finally(() => setSessionChecked(true));
-  }, [startedWithToken, loadUser]);
+  }, [startedWithSession, loadUser]);
 
   const login = useCallback(
     async (input: LoginInput) => {
@@ -105,14 +97,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPendingOtpEmail(input.email);
           return { otpRequired: true };
         }
-        persistToken(result.access_token as string);
-        await fetchCurrentUser();
+        // The response set the session cookie; the token in its body is for
+        // API clients and deliberately left untouched here.
+        await loadUser();
         return { otpRequired: false };
       } catch (error) {
         throw new Error(extractApiError(error));
       }
     },
-    [fetchCurrentUser]
+    [loadUser]
   );
 
   const beginOtpLogin = useCallback(async (input: LoginInput) => {
@@ -134,16 +127,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
       }
       try {
-        const token = await authApi.verifyOtp(pending.email, otp, pending.password);
-        persistToken(token.access_token);
+        await authApi.verifyOtp(pending.email, otp, pending.password);
         pendingLogin.current = null;
         setPendingOtpEmail(null);
-        await fetchCurrentUser();
+        await loadUser();
       } catch (error) {
         throw new Error(extractApiError(error));
       }
     },
-    [fetchCurrentUser]
+    [loadUser]
   );
 
   const cancelOtpLogin = useCallback(() => {
@@ -173,8 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const logout = useCallback(() => {
-    Cookies.remove(TOKEN_COOKIE);
+  const logout = useCallback(async () => {
+    try {
+      // Only the server can clear an HttpOnly cookie.
+      await authApi.logout();
+    } catch {
+      // Leave anyway. If the cookie survived, proxy.ts sends /login straight
+      // back to the dashboard, which shows the sign-out did not take effect.
+    }
     setUser(null);
     window.location.href = "/login";
   }, []);

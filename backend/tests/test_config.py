@@ -47,6 +47,25 @@ def test_allows_otp_on_in_production() -> None:
         )
     )
     assert settings.AUTH_REQUIRE_OTP is True
+    assert settings.SESSION_COOKIE_SECURE is True
+
+
+def test_refuses_an_insecure_session_cookie_in_production() -> None:
+    with pytest.raises(ValueError, match="SESSION_COOKIE_SECURE must be true"):
+        Settings(
+            **_base_kwargs(
+                APP_ENV="production",
+                AUTH_REQUIRE_OTP=True,
+                SESSION_COOKIE_SECURE=False,
+                GMAIL_ADDRESS="a@example.com",
+                GMAIL_APP_PASSWORD="app-password",
+            )
+        )
+
+
+def test_allows_an_insecure_session_cookie_in_development() -> None:
+    settings = Settings(**_base_kwargs(SESSION_COOKIE_SECURE=False, OTP_DELIVERY="console"))
+    assert settings.SESSION_COOKIE_SECURE is False
 
 
 def test_refuses_email_delivery_without_gmail_credentials() -> None:

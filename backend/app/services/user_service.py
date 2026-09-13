@@ -57,7 +57,15 @@ class UserService(BaseService[UserRepository]):
         user: User,
         hashed_password: str,
     ) -> User:
+        """Replace the password hash and invalidate every existing token.
+
+        Bumping token_version is what makes a reset actually lock out whoever
+        held the old password: their tokens carry the old version and are
+        refused from the next request on, not at expiry.
+        """
+
         user.hashed_password = hashed_password
+        user.token_version += 1
         return self.repository.update(db, user)
 
     def delete_user(self, db: Session, user_id: UUID) -> bool:

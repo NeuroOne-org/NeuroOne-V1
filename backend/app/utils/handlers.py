@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.session import SESSION_COOKIE_NAME, clear_session_cookie
 from app.schemas.common import ErrorResponse
 from app.utils.exceptions import (
     AIError,
@@ -50,13 +51,20 @@ def _error_response(
 def _application_handler(status_code: int, *, authenticate: bool = False):
     async def handler(request: Request, exc: ApplicationError) -> JSONResponse:
         headers = {"WWW-Authenticate": "Bearer"} if authenticate else None
-        return _error_response(
+        response = _error_response(
             status_code,
             exc.message,
             exc.error_code,
             details=exc.details,
             headers=headers,
         )
+        # A 401 means whatever session cookie came with the request is no
+        # good (expired, or revoked by a password reset). Dropping it here
+        # keeps the frontend's cookie-presence redirects from bouncing
+        # between /login and /dashboard on a dead session.
+        if authenticate and SESSION_COOKIE_NAME in request.cookies:
+            clear_session_cookie(response)
+        return response
 
     return handler
 

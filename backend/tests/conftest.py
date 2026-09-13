@@ -20,6 +20,10 @@ os.environ.setdefault("APP_ENV", "development")
 os.environ.setdefault("AUTH_REQUIRE_OTP", "false")
 os.environ.setdefault("OTP_DELIVERY", "console")
 
+# The auth tests assert the session cookie is Secure, so a developer's
+# SESSION_COOKIE_SECURE=false in backend/.env must not reach the suite.
+os.environ.setdefault("SESSION_COOKIE_SECURE", "true")
+
 # Pin the provider, because an environment variable outranks the .env file
 # and several suites call build_providers() with no argument. Without this, a
 # developer with AI_PROVIDER=live-llm in backend/.env would have the test

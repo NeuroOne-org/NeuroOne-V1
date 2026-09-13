@@ -1,12 +1,14 @@
 """Integration-style contract tests for authentication endpoints."""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import Mock
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from jose import jwt
 
 from app.api.dependencies import (
+    get_analysis_service,
     get_auth_service,
     get_current_active_user,
     get_db,
@@ -14,17 +16,23 @@ from app.api.dependencies import (
     require_admin,
 )
 from app.core.security import create_access_token
+from app.core.session import SESSION_COOKIE_NAME
 from main import app
 from app.core.config import settings
 from app.models.user import User, UserRole
-from app.schemas.auth import LoginResponse
+from app.schemas.auth import LoginResponse, Token
 from app.schemas.user import UserResponse
+from app.services.user_service import UserService
 from app.api.v1.auth import (
     _LOGIN_LIMIT,
     _OTP_REQUEST_LIMIT,
     _OTP_VERIFY_LIMIT,
 )
-from app.utils.exceptions import InvalidCredentialsError, UserAlreadyExistsError
+from app.utils.exceptions import (
+    EntityNotFoundError,
+    InvalidCredentialsError,
+    UserAlreadyExistsError,
+)
 
 
 def _user(role: UserRole = UserRole.CLINICIAN) -> User:
@@ -40,6 +48,7 @@ def _user(role: UserRole = UserRole.CLINICIAN) -> User:
         is_active=True,
         is_verified=True,
         is_deleted=False,
+        token_version=0,
         created_at=now,
         updated_at=now,
     )
@@ -56,6 +65,38 @@ def _client() -> TestClient:
 
 def teardown_function() -> None:
     app.dependency_overrides.clear()
+
+
+def _token_for(user: User) -> str:
+    return create_access_token(
+        {
+            "sub": str(user.id),
+            "username": user.username,
+            "role": user.role.value,
+            "ver": user.token_version,
+        }
+    )
+
+
+def _serve_user(user: User) -> None:
+    class UserServiceStub:
+        def get_user(self, db, user_id):
+            return user if user_id == user.id else None
+
+    app.dependency_overrides[get_user_service] = lambda: UserServiceStub()
+
+
+def _session_set_cookie(response) -> str | None:
+    """The response's Set-Cookie header for the session cookie, if any."""
+
+    for header in response.headers.get_list("set-cookie"):
+        if header.startswith(f"{SESSION_COOKIE_NAME}="):
+            return header
+    return None
+
+
+def _session_header(token: str) -> dict[str, str]:
+    return {"Cookie": f"{SESSION_COOKIE_NAME}={token}"}
 
 
 def test_login_success_and_invalid_credentials_share_safe_contract() -> None:
@@ -90,6 +131,15 @@ def test_login_success_and_invalid_credentials_share_safe_contract() -> None:
         "details": None,
     }
 
+    cookie = _session_set_cookie(success)
+    assert cookie is not None
+    assert cookie.startswith(f"{SESSION_COOKIE_NAME}=signed-token;")
+    attributes = cookie.lower()
+    assert "httponly" in attributes
+    assert "secure" in attributes
+    assert "samesite=strict" in attributes
+    assert _session_set_cookie(failure) is None
+
 
 def test_login_reports_otp_required_without_a_token() -> None:
     class AuthStub:
@@ -110,6 +160,7 @@ def test_login_reports_otp_required_without_a_token() -> None:
         "token_type": "bearer",
         "otp_required": True,
     }
+    assert _session_set_cookie(response) is None
 
 
 def test_me_requires_authentication_and_returns_current_user() -> None:
@@ -306,13 +357,7 @@ def test_valid_token_loads_current_user_from_service() -> None:
             return current_user
 
     app.dependency_overrides[get_user_service] = lambda: UserServiceStub()
-    token = create_access_token(
-        {
-            "sub": str(current_user.id),
-            "username": current_user.username,
-            "role": current_user.role.value,
-        }
-    )
+    token = _token_for(current_user)
     response = _client().get(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {token}"},
@@ -320,6 +365,124 @@ def test_valid_token_loads_current_user_from_service() -> None:
 
     assert response.status_code == 200
     assert response.json()["id"] == str(current_user.id)
+
+
+# --------------------------------------------------------------------------
+# Session cookie, CSRF header and token revocation
+# --------------------------------------------------------------------------
+
+
+def test_verify_otp_sets_the_session_cookie() -> None:
+    class AuthStub:
+        def verify_otp_login(self, db, email, otp, password):
+            return Token(access_token="otp-token")
+
+    app.dependency_overrides[get_auth_service] = lambda: AuthStub()
+
+    response = _client().post(
+        "/api/v1/auth/verify-otp",
+        json={"email": "a@example.com", "otp": "123456", "password": "pw"},
+    )
+
+    assert response.status_code == 200
+    cookie = _session_set_cookie(response)
+    assert cookie is not None
+    assert cookie.startswith(f"{SESSION_COOKIE_NAME}=otp-token;")
+    assert "httponly" in cookie.lower()
+
+
+def test_logout_clears_the_session_cookie_without_authentication() -> None:
+    response = _client().post("/api/v1/auth/logout")
+
+    assert response.status_code == 204
+    cookie = _session_set_cookie(response)
+    assert cookie is not None
+    assert "max-age=0" in cookie.lower()
+
+
+def test_session_cookie_authenticates_a_read() -> None:
+    current_user = _user()
+    _serve_user(current_user)
+
+    response = _client().get(
+        "/api/v1/auth/me", headers=_session_header(_token_for(current_user))
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(current_user.id)
+
+
+def test_cookie_authenticated_write_requires_the_csrf_header() -> None:
+    clinician = _user()
+    _serve_user(clinician)
+
+    class AnalysisServiceStub:
+        def sign_off_analysis(self, db, analysis_id, current_user):
+            raise EntityNotFoundError("Analysis", analysis_id)
+
+    app.dependency_overrides[get_analysis_service] = lambda: AnalysisServiceStub()
+    client = _client()
+    path = f"/api/v1/analyses/{uuid4()}/review"
+    session = _session_header(_token_for(clinician))
+
+    forged = client.post(path, headers=session)
+    from_app = client.post(
+        path, headers={**session, "X-Requested-With": "XMLHttpRequest"}
+    )
+    bearer = client.post(
+        path, headers={"Authorization": f"Bearer {_token_for(clinician)}"}
+    )
+
+    assert forged.status_code == 403
+    assert forged.json()["error_code"] == "authorization_error"
+    # 404 from the stub means authentication passed and the request went on.
+    assert from_app.status_code == 404
+    # A bearer header is never sent automatically, so it needs no CSRF header.
+    assert bearer.status_code == 404
+
+
+def test_password_change_revokes_tokens_issued_before_it() -> None:
+    current_user = _user()
+    _serve_user(current_user)
+    old_token = _token_for(current_user)
+    client = _client()
+
+    before = client.get("/api/v1/auth/me", headers=_session_header(old_token))
+    UserService(Mock()).set_password(Mock(), current_user, "new-hash")
+    after = client.get("/api/v1/auth/me", headers=_session_header(old_token))
+    reissued = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {_token_for(current_user)}"},
+    )
+
+    assert before.status_code == 200
+    assert after.status_code == 401
+    assert after.json()["error_code"] == "authentication_error"
+    # The dead cookie is cleared, so the frontend's redirects cannot loop on it.
+    cleared = _session_set_cookie(after)
+    assert cleared is not None
+    assert "max-age=0" in cleared.lower()
+    assert reissued.status_code == 200
+
+
+def test_token_without_a_version_claim_is_rejected() -> None:
+    current_user = _user()
+    _serve_user(current_user)
+    legacy_token = create_access_token(
+        {
+            "sub": str(current_user.id),
+            "username": current_user.username,
+            "role": current_user.role.value,
+        }
+    )
+
+    response = _client().get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {legacy_token}"},
+    )
+
+    assert response.status_code == 401
+    assert _session_set_cookie(response) is None
 
 
 def test_login_is_rate_limited_per_account() -> None:

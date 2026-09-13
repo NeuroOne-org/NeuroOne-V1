@@ -3,7 +3,7 @@
 from collections.abc import Callable, Generator
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,11 @@ from app.ai.orchestrator import AnalysisOrchestrator
 from app.ai.providers import build_providers
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.session import (
+    CSRF_HEADER_NAME,
+    CSRF_HEADER_VALUE,
+    SESSION_COOKIE_NAME,
+)
 from app.models import User
 from app.models.user import UserRole
 from app.repositories.analysis_repository import AnalysisRepository
@@ -32,7 +37,11 @@ from app.storage.scan_storage import LocalScanStorage
 from app.utils.exceptions import AuthenticationError, AuthorizationError
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# auto_error=False: a missing Authorization header is not yet a failure,
+# because the browser app authenticates with the session cookie instead.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+_CSRF_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 _user_service = UserService(UserRepository())
 _patient_service = PatientService(PatientRepository(), UserRepository())
@@ -131,18 +140,45 @@ def get_auth_service(
 
 
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    request: Request,
+    bearer_token: Annotated[str | None, Depends(oauth2_scheme)],
     db: Annotated[Session, Depends(get_db)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     user_service: Annotated[UserService, Depends(get_user_service)],
 ) -> User:
-    """Validate the bearer token and return its associated user."""
+    """Validate the access token and return its associated user.
+
+    The token comes from an ``Authorization: Bearer`` header when one is sent
+    (API clients, tests), and otherwise from the HttpOnly session cookie. A
+    cookie-authenticated write must also carry the CSRF header, because the
+    browser attaches the cookie whether or not this app made the request.
+
+    The token's ``ver`` claim must still match the account's token_version.
+    Changing the password increments it, so tokens issued before a reset stop
+    working immediately instead of living out their expiry.
+    """
+
+    token = bearer_token
+    if token is None:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
+        if not token:
+            raise AuthenticationError("Not authenticated.")
+        if (
+            request.method not in _CSRF_SAFE_METHODS
+            and request.headers.get(CSRF_HEADER_NAME) != CSRF_HEADER_VALUE
+        ):
+            raise AuthorizationError(
+                "This request is missing its CSRF header and was refused."
+            )
 
     payload = auth_service.verify_access_token(token)
     user = user_service.get_user(db, payload.sub)
 
     if user is None or user.is_deleted:
         raise AuthenticationError("Authenticated user no longer exists.")
+
+    if payload.ver != user.token_version:
+        raise AuthenticationError("Invalid or expired access token.")
 
     return user
 

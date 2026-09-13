@@ -1,26 +1,25 @@
 import axios, { AxiosError } from "axios";
-import Cookies from "js-cookie";
-
-export const TOKEN_COOKIE = "neuroone_token";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1",
-  headers: { "Content-Type": "application/json" },
-});
-
-api.interceptors.request.use((config) => {
-  const token = Cookies.get(TOKEN_COOKIE);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  // Sends the HttpOnly session cookie the backend set at sign-in. This code
+  // never handles the token itself (see lib/session.ts).
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+    // The backend refuses cookie-authenticated writes without it: a
+    // cross-site form cannot add a custom header, so it marks the request
+    // as coming from this app rather than from a forged submission.
+    "X-Requested-With": "XMLHttpRequest",
+  },
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // The backend already cleared a rejected session cookie on this 401, so
+    // proxy.ts will not bounce /login straight back to the dashboard.
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      Cookies.remove(TOKEN_COOKIE);
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }

@@ -373,9 +373,11 @@ Clinicians access their own patient panel. Administrators are unrestricted by th
 
 A role exclusion returns 403. A per-record ownership failure returns masked 404 so the caller cannot distinguish another clinician's record from an absent record. Child-resource errors are relabelled with the object the caller requested to avoid leaking parent ids.
 
-Frontend route protection only checks the presence of its token cookie. The server validates the token and account and enforces ownership. The frontend currently writes a JavaScript-readable cookie with SameSite strict; it is not an HttpOnly session implementation. This matters before claiming hardened production session security.
+The backend sets the access token as an HttpOnly, SameSite=Strict session cookie on login and OTP verification. That cookie is Secure unless `SESSION_COOKIE_SECURE=false`, which production refuses. Page scripts never see the token, so an XSS payload cannot read it. Cookie-authenticated writes must carry `X-Requested-With: XMLHttpRequest`, which a cross-site form cannot add. `Authorization: Bearer` still works for API clients. `POST /auth/logout` clears the cookie, and any 401 clears a rejected one. Frontend route protection (`proxy.ts`) still checks only that the cookie is present, and it can see the cookie only when the API is served from the frontend's host. The server validates the token and account and enforces ownership.
 
-The review endpoint uses an active-user dependency and inherited ownership checks, not a clinician-only role dependency. An authorized admin can also sign off. That is a qualification to “clinician sign-off,” not a claim that arbitrary users can bypass access control.
+Every token carries the account's `token_version` as its `ver` claim, and each request compares the two. Changing the password increments the version, so a reset revokes every token issued before it at once. Logout clears only the browser's cookie; it does not revoke the token.
+
+Sign-off (`POST /analyses/{id}/review`) is clinician-only. The route and `AnalysisService.sign_off_analysis` both refuse other roles with 403. Administrators pass every ownership check, and without this guard their sign-off would unlock a report that no clinician reviewed. Analyses an admin signed before this guard existed keep that sign-off until someone clears it.
 
 Sources: [security helpers](../../backend/app/core/security.py), [auth service](../../backend/app/services/auth_service.py), [OTP implementation](../../backend/app/services/otp_service.py), [auth dependencies](../../backend/app/api/dependencies.py), [patient service](../../backend/app/services/patient_service.py), [auth provider](../../frontend/src/components/auth-provider.tsx), [middleware](../../frontend/src/middleware.ts), [review API](../../backend/app/api/v1/analysis.py).
 
@@ -513,7 +515,8 @@ Core configuration names to recognize:
 | `AI_LLM_TIMEOUT_SECONDS` | Default 30 seconds per request attempt |
 | `SCAN_STORAGE_DIR` | Local backend storage/scans default |
 | `MAX_SCAN_SIZE_BYTES` | Default 200 MiB upload limit |
-| `NEXT_PUBLIC_API_URL` | Frontend URL including `/api/v1`, localhost:8000 default |
+| `SESSION_COOKIE_SECURE` | True by default; false permitted only outside production |
+| `NEXT_PUBLIC_API_URL` | Frontend URL including `/api/v1`, localhost:8000 default. Must share the frontend's host for `proxy.ts` to see the session cookie |
 
 `AI_RETRIEVAL_PROVIDER=corpus` belongs to the proposal; it is not an implemented setting. Public example files contain placeholders and development defaults, which should not be treated as production configuration. This handbook does not verify a configured hosted model id is currently available.
 

@@ -65,6 +65,9 @@ class TokenPayload(BaseModel):
     sub: UUID
     username: str
     role: UserRole
+    # The account's token_version when the token was issued. Required, so a
+    # token minted before the claim existed is rejected rather than trusted.
+    ver: int
     exp: int | None = None
 
 

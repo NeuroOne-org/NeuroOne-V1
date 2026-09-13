@@ -93,6 +93,14 @@ services:
 `NEXT_PUBLIC_API_URL` is read by the browser, so it must be an address the
 browser can reach, not the in-network `api` hostname.
 
+It must also be on the frontend's host. The backend sets the session token as
+an HttpOnly cookie that page scripts cannot read, and `proxy.ts` decides
+redirects by checking whether that cookie is present. Cookies ignore the port,
+so `localhost:3000` and `localhost:8000` work. A deployment should serve the
+API under the frontend's domain, for example behind the same reverse proxy.
+An API on a different host would work for API calls, but `proxy.ts` would
+never see the cookie.
+
 `frontend/Dockerfile` is a standard multi-stage Next.js build
 (`output: "standalone"` is already set in `next.config.mjs` to keep the
 final image small).
