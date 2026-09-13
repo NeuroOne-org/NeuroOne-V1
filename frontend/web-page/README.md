@@ -73,7 +73,7 @@ Final production build (including lint/types), responsive browser checks,
 failure/retry behavior and independent source review passed. Full verification
 details and limits are recorded at the end of `PLAN.md`.
 
-`DESIGN.md`, `PLAN.md`, `README.md`, `.gitignore`, `.eslintrc.json`,
+`DESIGN.md`, `PLAN.md`, `README.md`, `.gitignore`, `eslint.config.mjs`,
 `package.json`, `package-lock.json`, `next-env.d.ts`, `next.config.mjs`,
 `tsconfig.json`, `postcss.config.js`, `tailwind.config.ts`,
 `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/login/page.tsx`,
