@@ -2,10 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_auth_service, get_current_active_user, get_db
+from app.core.session import clear_session_cookie, set_session_cookie
 from app.models.user import User
 from app.schemas.auth import (
     ForgotPasswordRequest,
@@ -44,6 +45,7 @@ _OTP_VERIFY_WINDOW_SECONDS = 15 * 60
 def login(
     credentials: LoginRequest,
     request: Request,
+    response: Response,
     db: Annotated[Session, Depends(get_db)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> LoginResponse:
@@ -53,6 +55,9 @@ def login(
     a code is sent to the account's email and the response carries
     otp_required=true instead -- the client continues at /auth/verify-otp
     with that code and the same password.
+
+    A token is also set as the HttpOnly session cookie, which is what the
+    browser app authenticates with; the copy in the body is for API clients.
     """
 
     rate_limit.enforce(
@@ -68,14 +73,17 @@ def login(
         message="Too many sign-in attempts for this account. Try again later.",
     )
 
-    return auth_service.login(db, credentials.username, credentials.password)
+    result = auth_service.login(db, credentials.username, credentials.password)
+    if result.access_token is not None:
+        set_session_cookie(response, result.access_token)
+    return result
 
 
 @router.get("/me", response_model=UserResponse)
 def read_current_user(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> UserResponse:
-    """Return the identity associated with the bearer token."""
+    """Return the identity associated with the session cookie or bearer token."""
 
     return current_user
 
@@ -152,10 +160,14 @@ def request_otp_login(
 @router.post("/verify-otp", response_model=Token)
 def verify_otp_login(
     payload: VerifyOtpRequest,
+    response: Response,
     db: Annotated[Session, Depends(get_db)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> Token:
-    """Verify credentials and OTP together, then issue an access token."""
+    """Verify credentials and OTP together, then issue an access token.
+
+    As with /auth/login, the token is also set as the session cookie.
+    """
 
     rate_limit.enforce(
         f"otp-verify:login:{payload.email.lower()}",
@@ -164,4 +176,18 @@ def verify_otp_login(
         message="Too many attempts for this account. Try again later.",
     )
 
-    return auth_service.verify_otp_login(db, payload.email, payload.otp, payload.password)
+    token = auth_service.verify_otp_login(db, payload.email, payload.otp, payload.password)
+    set_session_cookie(response, token.access_token)
+    return token
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response) -> None:
+    """Clear the session cookie.
+
+    Needs no authentication, so a cookie the server has already rejected can
+    always be cleared. It does not revoke the token itself: a copy taken
+    elsewhere stays valid until it expires or the password is changed.
+    """
+
+    clear_session_cookie(response)

@@ -54,6 +54,8 @@ export const auth = {
       .then((r) => r.data),
 
   me: () => api.get<User>("/auth/me").then((r) => r.data),
+
+  logout: () => api.post("/auth/logout").then(() => undefined),
 };
 
 /* -- triage ----------------------------------------------------------- */

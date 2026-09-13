@@ -34,9 +34,16 @@ class Settings(BaseSettings):
     # without waiting on Gmail or hitting its sending limits.
     OTP_DELIVERY: Literal["email", "console"] = "email"
 
-    # Explicit allow-list, not a wildcard: the frontend sends the JWT via
-    # Authorization header with credentialed requests, and CORS forbids
-    # combining allow_origins=["*"] with allow_credentials=True anyway.
+    # Marks the HttpOnly session cookie (app/core/session.py) Secure, so it
+    # never crosses plain HTTP. Chrome, Edge and Firefox treat
+    # http://localhost as secure, so true works in local development too;
+    # set false only for a browser that drops Secure cookies on localhost.
+    # Refused at startup once APP_ENV=production (see _validate_auth_safety).
+    SESSION_COOKIE_SECURE: bool = True
+
+    # Explicit allow-list, not a wildcard: the frontend sends the session
+    # cookie with credentialed requests, and CORS forbids combining
+    # allow_origins=["*"] with allow_credentials=True anyway.
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # Gmail SMTP sender for OTP emails (app/services/otp_service.py). Only
@@ -90,6 +97,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 "AUTH_REQUIRE_OTP must be true when APP_ENV=production -- "
                 "password-only login cannot reach a real deployment."
+            )
+        if self.APP_ENV == "production" and not self.SESSION_COOKIE_SECURE:
+            raise ValueError(
+                "SESSION_COOKIE_SECURE must be true when APP_ENV=production -- "
+                "the session cookie cannot be sent over plain HTTP."
             )
         if self.OTP_DELIVERY == "email" and not (
             self.GMAIL_ADDRESS and self.GMAIL_APP_PASSWORD

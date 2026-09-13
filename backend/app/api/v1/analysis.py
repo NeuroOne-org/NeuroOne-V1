@@ -20,6 +20,7 @@ from app.api.dependencies import (
     get_current_active_user,
     get_db,
     get_report_service,
+    require_clinician,
 )
 from app.models.analysis import Analysis
 from app.models.report import Report
@@ -49,10 +50,15 @@ def get_analysis(
 def sign_off_analysis(
     analysis_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: Annotated[User, Depends(require_clinician)],
     analysis_service: Annotated[AnalysisService, Depends(get_analysis_service)],
 ) -> Analysis:
-    """Record clinician sign-off. Gates report generation (ADR-006)."""
+    """Record clinician sign-off. Gates report generation (ADR-006).
+
+    Clinician-only: an administrator can read every record, but sign-off is
+    the clinical review that unlocks a report, so it must not be theirs to
+    give. Refused with 403 before the analysis is even looked up.
+    """
 
     return analysis_service.sign_off_analysis(db, analysis_id, current_user)
 

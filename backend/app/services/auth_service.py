@@ -158,6 +158,7 @@ class AuthService:
                 "sub": str(user.id),
                 "username": user.username,
                 "role": user.role.value,
+                "ver": user.token_version,
             }
         )
 

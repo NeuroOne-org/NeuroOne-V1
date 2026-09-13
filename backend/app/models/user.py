@@ -7,6 +7,7 @@ from app.models.base import BaseModel
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import (
     Boolean,
+    Integer,
     String,
     Index,
 )
@@ -62,6 +63,16 @@ class User(BaseModel):
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
+        nullable=False,
+    )
+
+    # Copied into every access token as its "ver" claim, and compared on each
+    # request (get_current_user). Changing the password increments it, which
+    # invalidates every token issued before the change.
+    token_version: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
         nullable=False,
     )
 

@@ -19,13 +19,13 @@ from app.models.analysis import (
     AnalysisFinding,
     FindingCategory,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.repositories.analysis_repository import AnalysisRepository
 from app.schemas.analysis import AnalysisResult, DiagnosisCandidate
 from app.services.base_service import BaseService
 from app.services.patient_service import PatientService
 from app.services.visit_service import VisitService
-from app.utils.exceptions import EntityNotFoundError
+from app.utils.exceptions import AuthorizationError, EntityNotFoundError
 
 
 class AnalysisService(BaseService[AnalysisRepository]):
@@ -198,7 +198,15 @@ class AnalysisService(BaseService[AnalysisRepository]):
         Idempotent rather than one-shot: re-signing updates who and when
         rather than raising, since there is no separate amendment flow yet
         through which a clinician would need to revoke a prior sign-off.
+
+        Only a clinician may sign. The route already enforces this; it is
+        repeated here because ownership alone is not enough -- administrators
+        pass every ownership check, and their sign-off would unlock a report
+        no clinician reviewed.
         """
+
+        if current_user.role is not UserRole.CLINICIAN:
+            raise AuthorizationError("Only a clinician can sign off an analysis.")
 
         analysis = self.get_analysis(db, analysis_id, current_user)
         analysis.reviewed_by_id = current_user.id

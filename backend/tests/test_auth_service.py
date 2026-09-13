@@ -12,6 +12,7 @@ from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserResponse
 from app.services import otp_service
 from app.services.auth_service import AuthService
+from app.services.user_service import UserService
 from app.utils.exceptions import (
     AuthorizationError,
     InvalidCredentialsError,
@@ -88,6 +89,7 @@ def test_login_validates_real_password_hash_and_hides_user_existence() -> None:
         role=UserRole.CLINICIAN,
         is_active=True,
         is_deleted=False,
+        token_version=0,
     )
     user_service.get_user_by_username.return_value = user
 
@@ -119,6 +121,7 @@ def test_login_sends_otp_and_withholds_token_when_required(monkeypatch) -> None:
         role=UserRole.CLINICIAN,
         is_active=True,
         is_deleted=False,
+        token_version=0,
     )
     user_service.get_user_by_username.return_value = user
     sent = Mock()
@@ -152,6 +155,7 @@ def test_login_and_reset_otps_do_not_cross_over(monkeypatch) -> None:
         role=UserRole.CLINICIAN,
         is_active=True,
         is_deleted=False,
+        token_version=0,
     )
     user_service.get_user_by_email.return_value = user
     user_service.get_user_by_username.return_value = user
@@ -260,6 +264,33 @@ def test_reset_password_updates_hash_on_valid_otp(monkeypatch) -> None:
     assert service.verify_password("brand-new-password", args[2])
 
 
+def test_reset_password_moves_the_token_version_past_existing_tokens(
+    monkeypatch,
+) -> None:
+    repository = Mock()
+    repository.update.side_effect = lambda db, obj: obj
+    user = User(
+        id=uuid4(),
+        username="known",
+        email="known@example.com",
+        role=UserRole.CLINICIAN,
+        is_active=True,
+        is_deleted=False,
+        hashed_password="old-hash",
+        token_version=0,
+    )
+    repository.get_by_email.return_value = user
+    service = AuthService(UserService(repository))
+    token_before_reset = service.create_access_token(user)
+    monkeypatch.setattr(otp_service, "verify_otp", Mock(return_value=True))
+
+    service.reset_password(Mock(), "known@example.com", "123456", "brand-new-password")
+
+    assert user.token_version == 1
+    assert service.verify_access_token(token_before_reset).ver == 0
+    assert service.verify_access_token(service.create_access_token(user)).ver == 1
+
+
 def test_reset_password_rejects_invalid_otp(monkeypatch) -> None:
     user_service = Mock()
     service = AuthService(user_service)
@@ -292,6 +323,7 @@ def test_otp_login_wrong_password_does_not_burn_the_code() -> None:
         role=UserRole.CLINICIAN,
         is_active=True,
         is_deleted=False,
+        token_version=0,
     )
     user_service.get_user_by_email.return_value = user
     otp_service._otp_store[otp_service._store_key("known@example.com", "login")] = otp_service._OtpEntry(

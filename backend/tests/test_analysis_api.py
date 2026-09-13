@@ -393,6 +393,22 @@ def test_signing_off_a_foreign_analysis_is_404() -> None:
     assert response.status_code == 404
 
 
+def test_an_admin_cannot_sign_off_an_analysis() -> None:
+    """Admins pass every ownership check, so the role guard is what stops an
+    admin sign-off from unlocking a report no clinician reviewed."""
+
+    class ServiceStub:
+        def sign_off_analysis(self, db, analysis_id, current_user):
+            raise AssertionError("an admin sign-off must not reach the service")
+
+    response = _client(_user(UserRole.ADMIN), ServiceStub()).post(
+        f"/api/v1/analyses/{uuid4()}/review"
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error_code"] == "authorization_error"
+
+
 # --------------------------------------------------------------------------
 # Reads
 # --------------------------------------------------------------------------

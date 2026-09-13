@@ -45,6 +45,8 @@ export interface User {
   updated_at: string;
 }
 
+/** The token in a sign-in response body is for API clients. The browser app
+ * never reads it: the same response sets it as an HttpOnly session cookie. */
 export interface Token {
   access_token: string;
   token_type: string;

@@ -23,7 +23,7 @@ from app.schemas.analysis import (
 )
 from app.schemas.evidence import RetrievedDocument
 from app.services.analysis_service import AnalysisService
-from app.utils.exceptions import AIError, EntityNotFoundError
+from app.utils.exceptions import AIError, AuthorizationError, EntityNotFoundError
 
 
 NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
@@ -405,6 +405,22 @@ def test_signing_off_twice_updates_the_reviewer_rather_than_erroring() -> None:
 
     assert reviewed.reviewed_by_id == second_reviewer.id
     assert reviewed.reviewed_at > NOW
+
+
+def test_an_admin_cannot_sign_off_even_an_analysis_they_can_read() -> None:
+    """Admins pass every ownership check, so ownership alone would let their
+    sign-off unlock a report that no clinician reviewed."""
+    service, repository, visit_service, _, _ = _service()
+    visit = _visit()
+    analysis = Mock(visit_id=visit.id, reviewed_by_id=None, reviewed_at=None)
+    repository.get_with_graph.return_value = analysis
+    visit_service.get_visit.return_value = visit
+
+    with pytest.raises(AuthorizationError):
+        service.sign_off_analysis(Mock(), uuid4(), _user(UserRole.ADMIN))
+
+    assert analysis.reviewed_at is None
+    repository.update.assert_not_called()
 
 
 def test_listing_a_foreign_visits_analyses_is_refused() -> None:
