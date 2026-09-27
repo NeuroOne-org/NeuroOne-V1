@@ -18,14 +18,26 @@ from app.models import *
 # access to the values within the .ini file in use.
 config = context.config
 
+
+# A caller that already set this (the Postgres test suite's per-test schema
+# fixture, tests/postgres/conftest.py, passing its own Config instance to
+# alembic.command.*) is respected rather than clobbered here -- every real
+# invocation (CLI, the compose `migrate` service) never pre-sets it, so this
+# is unchanged for them. alembic.ini's own `sqlalchemy.url =` is blank, so
+# `or` falls through to Settings() exactly as before when nothing did.
 config.set_main_option(
     "sqlalchemy.url",
-    settings.DATABASE_URL
+    config.get_main_option("sqlalchemy.url", "") or settings.DATABASE_URL,
 )
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Interpret the config file for Python logging. disable_existing_loggers
+# defaults to True, which -- when this module is exec'd programmatically
+# mid-test-session rather than as a standalone CLI process -- silently
+# disables every logger already configured (e.g. by conftest.py or by
+# app modules imported earlier in the same process), breaking any later
+# test that asserts on captured log output. False matches what a fresh CLI
+# process already gets for free (there are no "existing" loggers to keep).
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
