@@ -50,7 +50,12 @@ def pg_session() -> Session:
     schema_url = f"{TEST_POSTGRES_URL}?options=-csearch_path%3D{schema}"
 
     config = Config(str(BACKEND_DIR / "alembic.ini"))
-    config.set_main_option("sqlalchemy.url", schema_url)
+    # alembic.Config stores values in a configparser with interpolation
+    # enabled, which treats a bare "%" as the start of an escape sequence
+    # even on a plain set() -- so the "%3D" from URL-encoding above must be
+    # doubled to "%%3D" here. The engine below gets the un-doubled
+    # schema_url; only the value handed to alembic's Config needs this.
+    config.set_main_option("sqlalchemy.url", schema_url.replace("%", "%%"))
     command.upgrade(config, "head")
 
     engine = create_engine(schema_url)
