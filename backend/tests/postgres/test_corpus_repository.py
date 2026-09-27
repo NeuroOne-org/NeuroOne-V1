@@ -65,9 +65,11 @@ def test_migration_creates_the_generated_search_vector_and_gin_index(pg_session)
 
 
 def test_check_constraint_rejects_a_disallowed_tier(pg_session):
-    _row(pg_session, source_tier="primary_study")
+    # _row() itself flushes, and the CHECK constraint fires on flush, not
+    # only on commit -- so the assertion has to wrap the call that actually
+    # touches the database, not a separate commit() afterward.
     with pytest.raises(IntegrityError):
-        pg_session.commit()
+        _row(pg_session, source_tier="primary_study")
     pg_session.rollback()
 
 
