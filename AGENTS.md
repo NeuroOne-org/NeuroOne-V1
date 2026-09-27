@@ -352,13 +352,13 @@ Per `NEUROONE-MVP-SCOPE.md`, the `AI-01` phase is deliberately split. (`AI-01` i
 
 **Mocked now, swapped later (`AI-02`):**
 
-- the retrieval corpus — still mocked (`AI-02b`, deferred),
+- the retrieval corpus — **swapped, code landed, content pending review** (`AI-02b`; see [ADR-007](docs/decisions/ADR-007-curated-retrieval-corpus.md)). `AI_RETRIEVAL_PROVIDER=corpus` selects the curated Postgres full-text retriever; the default stays `mock` until a named clinical reviewer signs off the seed corpus (AI-02b-9),
 - the LLM call — **swapped** (`AI-02a`, done; see [ADR-005](docs/decisions/ADR-005-live-llm-provider.md)),
 - the scan staging model — mocked behind its own seam (`SCAN-02`; see [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md)).
 
 Staging is a **third** seam, not a variant of the other two, so provenance is three-dimensional and `AI_PROVIDER` as a single literal does not stretch to cover it — staging carries its own setting. A stage estimate enters the contract as the top-ranked `DiagnosisCandidate`, subject to every rule below: the `MAX_CONFIDENCE` ceiling, likelihood rather than certainty, and citations. It is never a standalone verdict, in the schema or in UI copy.
 
-Mock providers return **schema-valid deterministic results** and sit **behind the same interface** the real providers will use. Fixing the contract first is the entire point, and it held: `AI-02a` changed `app/ai/providers/` and the `pipeline_note` derivation, and nothing else.
+Mock providers return **schema-valid deterministic results** and sit **behind the same interface** the real providers will use. Fixing the contract first is the entire point, and it held: `AI-02a` changed `app/ai/providers/` and the `pipeline_note` derivation, and nothing else; `AI-02b` added a fourth provider (`CorpusEvidenceRetriever`) and one `pipeline_note` suffix behind the same seam.
 
 **Three provenance states now exist, and the label must match the one in force:**
 
@@ -758,7 +758,7 @@ SCAN-01       scan per visit: entity, storage, checksum, ownership via ADR-002
 SCAN-02       mocked staging provider behind its own seam + trend extension
 REVIEW-01     clinician sign-off state, gating the report endpoint
 DASH-01       triage queue endpoint, dashboard, intake split (patient / visit)
-AI-02b        real RAG corpus behind the same interface (deferred)
+AI-02b        real RAG corpus behind the same interface (code landed, ADR-007; content pending review)
 ```
 
 `SCAN-01` through `DASH-01` come from [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md). `SCAN-01` precedes `SCAN-02` because a staging provider needs something to stage, and `REVIEW-01` precedes `DASH-01` because the queue sorts partly on review state.
@@ -849,7 +849,7 @@ A feature is not complete because code exists. A task is complete only when ever
 
 - the `RECEPTIONIST` role (not in the MVP, and not yet defined in PRD §4; if it returns, PRD §4 must define it first),
 - biomarker analysis (§8.3),
-- a real retrieval corpus (`AI-02b`, §15) — the live LLM landed in `AI-02a`, the corpus did not.
+- a real retrieval corpus's **content** (`AI-02b-9`, §15) — the retriever code landed (ADR-007), but `AI_RETRIEVAL_PROVIDER=corpus` cannot be enabled anywhere until a named clinical reviewer signs off a seed corpus; the default stays `mock`.
 
 Do not introduce any of these quietly while implementing adjacent features. If asked for one, switch to PLAN mode and treat the request as a scope/version decision, not a feature request.
 

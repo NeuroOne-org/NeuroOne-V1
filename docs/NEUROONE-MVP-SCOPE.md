@@ -30,7 +30,7 @@ All of FR-01 through FR-07 are in scope for this MVP. Nothing is cut — but FR-
 **AI-02 (later phase, post-demo) — split in two, because the two protocols swap independently:**
 
 - **AI-02a — live LLM (done, [ADR-005](decisions/ADR-005-live-llm-provider.md)).** `MockLLMClient` is joined by `LiveLLMClient`, reasoning through any OpenAI-compatible endpoint selected by config. It was a provider swap, not a pipeline rewrite — the contract, ranking, citation attachment, validation and persistence were untouched, which is what building the contract first bought. `AI_PROVIDER` still defaults to `mock`.
-- **AI-02b — real retrieval corpus (deferred).** The mock retriever stays until a trusted-literature corpus, an index and a source-tier policy are decided. That is a larger scope decision than the model swap, and it is where the prompt-injection exposure actually lands: a retrieved passage is untrusted text in a way a symptom field is not.
+- **AI-02b — real retrieval corpus (code landed, content pending review, [ADR-007](decisions/ADR-007-curated-retrieval-corpus.md)).** `CorpusEvidenceRetriever` joins `MockEvidenceRetriever` behind the same `EvidenceRetriever` seam: a curated, human-reviewed set of guideline/systematic-review passages, indexed with Postgres full-text search. `AI_RETRIEVAL_PROVIDER` still defaults to `mock` -- `corpus` cannot be enabled anywhere until a named clinical reviewer signs off a seed corpus (task AI-02b-9). Prompt injection from a retrieved passage, the risk this phase was deferred to resolve, is contained in layers: human review before ingestion, an ingestion-time tripwire for instruction-like text, and a system-prompt rule that evidence is data, never instructions.
 
 Live reasoning over a still-simulated corpus is a real state and is labelled as one — every analysis carries `pipeline_note = "pipeline complete, live model reasoning, evidence retrieval simulated"`.
 
@@ -61,7 +61,7 @@ CASE-01       clinical case / symptom domain (currently a broken stub)
 AI-01 (mock)  structured AI contract + mocked retriever/LLM + evidence/citation shape
 REPORT-01     PDF assembly — full acceptance journey becomes demoable end-to-end
 AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-005)
-AI-02b        real RAG corpus behind the same interface (deferred)
+AI-02b        real RAG corpus behind the same interface (code landed, ADR-007; content pending review)
 ```
 
 ## Early-detection design (confirmed — governs CASE-01 and AI-01, not SEC-01/AUTH-01)

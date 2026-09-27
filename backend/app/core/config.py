@@ -66,6 +66,13 @@ class Settings(BaseSettings):
     # to cover it. "mock" is the only value until a live staging model exists.
     AI_STAGING_PROVIDER: Literal["mock"] = "mock"
 
+    # A fourth, independent seam (ADR-007 decision 7): "corpus" selects the
+    # curated Postgres full-text retriever. The default stays "mock" --
+    # switching an environment to "corpus" requires a reviewed seed corpus
+    # (AI-02b-9) and a Postgres DATABASE_URL, both checked at startup by
+    # build_providers() rather than failing mid-analysis.
+    AI_RETRIEVAL_PROVIDER: Literal["mock", "corpus"] = "mock"
+
     # Any OpenAI-compatible /chat/completions endpoint. Provider choice is
     # configuration rather than a code branch (ADR-005), so Groq, Gemini's
     # compatibility endpoint, OpenRouter and a local Ollama all work here.

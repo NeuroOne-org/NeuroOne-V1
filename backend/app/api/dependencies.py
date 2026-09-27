@@ -27,6 +27,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.visit_repository import VisitRepository
 from app.services.analysis_service import AnalysisService
 from app.services.auth_service import AuthService
+from app.services.corpus_search import SessionCorpusSearch
 from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
 from app.services.scan_service import ScanService
@@ -51,7 +52,10 @@ _visit_service = VisitService(
     _patient_service,
 )
 
-_retriever, _llm, _stager = build_providers(settings)
+_corpus_search = (
+    SessionCorpusSearch() if settings.AI_RETRIEVAL_PROVIDER == "corpus" else None
+)
+_retriever, _llm, _stager = build_providers(settings, corpus_search=_corpus_search)
 _analysis_service = AnalysisService(
     AnalysisRepository(),
     _visit_service,

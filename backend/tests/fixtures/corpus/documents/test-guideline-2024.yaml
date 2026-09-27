@@ -1,0 +1,15 @@
+# Synthetic fixture -- not real literature. Used only by the Postgres test
+# suite to exercise ingestion end to end.
+document_id: test-guideline-2024
+source: Test Fixture Source
+citation: "Test Fixture Source. A synthetic test guideline. 2024."
+source_url: https://example.org/test-guideline-2024
+source_tier: guideline
+published_year: 2024
+license: CC0-1.0
+keywords: [dementia, memory loss]
+reviewed_by: test-fixture
+reviewed_at: 2026-01-01
+passages:
+  - chunk_id: test-guideline-2024#c1
+    text: "Progressive memory loss is a diagnostic feature used in this fixture."

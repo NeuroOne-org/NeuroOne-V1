@@ -8,6 +8,7 @@ class behind ``EvidenceRetriever``.
 """
 
 from app.ai.corpus.mock_corpus import MOCK_DOCUMENTS
+from app.ai.ranking import TIER_BONUS
 from app.schemas.evidence import RetrievalQuery, RetrievedDocument
 
 
@@ -15,15 +16,6 @@ from app.schemas.evidence import RetrievalQuery, RetrievedDocument
 CONDITION_MATCH = 0.5
 SYMPTOM_MATCH = 0.3
 COMPLAINT_MATCH = 0.2
-
-# Guideline and systematic review outrank primary studies and reference text,
-# so "trusted medical sources are prioritized" (AGENTS.md section 8.4).
-TIER_BONUS = {
-    "guideline": 0.10,
-    "systematic_review": 0.08,
-    "primary_study": 0.04,
-    "reference_text": 0.0,
-}
 
 
 def _normalize(value: str) -> str:

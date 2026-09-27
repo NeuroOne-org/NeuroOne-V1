@@ -299,6 +299,14 @@ class AnalysisOrchestrator:
             note = HYBRID_PIPELINE_NOTE
         else:
             note = LIVE_PIPELINE_NOTE
+            # Version-suffix the live/live state (ADR-007 decision 8). Read
+            # via getattr, not an isinstance check, so the orchestrator does
+            # not need to know CorpusEvidenceRetriever exists -- any future
+            # live retriever that exposes corpus_version gets the same
+            # treatment for free.
+            corpus_version = getattr(self.retriever, "corpus_version", None)
+            if corpus_version is not None:
+                note += f", corpus {corpus_version}"
 
         if imaging is not None:
             note += (

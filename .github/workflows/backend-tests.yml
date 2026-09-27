@@ -14,6 +14,25 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # ADR-007 / AI-02b-8: the Postgres-marked suite (tests/postgres/)
+    # exercises real full-text search SQL that SQLite cannot represent, so
+    # it needs a real Postgres to run against rather than being skipped.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: neuroone_test
+          POSTGRES_USER: neuroone
+          POSTGRES_PASSWORD: neuroone_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neuroone -d neuroone_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_POSTGRES_URL: postgresql+psycopg2://neuroone:neuroone_test_only@localhost:5432/neuroone_test
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -23,4 +42,11 @@ jobs:
           cache-dependency-path: backend/requirements*.txt
       - run: python -m pip install -r requirements-dev.txt
       - run: alembic heads
+      # Base migration sanity check against a real Postgres, independent of
+      # the per-test isolated schemas tests/postgres/conftest.py creates --
+      # this catches a migration that fails outright even if no
+      # postgres-marked test happens to exercise that exact path.
+      - run: alembic upgrade head
+        env:
+          DATABASE_URL: ${{ env.TEST_POSTGRES_URL }}
       - run: python -m pytest

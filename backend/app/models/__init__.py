@@ -5,3 +5,4 @@ from .symptom import Symptom
 from .scan import Scan
 from .analysis import Analysis, AnalysisEvidence, AnalysisFinding, FindingCategory
 from .report import Report
+from .corpus import CorpusDocument

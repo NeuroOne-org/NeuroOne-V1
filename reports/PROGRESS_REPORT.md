@@ -185,13 +185,17 @@ queue has nothing to rank.
 Mount scan storage, align the version settings, add a frontend CI job, confirm
 the synthetic-data decision in writing, and prune the outstanding branches.
 
-### Milestone 4: AI-02b, deferred
+### Milestone 4: AI-02b, code landed, content pending review
 
-The real retrieval corpus behind the AI-01 interface. Deliberately deferred in
-`NEUROONE-MVP-SCOPE.md` until a trusted-literature corpus, an index and a
-source-tier policy are decided — and it is where prompt-injection exposure
-actually lands, because a retrieved passage is untrusted text in a way a
-symptom field is not.
+The real retrieval corpus behind the AI-01 interface ([ADR-007](../docs/decisions/ADR-007-curated-retrieval-corpus.md)). `CorpusEvidenceRetriever`,
+the `corpus_documents` migration, the ingestion CLI and the Postgres-marked
+test suite are in place, selectable via `AI_RETRIEVAL_PROVIDER=corpus`. The
+default stays `mock`: switching any environment to `corpus` still requires a
+named clinical reviewer to sign off a seed corpus (task AI-02b-9), which is
+the remaining item on this milestone. Prompt-injection exposure from a
+retrieved passage is contained in layers -- human review before ingestion,
+an ingestion-time tripwire, and a system-prompt rule that evidence is data,
+never instructions.
 
 ## Definition-of-Done Dashboard
 
@@ -199,7 +203,7 @@ symptom field is not.
 | --- | --- | --- |
 | Code implemented | Yes | Mockup only |
 | API works | Yes, 35 endpoints | Not applicable |
-| Tests pass | Yes, 400 | None exist |
+| Tests pass | Yes, 499 (fast suite; 12 more Postgres-marked, CI-only) | None exist |
 | Documentation updated | Yes, as of this cycle | Checklists reconciled this cycle |
 | Migration verified | Yes, single head in CI | Not applicable |
 | Pull request approved | Yes | Not applicable |

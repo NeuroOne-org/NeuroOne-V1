@@ -34,7 +34,7 @@ Replace `MockEvidenceRetriever` with a real, curated, Postgres full-text retriev
 | 2 | Index | Postgres FTS (owner) |
 | 3 | Tier policy | `guideline` + `systematic_review` only (owner) |
 | 4 | Branch | New branch from `main` (owner) |
-| 5 | Licence allow-list | **Default taken:** `CC0-1.0`, `CC-BY-4.0`, `public-domain`; non-commercial excluded. Owner to confirm |
+| 5 | Licence allow-list | **Confirmed (2026-09-22):** `CC0-1.0`, `CC-BY-4.0`, `public-domain`; non-commercial excluded |
 | 6 | Who reviews and approves seed passages | **Open.** Blocks task AI-02b-9 only |
 | 7 | Mock reasoning + corpus retrieval | Refused at configuration time (ADR-007 decision 7) |
 

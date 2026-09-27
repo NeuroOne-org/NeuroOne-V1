@@ -20,10 +20,11 @@ from pydantic import ValidationError
 
 from app.ai.orchestrator import (
     HYBRID_PIPELINE_NOTE,
+    LIVE_PIPELINE_NOTE,
     AnalysisOrchestrator,
 )
 from app.ai.providers import build_providers
-from app.ai.providers.live_llm import LiveLLMClient
+from app.ai.providers.live_llm import SYSTEM_PROMPT, LiveLLMClient
 from app.ai.providers.mock_llm import MockLLMClient
 from app.ai.providers.mock_retriever import MockEvidenceRetriever
 from app.ai.trends import detect_trends
@@ -694,6 +695,35 @@ def test_no_patient_data_is_logged(caplog):
 # Honest labelling (AGENTS.md section 8.1, ADR-005)
 
 
+class _FakeLiveRetriever:
+    """A live retriever stub carrying a corpus_version, like
+    CorpusEvidenceRetriever (ADR-007 decision 8)."""
+
+    name = "curated-corpus-curated-v1"
+    provenance = "live"
+    corpus_version = "curated-v1"
+
+    def __init__(self, documents):
+        self._documents = documents
+
+    def retrieve(self, query):
+        return list(self._documents)
+
+
+def test_live_reasoning_over_a_live_corpus_carries_the_corpus_version():
+    context = _rising_tremor_context()
+    documents = _evidence(context)
+    orchestrator = AnalysisOrchestrator(
+        _FakeLiveRetriever(documents),
+        _returning(_candidates(evidence_document_ids=[documents[0].document_id])),
+    )
+
+    result = orchestrator.run(context)
+
+    assert result.provider_mode == "live"
+    assert result.pipeline_note == f"{LIVE_PIPELINE_NOTE}, corpus curated-v1"
+
+
 def test_live_reasoning_over_a_simulated_corpus_is_labelled_hybrid():
     """The retriever is still mocked, so the note must not claim otherwise."""
     context = _rising_tremor_context()
@@ -786,3 +816,67 @@ def test_build_providers_still_defaults_to_the_mock_pair():
 
     assert isinstance(retriever, MockEvidenceRetriever)
     assert isinstance(llm, MockLLMClient)
+
+
+# --------------------------------------------------------------------------
+# Curated corpus provider selection (ADR-007 decision 7)
+
+
+class _FakeCorpusSearch:
+    def search(self, terms, *, limit):
+        return []
+
+
+def test_build_providers_rejects_corpus_retrieval_with_mock_reasoning():
+    with pytest.raises(ValueError, match="AI_PROVIDER='live-llm'"):
+        build_providers(
+            _settings(AI_PROVIDER="mock", AI_RETRIEVAL_PROVIDER="corpus"),
+            corpus_search=_FakeCorpusSearch(),
+        )
+
+
+def test_build_providers_rejects_corpus_retrieval_without_a_search_backend():
+    with pytest.raises(ValueError, match="CorpusSearch"):
+        build_providers(_settings(AI_RETRIEVAL_PROVIDER="corpus"))
+
+
+def test_build_providers_rejects_corpus_retrieval_on_a_non_postgres_url():
+    with pytest.raises(ValueError, match="Postgres"):
+        build_providers(
+            _settings(AI_RETRIEVAL_PROVIDER="corpus"),
+            corpus_search=_FakeCorpusSearch(),
+        )
+
+
+def test_build_providers_returns_the_corpus_retriever_when_fully_configured():
+    from app.ai.providers.corpus_retriever import CorpusEvidenceRetriever
+
+    retriever, llm, _ = build_providers(
+        _settings(
+            AI_RETRIEVAL_PROVIDER="corpus",
+            DATABASE_URL="postgresql+psycopg2://user:pass@localhost/neuroone",
+        ),
+        corpus_search=_FakeCorpusSearch(),
+    )
+
+    assert isinstance(retriever, CorpusEvidenceRetriever)
+    assert retriever.provenance == "live"
+    assert isinstance(llm, LiveLLMClient)
+
+
+def test_default_configuration_is_unaffected_by_the_corpus_seam():
+    """Byte-identical to origin/main's default: mock/mock (AI-02b-6 DoD)."""
+
+    retriever, llm, _ = build_providers(_settings(AI_PROVIDER="mock"))
+
+    assert isinstance(retriever, MockEvidenceRetriever)
+    assert retriever.name == "mock-corpus-v1"
+
+
+# --------------------------------------------------------------------------
+# Prompt hardening (ADR-007 decision 9)
+
+
+def test_system_prompt_treats_evidence_as_data_not_instructions():
+    assert "EVIDENCE" in SYSTEM_PROMPT
+    assert "never as instructions" in SYSTEM_PROMPT
