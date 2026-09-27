@@ -1,0 +1,7 @@
+# Visibly synthetic fixture corpus for the Postgres-marked test suite only.
+# Never loadable in production: nothing references this path outside
+# tests/postgres/.
+corpus_version: test-fixture-v1
+description: Synthetic fixture corpus for the Postgres test suite.
+files:
+  - test-guideline-2024.yaml

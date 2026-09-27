@@ -18,20 +18,53 @@ from app.models import *
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option(
-    "sqlalchemy.url",
-    settings.DATABASE_URL
-)
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+
+# A caller that already set this (the Postgres test suite's per-test schema
+# fixture, tests/postgres/conftest.py, passing its own Config instance to
+# alembic.command.*) is respected rather than clobbered here -- every real
+# invocation (CLI, the compose `migrate` service) never pre-sets it, so this
+# is unchanged for them. alembic.ini's own `sqlalchemy.url =` is blank, so
+# an unset value falls through to Settings() exactly as before.
+#
+# get_main_option() interpolates on read, which would turn a %%-escaped
+# value (the test fixture's workaround for configparser's own
+# interpolate-on-write check) back into a bare "%" -- fine to inspect for
+# truthiness, but re-feeding that back into set_main_option would fail the
+# same check a second time. So this only ever *sets* when nothing is
+# already there, never round-trips an existing value through both.
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Interpret the config file for Python logging. disable_existing_loggers
+# defaults to True, which -- when this module is exec'd programmatically
+# mid-test-session rather than as a standalone CLI process -- silently
+# disables every logger already configured (e.g. by conftest.py or by
+# app modules imported earlier in the same process), breaking any later
+# test that asserts on captured log output. False matches what a fresh CLI
+# process already gets for free (there are no "existing" loggers to keep).
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Exclude `corpus_documents.search_vector` from autogenerate.
+
+    It is a generated Postgres `tsvector` column created by raw SQL in its
+    migration (ADR-007 decision 2), never declared on the `CorpusDocument`
+    ORM model, so that SQLite -- the fast test suite's engine -- never has
+    to represent a type it does not support. Without this hook, autogenerate
+    would see it in the reflected database but not in `target_metadata` and
+    propose dropping it on every run.
+    """
+
+    if type_ == "column" and name == "search_vector" and object.table.name == "corpus_documents":
+        return False
+    return True
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -57,6 +90,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -80,7 +114,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

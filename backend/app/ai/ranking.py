@@ -20,6 +20,17 @@ TIER_PRIORITY = {
     "reference_text": 3,
 }
 
+# Additive score bonus per source tier, applied by a retriever's own scoring
+# (not by rank_evidence above, which orders whatever a retriever already
+# scored). One definition shared by every retriever (AI-02b-5) -- the mock
+# corpus and the curated corpus must agree on how much a tier is worth.
+TIER_BONUS = {
+    "guideline": 0.10,
+    "systematic_review": 0.08,
+    "primary_study": 0.04,
+    "reference_text": 0.0,
+}
+
 
 def rank_evidence(
     documents: Sequence[RetrievedDocument],
@@ -81,6 +92,7 @@ def cap_evidence_per_candidate(
 
 
 __all__ = [
+    "TIER_BONUS",
     "TIER_PRIORITY",
     "cap_evidence_per_candidate",
     "rank_candidates",

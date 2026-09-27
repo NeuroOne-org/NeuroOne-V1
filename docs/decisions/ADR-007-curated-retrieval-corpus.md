@@ -1,7 +1,7 @@
 # ADR-007: Curated Retrieval Corpus Behind the AI-01 Seam
 
 ## Status
-Proposed
+Accepted (2026-09-22). Open question 5 (licence allow-list) is confirmed as written: `CC0-1.0`, `CC-BY-4.0`, `public-domain`. Open question 6 (named clinical reviewer) remains open and blocks only task AI-02b-9 (seed corpus content) — it does not block the code in AI-02b-1 through AI-02b-8 and AI-02b-10.
 
 ## Context
 

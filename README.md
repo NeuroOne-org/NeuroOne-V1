@@ -90,8 +90,8 @@ F --> G[Healthcare Intelligence OS]
 | Module | Progress | What that actually means |
 |:--|:--:|:--|
 | 🔐 Authentication | 🟢 Complete | Login, JWT, an emailed OTP second factor (on by default, mandatory in production), purpose-scoped codes, password reset, and rate-limited auth endpoints. Accounts are admin-provisioned; there is no self-registration. |
-| ⚙️ Backend APIs | 🟢 Complete | 35 endpoints across patients, visits, symptoms, scans, analyses, reports and triage. 400 tests, run in CI. |
-| 🧠 AI Pipeline | 🟡 Contract complete, providers simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Literature retrieval and MRI staging are **mocked**; reasoning can run against a live model. Every analysis states which parts were simulated. |
+| ⚙️ Backend APIs | 🟢 Complete | 35 endpoints across patients, visits, symptoms, scans, analyses, reports and triage. 499 tests, run in CI (plus 12 Postgres-marked tests, CI-only). |
+| 🧠 AI Pipeline | 🟡 Reasoning and retrieval real, content and staging simulated | Orchestrator, ranking, trend detection and the output contract are real and enforced. Reasoning can run against a live model (`AI_PROVIDER=live-llm`), and literature retrieval can run against a curated, Postgres full-text-searched corpus (`AI_RETRIEVAL_PROVIDER=corpus`, [ADR-007](docs/decisions/ADR-007-curated-retrieval-corpus.md)) -- but both default to mock, and `corpus` has no reviewed content yet, so every environment today runs simulated end to end. MRI staging is still **mocked**. Every analysis states which parts were simulated. |
 | 🖥️ Dashboard | 🟢 Connected to the API | A triage queue ranked by `GET /triage`, patient records, new-patient intake, follow-up visits with symptoms and a scan, analysis runs, clinician sign-off and PDF report download, all against real endpoints. Lint, typecheck, tests and build run in CI. |
 | 📊 Explainable AI | 🟢 In the API and the UI | The patient record renders ranked differentials with supporting and contradicting findings and their citations, under a provenance line stating which parts of the analysis were simulated. |
 | ☁️ Deployment | 🟡 Partial | Compose runs Postgres, applies migrations, then starts the API with scans on a named volume. OTP codes are logged to the API container by default (`OTP_DELIVERY=console`); set `OTP_DELIVERY=email` plus `GMAIL_ADDRESS`/`GMAIL_APP_PASSWORD` on the host to email them. The frontend is not in Compose yet. |
@@ -99,9 +99,11 @@ F --> G[Healthcare Intelligence OS]
 </div>
 
 > **Status, stated plainly.** The backend implements the full clinical journey and is
-> tested, and the frontend drives that journey against it. Literature retrieval and MRI
-> staging are still simulated. NeuroOne is not clinically validated, is not a diagnostic
-> device, and assists clinicians rather than diagnosing. Demo data is synthetic. See
+> tested, and the frontend drives that journey against it. A curated, real literature
+> retrieval corpus now has a live code path (ADR-007), but no reviewed content yet, so
+> it is not enabled anywhere; MRI staging is still simulated with no live path at all.
+> NeuroOne is not clinically validated, is not a diagnostic device, and assists
+> clinicians rather than diagnosing. Demo data is synthetic. See
 > [`reports/PROGRESS_REPORT.md`](reports/PROGRESS_REPORT.md) for the backend detail
 > (written before the frontend was connected) and [`docs/decisions/`](docs/decisions/)
 > for the decisions behind it.

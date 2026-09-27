@@ -32,6 +32,12 @@ os.environ.setdefault("SESSION_COOKIE_SECURE", "true")
 # httpx.MockTransport.
 os.environ["AI_PROVIDER"] = "mock"
 
+# Same reasoning as AI_PROVIDER above: pin retrieval to mock so a developer's
+# backend/.env cannot make the suite build a CorpusEvidenceRetriever (which
+# needs a corpus_search the fast suite never supplies) or a Postgres
+# DATABASE_URL the fast suite does not run against.
+os.environ["AI_RETRIEVAL_PROVIDER"] = "mock"
+
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))

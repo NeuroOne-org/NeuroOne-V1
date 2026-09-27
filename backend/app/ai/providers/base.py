@@ -9,6 +9,7 @@ Two narrow protocols rather than one combined provider, because retrieval and
 reasoning fail differently and are swapped independently.
 """
 
+from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
 from app.schemas.analysis import ReasoningRequest, ReasoningResult
@@ -76,4 +77,62 @@ class ImagingStager(Protocol):
         ...
 
 
-__all__ = ["EvidenceRetriever", "ImagingStager", "LLMClient", "ProviderMode"]
+@dataclass(frozen=True)
+class CorpusSearchTerms:
+    """Query terms `CorpusEvidenceRetriever` hands to a `CorpusSearch` (ADR-007).
+
+    Built once from a `RetrievalQuery`: `complaint_terms` is the chief
+    complaint already split into at most 20 word tokens (AI-02b-5), so no
+    implementation of `CorpusSearch` needs its own tokenization policy.
+    """
+
+    conditions: tuple[str, ...]
+    symptoms: tuple[str, ...]
+    complaint_terms: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CorpusHit:
+    """One row a `CorpusSearch` returns, before retriever-side normalization.
+
+    `rank` is the search backend's own relevance score (e.g. Postgres
+    `ts_rank_cd`), before the tier bonus and max-normalization
+    `CorpusEvidenceRetriever` applies on the way to a `RetrievedDocument`.
+    """
+
+    document_id: str
+    chunk_id: str
+    source: str
+    citation: str
+    relevant_passage: str
+    source_url: str | None
+    source_tier: str
+    published_year: int | None
+    keywords: tuple[str, ...]
+    rank: float
+
+
+@runtime_checkable
+class CorpusSearch(Protocol):
+    """What `CorpusEvidenceRetriever` depends on, implemented outside `app/ai/`.
+
+    Keeps the retriever database-free (ADR-003, ADR-007 decision 5): the
+    concrete implementation is a repository plus a session-factory adapter
+    (`app/repositories/corpus_repository.py`,
+    `app/services/corpus_search.py`), never imported here.
+    """
+
+    def search(self, terms: CorpusSearchTerms, *, limit: int) -> list[CorpusHit]:
+        """Return matching, active corpus rows, most relevant first."""
+        ...
+
+
+__all__ = [
+    "CorpusHit",
+    "CorpusSearch",
+    "CorpusSearchTerms",
+    "EvidenceRetriever",
+    "ImagingStager",
+    "LLMClient",
+    "ProviderMode",
+]

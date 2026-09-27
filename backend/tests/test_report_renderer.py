@@ -184,6 +184,30 @@ def test_markup_like_input_is_escaped_not_interpreted() -> None:
     assert pdf_bytes.startswith(b"%PDF-")
 
 
+def test_evidence_passage_markup_is_escaped_not_interpreted() -> None:
+    """ADR-007: a corpus passage is reviewed text, not trusted markup --
+    verified here rather than assumed, since it now reaches the renderer
+    from a second source (the curated corpus) in addition to the mock one."""
+    finding = _finding(
+        evidence=[
+            _evidence(
+                relevant_passage="<b>bold</b> & <script>alert(1)</script> passage"
+            )
+        ]
+    )
+
+    pdf_bytes = render(_snapshot(findings=[finding]))
+
+    # Escaping only has to stop ReportLab from parsing the passage as markup
+    # (which would crash or silently swallow it as an unknown tag) -- once
+    # rendered, PDF text extraction naturally returns the literal glyphs
+    # that were drawn, so the full literal string is the correct assertion,
+    # not its absence.
+    assert pdf_bytes.startswith(b"%PDF-")
+    text = _text(pdf_bytes)
+    assert "<b>bold</b> & <script>alert(1)</script> passage" in text
+
+
 @pytest.mark.parametrize("provider_mode", ["simulated", "live"])
 def test_live_mode_omits_the_simulated_note(provider_mode) -> None:
     snapshot = _snapshot(

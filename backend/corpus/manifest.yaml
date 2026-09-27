@@ -1,0 +1,16 @@
+# Curated retrieval corpus manifest (ADR-007).
+#
+# Loading this file makes every listed document's rows `is_active = true`
+# and deactivates every row of any other `corpus_version`, in one
+# transaction (scripts/ingest_documents.py).
+#
+# `files` is empty until AI-02b-9 lands a human-reviewed, human-approved
+# seed corpus. An empty manifest is a legitimate, loadable state: it
+# activates zero rows, which the retriever reports as no evidence retrieved
+# rather than as a failure.
+corpus_version: curated-v1
+description: >-
+  Curated guideline and systematic-review passages backing live retrieval
+  (AI_RETRIEVAL_PROVIDER=corpus). Content pending a named clinical reviewer
+  (ADR-007 open question 6, AI-02b-9).
+files: []
