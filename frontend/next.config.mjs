@@ -8,6 +8,13 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
   output: "standalone",
+  // Serves the API from the page's own origin, so a single public tunnel
+  // (cloudflared on port 3000) carries both and the SameSite=Strict session
+  // cookie still applies. Used only when NEXT_PUBLIC_API_URL=/api/v1.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET || "http://localhost:8000";
+    return [{ source: "/api/v1/:path*", destination: `${target}/api/v1/:path*` }];
+  },
   images: {
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },

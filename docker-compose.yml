@@ -65,6 +65,17 @@ services:
       # Scan bytes are source data that cannot be regenerated (ADR-006).
       - neuroone_scan_data:/data/scans
 
+  frontend:
+    # Proxies /api/v1 to the api service (next.config.mjs rewrites), so the
+    # browser talks to one origin and the SameSite=Strict cookie just works.
+    build:
+      context: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
 volumes:
   neuroone_postgres_data:
   neuroone_scan_data:
