@@ -1,3 +1,5 @@
+import logging
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +10,11 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import engine
 from app.utils.handlers import register_exception_handlers
+
+# Uvicorn only configures its own loggers, so app.* INFO records (including
+# the console OTP) were dropped. Root stays at WARNING to keep libraries quiet.
+logging.basicConfig(format="%(levelname)s:     %(name)s: %(message)s")
+logging.getLogger("app").setLevel(logging.INFO)
 
 app = FastAPI(
     title=settings.APP_NAME,
