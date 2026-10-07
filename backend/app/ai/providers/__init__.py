@@ -8,6 +8,7 @@ from .base import (
     ImagingStager,
     LLMClient,
     ProviderMode,
+    ScanImages,
 )
 from .corpus_retriever import CorpusEvidenceRetriever
 from .mock_llm import MockLLMClient
@@ -27,5 +28,6 @@ __all__ = [
     "MockImagingStager",
     "MockLLMClient",
     "ProviderMode",
+    "ScanImages",
     "build_providers",
 ]

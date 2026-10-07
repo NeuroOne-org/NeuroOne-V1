@@ -63,8 +63,12 @@ class Settings(BaseSettings):
     # A third seam alongside AI_PROVIDER (ADR-006 decision 4): provenance is
     # now three-dimensional -- simulated retrieval, live-or-simulated
     # reasoning, simulated staging -- so a single literal no longer stretches
-    # to cover it. "mock" is the only value until a live staging model exists.
-    AI_STAGING_PROVIDER: Literal["mock"] = "mock"
+    # to cover it. "live-vision" sends one rendered slice to a vision model on
+    # the same OpenAI-compatible endpoint as AI_LLM_* (ADR-008).
+    AI_STAGING_PROVIDER: Literal["mock", "live-vision"] = "mock"
+    # Must accept image_url content. Verify against the provider's /models
+    # list, as for AI_LLM_MODEL.
+    AI_VISION_MODEL: str = "qwen/qwen3.8-27b"
 
     # A fourth, independent seam (ADR-007 decision 7): "corpus" selects the
     # curated Postgres full-text retriever. The default stays "mock" --

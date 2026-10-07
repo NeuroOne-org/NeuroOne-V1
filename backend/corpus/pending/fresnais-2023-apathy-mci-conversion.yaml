@@ -1,0 +1,27 @@
+# DRAFT -- pending human review (backend/corpus/pending/README.md).
+# Passages are sliced verbatim from the Europe PMC full-text XML of
+# PMC9755689; the reviewer must still check each against the article,
+# then set reviewed_by / reviewed_at and move this file to documents/.
+document_id: fresnais-2023-apathy-mci-conversion
+source: Journal of Geriatric Psychiatry and Neurology
+citation: 'Fresnais D, Humble MB, Bejerot S, et al. Apathy as a Predictor for Conversion From Mild Cognitive Impairment to Dementia: A Systematic Review and Meta-Analysis of Longitudinal Studies. J Geriatr Psychiatry Neurol. 2023;36(1):3-17. doi:10.1177/08919887221093361'
+source_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9755689/
+source_tier: systematic_review
+published_year: 2023
+license: CC-BY-4.0
+keywords:
+- Mild cognitive impairment (MCI)
+- Mild dementia
+- apathy
+- behavioral changes
+- progression
+- Alzheimer's disease
+reviewed_by: PENDING
+reviewed_at: '2026-10-07'
+passages:
+- chunk_id: fresnais-2023-apathy-mci-conversion#c1
+  text: Apathy is one of the most prevalent neurobehavioral manifestations in mild cognitive impairment (MCI) and is included among the behavioral and psychological symptoms of dementia (BPSD). Studies suggest that the presence of apathy could be associated with increased dementia risk.
+- chunk_id: fresnais-2023-apathy-mci-conversion#c2
+  text: There was a significant association between apathy and dementia conversion, HR = 1.54; 95% CI, 1.29, 1.84. Subgroup analysis showed a significant association between apathy and progression to AD.
+- chunk_id: fresnais-2023-apathy-mci-conversion#c3
+  text: Apathy was associated with an increased risk of conversion to AD and all-cause dementia in patients with MCI.

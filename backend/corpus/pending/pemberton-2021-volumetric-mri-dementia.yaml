@@ -1,0 +1,28 @@
+# DRAFT -- pending human review (backend/corpus/pending/README.md).
+# Passages are sliced verbatim from the Europe PMC full-text XML of
+# PMC8528755; the reviewer must still check each against the article,
+# then set reviewed_by / reviewed_at and move this file to documents/.
+document_id: pemberton-2021-volumetric-mri-dementia
+source: Neuroradiology
+citation: Pemberton HG, Zaki LAM, Goodkin O, et al. Technical and clinical validation of commercial automated volumetric MRI tools for dementia diagnosis - a systematic review. Neuroradiology. 2021;63(11):1773. doi:10.1007/s00234-021-02746-3
+source_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8528755/
+source_tier: systematic_review
+published_year: 2021
+license: CC-BY-4.0
+keywords:
+- MRI
+- brain atrophy
+- hippocampal atrophy
+- medial temporal atrophy
+- Mild dementia
+- Moderate dementia
+- Severe dementia
+- Mild cognitive impairment (MCI)
+- Cognitively normal
+reviewed_by: PENDING
+reviewed_at: '2026-10-07'
+passages:
+- chunk_id: pemberton-2021-volumetric-mri-dementia#c1
+  text: In the clinical diagnosis of dementia, structural MRI plays a key role in excluding other pathologies, as well as revealing patterns of brain atrophy [1, 2]. These patterns can act as imaging biomarkers to assist nosological diagnosis and differentiation between subtypes of dementia [3]. In clinical neuroradiology, visual assessment of brain atrophy patterns is commonly supported through the use of visual rating scales, such as the global cortical atrophy (GCA) or medial temporal atrophy (MTA) scale [4]. These semi-quantitative measures have shown good diagnostic accuracy to distinguish dementia from normal ageing and can help mediate the subjectivity of visual assessment [5].
+- chunk_id: pemberton-2021-volumetric-mri-dementia#c2
+  text: For the 17 products identified, 11 companies have published some form of technical validation on their methods, but only 4 have published clinical validation of their QReports in a dementia population. Upon systematically reviewing the published evidence for regulatory-approved QReports in dementia, we concluded that there is a significant evidence gap in the literature regarding clinical validation, workflow integration and in-use evaluation of these tools in dementia MRI diagnosis.

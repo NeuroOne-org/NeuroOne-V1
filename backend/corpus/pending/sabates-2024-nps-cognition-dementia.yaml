@@ -1,0 +1,28 @@
+# DRAFT -- pending human review (backend/corpus/pending/README.md).
+# Passages are sliced verbatim from the Europe PMC full-text XML of
+# PMC11166771; the reviewer must still check each against the article,
+# then set reviewed_by / reviewed_at and move this file to documents/.
+document_id: sabates-2024-nps-cognition-dementia
+source: Neuropsychology Review
+citation: 'Sabates J, Chiu WH, Loi S, et al. The Associations Between Neuropsychiatric Symptoms and Cognition in People with Dementia: A Systematic Review and Meta-Analysis. Neuropsychol Rev. 2024;34(2):581. doi:10.1007/s11065-023-09608-0'
+source_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11166771/
+source_tier: systematic_review
+published_year: 2024
+license: CC-BY-4.0
+keywords:
+- Mild dementia
+- Moderate dementia
+- Severe dementia
+- apathy
+- depression
+- anxiety
+- delusions
+- behavioral changes
+- neuropsychiatric symptoms
+reviewed_by: PENDING
+reviewed_at: '2026-10-07'
+passages:
+- chunk_id: sabates-2024-nps-cognition-dementia#c1
+  text: Most people with dementia experience neuropsychiatric symptoms (NPS), including anxiety, depression or disinhibition.
+- chunk_id: sabates-2024-nps-cognition-dementia#c2
+  text: We found significant associations between NPS, global cognition and cognitive domains, e.g. apathy was associated with global cognitive and memory impairment; dysphoria was associated with worse attention; delusions with executive dysfunction. Increased NPS in people with dementia are associated with worse cognitive performance.

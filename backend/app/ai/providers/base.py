@@ -127,6 +127,21 @@ class CorpusSearch(Protocol):
         ...
 
 
+@runtime_checkable
+class ScanImages(Protocol):
+    """Renders a scan to one 2D PNG for a vision staging model (ADR-008).
+
+    Same shape as `CorpusSearch`: implemented outside `app/ai/`
+    (`app/services/scan_images.py`), so the storage key never reaches the AI
+    layer -- the stager only knows the checksum `StagingRequest` already
+    carries. The PNG holds pixels only, never DICOM/EXIF headers.
+    """
+
+    def preview_png(self, checksum: str) -> bytes | None:
+        """Return a PNG slice of the scan, or None when none can be found."""
+        ...
+
+
 __all__ = [
     "CorpusHit",
     "CorpusSearch",
@@ -135,4 +150,5 @@ __all__ = [
     "ImagingStager",
     "LLMClient",
     "ProviderMode",
+    "ScanImages",
 ]

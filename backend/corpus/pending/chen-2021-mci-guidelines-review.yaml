@@ -1,0 +1,27 @@
+# DRAFT -- pending human review (backend/corpus/pending/README.md).
+# Passages are sliced verbatim from the Europe PMC full-text XML of
+# PMC8545868; the reviewer must still check each against the article,
+# then set reviewed_by / reviewed_at and move this file to documents/.
+document_id: chen-2021-mci-guidelines-review
+source: Frontiers in Neurology
+citation: 'Chen YX, Liang N, Li XL, et al. Diagnosis and Treatment for Mild Cognitive Impairment: A Systematic Review of Clinical Practice Guidelines and Consensus Statements. Front Neurol. 2021;12:719849. doi:10.3389/fneur.2021.719849'
+source_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8545868/
+source_tier: systematic_review
+published_year: 2021
+license: CC-BY-4.0
+keywords:
+- Mild cognitive impairment (MCI)
+- memory loss
+- cognitive decline
+- neuropsychological testing
+- biomarkers
+- dementia
+reviewed_by: PENDING
+reviewed_at: '2026-10-07'
+passages:
+- chunk_id: chen-2021-mci-guidelines-review#c1
+  text: Mild cognitive impairment (MCI) is an important stage between the normal cognitive decline of aging and dementia.
+- chunk_id: chen-2021-mci-guidelines-review#c2
+  text: Nine guidelines and consensus statements covered the screening and diagnosis of MCI. The evaluation of the documents showed that neuropsychological testing and biomarker assessments were the most common recommendations for the diagnosis of MCI.
+- chunk_id: chen-2021-mci-guidelines-review#c3
+  text: 'Nine of the 13 guidance documents covered the treatment and management of MCI. The recommendations for the treatment and management were classified into four categories, namely: intervention for risk reduction, pharmacologic interventions, non-pharmacologic interventions, and counseling. Regarding pharmacological interventions, three guidelines recommend no pharmacologic intervention. The use of cholinesterase inhibitors for MCI is contraindicated in three guidance documents, whereas one proposes that cholinesterase inhibitors and memantine should be deprescribed. EHb761®, Chinese herbal decoctions, and Chinese traditional patent medicine are recommended in two documents. A total of seven guidance documents recommend non-pharmacological interventions, including physical activity interventions, cognitive interventions, dietary and nutritional interventions, and acupuncture.'

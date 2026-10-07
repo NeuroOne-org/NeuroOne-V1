@@ -12,9 +12,16 @@ import httpx
 from sqlalchemy.engine import make_url
 
 from app.ai.corpus.source_schema import load_manifest
-from app.ai.providers.base import CorpusSearch, EvidenceRetriever, ImagingStager, LLMClient
+from app.ai.providers.base import (
+    CorpusSearch,
+    EvidenceRetriever,
+    ImagingStager,
+    LLMClient,
+    ScanImages,
+)
 from app.ai.providers.corpus_retriever import CorpusEvidenceRetriever
 from app.ai.providers.live_llm import LiveLLMClient
+from app.ai.providers.live_staging import LiveImagingStager
 from app.ai.providers.mock_llm import MockLLMClient
 from app.ai.providers.mock_retriever import MockEvidenceRetriever
 from app.ai.providers.mock_staging import MockImagingStager
@@ -27,9 +34,27 @@ from app.core.config import Settings, settings
 CORPUS_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "corpus" / "manifest.yaml"
 
 
-def _build_stager(config: Settings) -> ImagingStager:
+def _build_stager(
+    config: Settings,
+    scan_images: ScanImages | None,
+    http_client: httpx.Client | None,
+) -> ImagingStager:
     if config.AI_STAGING_PROVIDER == "mock":
         return MockImagingStager()
+
+    if config.AI_STAGING_PROVIDER == "live-vision":
+        # Refused at startup, not mid-analysis (ADR-005 precedent).
+        if not config.AI_LLM_API_KEY:
+            raise ValueError(
+                "AI_STAGING_PROVIDER='live-vision' requires AI_LLM_API_KEY. "
+                "Set it in backend/.env, or set AI_STAGING_PROVIDER=mock."
+            )
+        if scan_images is None:
+            raise ValueError(
+                "AI_STAGING_PROVIDER='live-vision' requires a ScanImages to be "
+                "passed to build_providers(scan_images=...)."
+            )
+        return LiveImagingStager(config, scan_images, client=http_client)
 
     raise ValueError(f"Unknown AI staging provider: {config.AI_STAGING_PROVIDER!r}")
 
@@ -92,17 +117,19 @@ def build_providers(
     *,
     http_client: httpx.Client | None = None,
     corpus_search: CorpusSearch | None = None,
+    scan_images: ScanImages | None = None,
 ) -> tuple[EvidenceRetriever, LLMClient, ImagingStager]:
     """Return the (retriever, llm, stager) triple for the configured providers.
 
     `corpus_search` is only consulted when `AI_RETRIEVAL_PROVIDER=corpus`; it
     is `None` in every other configuration, including every existing test
     and the default `mock`/`mock` state, which is why this stays additive
-    rather than a breaking signature change.
+    rather than a breaking signature change. `scan_images` is the same for
+    `AI_STAGING_PROVIDER=live-vision`.
     """
 
     config = config or settings
-    stager = _build_stager(config)
+    stager = _build_stager(config, scan_images, http_client)
     retriever = _build_retriever(config, corpus_search)
 
     if config.AI_PROVIDER == "mock":
