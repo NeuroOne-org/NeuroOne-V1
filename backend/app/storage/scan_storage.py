@@ -18,6 +18,10 @@ class ScanStorage(Protocol):
         """Persist ``content`` and return its storage key."""
         ...
 
+    def load(self, storage_key: str) -> bytes:
+        """Return previously saved content."""
+        ...
+
     def delete(self, storage_key: str) -> None:
         """Remove previously saved content. Missing content is not an error."""
         ...
@@ -47,6 +51,9 @@ class LocalScanStorage:
         key = f"{visit_id}/{uuid4()}-{safe_name}"
         (self.base_dir / key).write_bytes(content)
         return key
+
+    def load(self, storage_key: str) -> bytes:
+        return (self.base_dir / storage_key).read_bytes()
 
     def delete(self, storage_key: str) -> None:
         (self.base_dir / storage_key).unlink(missing_ok=True)

@@ -23,5 +23,18 @@ class ScanRepository(BaseRepository[Scan]):
         )
         return db.scalar(statement)
 
+    def get_by_checksum(self, db: Session, checksum: str) -> Scan | None:
+        """Return one active scan with this content checksum, if any.
+
+        Identical bytes uploaded twice share a checksum; either row's file
+        renders the same image, so which one comes back does not matter.
+        """
+
+        statement = select(Scan).where(
+            Scan.checksum == checksum,
+            Scan.is_deleted.is_(False),
+        )
+        return db.scalars(statement).first()
+
 
 __all__ = ["ScanRepository"]

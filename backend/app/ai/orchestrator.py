@@ -102,9 +102,10 @@ class AnalysisOrchestrator:
         Every prior visit that also has a scan gets staged too, purely to
         feed ``detect_stage_trend`` (ADR-006 consequence: without this, the
         scan contributes nothing to trend-aware early detection). A prior
-        visit's own persisted analysis, if any, is not reused -- staging is
-        deterministic, so re-running it here costs nothing and keeps this
-        module the only place that talks to the provider.
+        visit's own persisted analysis, if any, is not reused -- the mock is
+        deterministic and the live stager caches per checksum (ADR-008), so
+        re-running it here is cheap and keeps this module the only place that
+        talks to the provider.
         """
 
         scan = context.current_visit.scan

@@ -1,0 +1,24 @@
+# DRAFT -- pending human review (backend/corpus/pending/README.md).
+# Passages are sliced verbatim from the Europe PMC full-text XML of
+# PMC5754432; the reviewer must still check each against the article,
+# then set reviewed_by / reviewed_at and move this file to documents/.
+document_id: belleville-2017-mci-progression-neuropsych
+source: Neuropsychology Review
+citation: 'Belleville S, Fouquet C, Hudon C, et al. Neuropsychological Measures that Predict Progression from Mild Cognitive Impairment to Alzheimer''s type dementia in Older Adults: a Systematic Review and Meta-Analysis. Neuropsychol Rev. 2017;27(4):328-353. doi:10.1007/s11065-017-9361-5'
+source_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5754432/
+source_tier: systematic_review
+published_year: 2017
+license: CC-BY-4.0
+keywords:
+- Mild cognitive impairment (MCI)
+- Mild dementia
+- Alzheimer's disease
+- memory loss
+- verbal memory
+- language
+- progression
+reviewed_by: PENDING
+reviewed_at: '2026-10-07'
+passages:
+- chunk_id: belleville-2017-mci-progression-neuropsych#c1
+  text: Many domains showed very good predictive accuracy with high sensitivity and specificity values (≥ 0.7). Verbal memory measures and many language tests yielded very high predictive accuracy. Other domains (e.g., executive functions, visual memory) showed better specificity than sensitivity. Predictive accuracy was highest when combining memory measures with a small set of other domains or when relying on broad cognitive batteries. Cognitive tests are excellent at predicting MCI individuals who will progress to dementia and should be a critical component of any toolkit intended to identify AD at the pre-dementia stage. Some tasks are remarkable as early indicators, whereas others might be used to suggest imminent progression.
