@@ -152,6 +152,9 @@ NeuroOne/
 └── LICENSE
 ```
 
+To run the stack locally (start/stop, logs, OTP codes, DB shell), see the
+[Docker cheat sheet](docs/DOCKER-CHEATSHEET.md).
+
 ---
 
 # ✦ Design Principles
