@@ -1,6 +1,6 @@
 # NeuroONE learning and presentation handbook
 
-Prepared for your professor-facing team project report. Audited on **13 September 2026**, against checkout **`a01ae83`**. The original audit used `5d391b1`; PR preparation refreshed auth, graph metadata and backend tests against `a01ae83`. Historical findings remain dated in the audit. This is a learning reference, not a new product specification.
+Prepared for your professor-facing team project report. Audited on **13 September 2026**, against checkout **`a01ae83`**. The AI pipeline sections were refreshed on **12 October 2026** against **`c336492`** (curated retrieval, live vision staging, stored stages, stage pinned first). The original audit used `5d391b1`; PR preparation refreshed auth, graph metadata and backend tests against `a01ae83`. Historical findings remain dated in the audit. This is a learning reference, not a new product specification.
 
 ## Start here
 
@@ -16,7 +16,7 @@ Your aim is to explain the project accurately, including its unfinished parts. Y
 
 ## The explanation to remember
 
-> NeuroONE is a clinical decision-support project for neurological evaluation. It organizes patient visits, MRI scan intake and structured clinical information, then produces ranked possibilities with findings, reasoning and citations. It compares a patient's visits to surface changes worth reviewing. A clinician signs off before generating a PDF. The application workflow is implemented in the backend and the current frontend has been wired to clinical endpoints. Literature retrieval and MRI staging are simulated, while reasoning has both a deterministic mock and a configurable live LLM provider. We still need to close integration gaps, implement reviewed literature retrieval and validate the real imaging component.
+> NeuroONE is a clinical decision-support project for neurological evaluation. It organizes patient visits, MRI scan intake and structured clinical information, then produces ranked possibilities with findings, reasoning and citations. It compares a patient's visits to surface changes worth reviewing. A clinician signs off before generating a PDF. The application workflow is implemented in the backend and the current frontend has been wired to clinical endpoints. Each of the three AI parts (literature retrieval, reasoning and MRI staging) has a deterministic mock and a live option. Live reasoning uses a configurable LLM. Live retrieval searches a curated literature corpus that still has no clinically reviewed content. Live staging asks a general vision model to read one MRI slice, which is not a validated imaging model. We still need reviewed literature, a validated imaging model and a fully rehearsed end-to-end demo.
 
 The last sentence is part of your explanation, not something to hide until asked.
 
@@ -26,9 +26,9 @@ The last sentence is part of your explanation, not something to hide until asked
 2. **Unit of clinical work:** a visit belonging to a patient. Each visit can carry symptoms and one scan.
 3. **Journey:** login, patient, visit with scan and symptoms, analysis, ranked differential and evidence, review/sign-off, PDF.
 4. **Backend layers:** client, API, service, repository, PostgreSQL. The AI orchestrator produces structured results; the service persists them.
-5. **AI has three components:** retrieval, reasoning and imaging staging. They can have different provenance.
-6. **Current evidence:** 35 versioned API operations, 13 migration files, 437 backend tests passed in this audit. Frontend tests and CI exist, but this audit did not execute them locally.
-7. **Current limits:** MRI staging uses checksums rather than anatomy, retrieval uses fixture passages, live reasoning currently omits imaging results, and a full browser demo was not verified by this audit.
+5. **AI has three components:** retrieval, reasoning and imaging staging. Each one is swapped independently by its own setting, so each can be mock or live, and every result says which.
+6. **Current evidence:** 36 versioned API operations, 16 migration files, 12 tables, 523 backend tests passed (12 PostgreSQL tests run only in CI). Frontend tests and CI exist, but this audit did not execute them locally.
+7. **Current limits:** the curated corpus has no reviewed content, so live retrieval returns nothing yet. Live staging is a general vision model reading one slice. The mock stager still uses checksums rather than anatomy. A full browser demo with live providers was not verified by this audit.
 
 ## Your learning route
 
@@ -53,7 +53,7 @@ Status labels in this handbook mean:
 
 The graph is a navigation tool and a record of context. Its edges can describe old or inferred relationships. Current source code establishes implementation facts. PRD and approved decisions establish requirements. When those disagree, the audit records both.
 
-Do not quote the old “frontend is disconnected” status or the old “MRI is excluded” sentence as current state. Conversely, a merged branch called `ai-02b-retrieval-corpus` does not prove real retrieval exists: the merged work currently consists of the proposed decision and plan. See the audit for exact evidence.
+Do not quote the old “frontend is disconnected” status or the old “MRI is excluded” sentence as current state. Conversely, merged retrieval code does not mean real retrieval is running: the curated retriever exists, but its corpus is empty until a reviewer approves the drafts. And "live staging" means a real model ran, not that its estimate is clinically valid. See the audit for exact evidence.
 
 ## When you get a question you cannot answer
 

@@ -1,7 +1,7 @@
 """Live reasoning over an OpenAI-compatible chat-completions endpoint.
 
-The AI-02 counterpart to ``mock_llm``: the retrieval corpus is still
-simulated, so this provider reasons over mock-sourced evidence and the
+The AI-02 counterpart to ``mock_llm``. It reasons over whatever the configured
+retriever returned -- the mock corpus or the curated one (ADR-007) -- and the
 orchestrator labels the result accordingly (ADR-005).
 
 The endpoint is configuration, not code -- Groq, Gemini's compatibility

@@ -11,13 +11,13 @@ MODE: PLAN
 
 Act as my NeuroONE project tutor for a report to my professor. My team must explain how the project works, what is completed, and what remains.
 
-Read AGENTS.md and docs/handbook/README.md first. Then use PROJECT-HANDBOOK.md, PROFESSOR-PRESENTATION.md and AUDIT.md in that folder. The handbook was audited at commit a01ae83 on 2026-09-13. Check current HEAD before calling its status current.
+Read AGENTS.md and docs/handbook/README.md first. Then use PROJECT-HANDBOOK.md, PROFESSOR-PRESENTATION.md and AUDIT.md in that folder. The handbook was audited at commit a01ae83 on 2026-09-13, and its AI sections were refreshed at c336492 on 2026-10-12. Check current HEAD before calling its status current.
 
 For codebase questions, follow the installed graphify instructions and query the existing graph first. Check graph built_at_commit, distinguish extracted/inferred/ambiguous links, and inspect the cited source file when a fact matters. Use docs/PRD.md, APP-FLOW.md, TRD.md, NEUROONE-MVP-SCOPE.md and decision records to determine requirements. If graph or old documentation disagrees with current code, explain both and flag the conflict.
 
 Teach me in plain language. Start with the product story, then visits/data relationships, architecture, API contracts, AI providers, trends, citations, review/reports, testing, progress and remaining tasks. Explain one topic at a time and ask one recall question, then wait for my answer. Do not dump a full questionnaire.
 
-Mark factual statements as implemented, verified, simulated, proposed or unverified. Do not turn confidence scores into accuracy, simulated imaging into anatomical inference, fixture citations into reviewed literature, or a merged planning branch into a working provider. Preserve the difference between a patient's trend_basis and external evidence.
+Mark factual statements as implemented, verified, simulated, proposed or unverified. Do not turn confidence scores into accuracy, "live staging" into validated imaging, fixture citations into reviewed literature, or merged retriever code into a populated corpus. Preserve the difference between a patient's trend_basis and external evidence.
 
 For every correction, give the corrected explanation and a source file/section or symbol. If a fact cannot be established, say so. Keep an error log during this conversation. After each topic, give one 20-second presentation answer and one likely professor question. Revisit missed concepts later.
 
@@ -32,7 +32,7 @@ The agent should wait after asking a recall question. Learning happens when you 
 |---|---|
 | Architecture | “Teach me one analysis request from browser to persisted result. Explain why each layer owns its step, then ask me to reconstruct the path.” |
 | Database | “Help me draw Patient → Visit → Scan/Symptoms → Analysis → Findings/Evidence → Report. Quiz me on cardinality and where ownership lives.” |
-| AI truth | “Test whether I understand simulated retrieval, mock/live reasoning and simulated imaging. Give me one ambiguous claim at a time to correct.” |
+| AI truth | “Test whether I understand mock/curated retrieval, mock/live reasoning and mock/live staging, and why the curated corpus is still empty. Give me one ambiguous claim at a time to correct.” |
 | Early watch | “Use Helen's seeded tremor and memory-loss history. Ask me why a worsening trend and low confidence together can create early_watch, and why low confidence alone cannot.” |
 | Citations | “Explain provider selects/system resolves. Quiz me on why evidence ids and history UUIDs should come from source records.” |
 | Safety and auth | “Ask me to distinguish diagnosis assistance, authentication, role authorization, per-record ownership and clinician sign-off.” |
@@ -52,7 +52,7 @@ After each answer, score it 0–3:
 2 = correct explanation with minor gaps
 3 = correct, concise, source-grounded explanation with relevant limits
 
-Correct errors using current source code and governing documents. Pay special attention to MRI staging being checksum-based, mock literature, live prompt imaging omission, early_watch requiring a trend, sign-off versus amendments, missing reviewer details in PDF, and the scope of the passing tests. If the code has changed, verify before repeating an old limitation.
+Correct errors using current source code and governing documents. Pay special attention to mock staging being checksum-based, live staging being a general vision model on one slice, the empty curated corpus, full-text search rather than embeddings, the stage being pinned first, early_watch requiring a trend, sign-off versus amendments, missing reviewer details in PDF, and the scope of the passing tests. If the code has changed, verify before repeating an old limitation.
 
 After ten questions, summarize my weak topics and give a short targeted revision plan. Keep the assessment about my understanding. Do not modify the project.
 ```
@@ -82,7 +82,7 @@ MODE: PLAN
 
 Audit and refresh docs/handbook/ for the current NeuroONE checkout. I authorize documentation updates only.
 
-Read AGENTS.md and the handbook audit. Compare current HEAD with baseline a01ae83. Query Graphify first, check its built_at_commit and inspect relevant changes in source. Verify old limitations before carrying them forward. Read current requirements and ADR status. Distinguish accepted/implemented decisions from proposals and unresolved questions.
+Read AGENTS.md and the handbook audit. Compare current HEAD with baseline c336492 (AI sections) and a01ae83 (everything else). Query Graphify first, check its built_at_commit and inspect relevant changes in source. Verify old limitations before carrying them forward. Read current requirements and ADR status. Distinguish accepted/implemented decisions from proposals and unresolved questions.
 
 Run appropriate existing checks only under synthetic/offline test settings. Do not touch a live clinical database, reset demo accounts, expose secrets, send email or make live model calls. If checks cannot run, record the exact limitation.
 

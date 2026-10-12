@@ -1,6 +1,6 @@
 # Professor presentation and rehearsal guide
 
-Baseline: 13 September 2026, checkout `a01ae83`. Goal: explain how NeuroONE works, show delivered work and clearly identify what remains. Duration was not specified. Use this five-minute core, then expand the architecture, demonstration and Q&A as needed.
+Baseline: 13 September 2026, checkout `a01ae83`; AI claims refreshed 12 October 2026 at `c336492`. Goal: explain how NeuroONE works, show delivered work and clearly identify what remains. Duration was not specified. Use this five-minute core, then expand the architecture, demonstration and Q&A as needed.
 
 ## Five-minute core talk
 
@@ -20,17 +20,17 @@ These are suggested speaking notes. Practice explaining them naturally instead o
 
 ### 2:15–3:15 — Analysis and early watch
 
-“Analysis has three replaceable components: evidence retrieval, reasoning and imaging staging. Retrieval currently searches fixture passages. Reasoning can use deterministic rules or a configurable live language model. Imaging staging is a deterministic mock based on a file checksum, so it does not interpret image anatomy. We show that provenance on the result.
+“Analysis has three replaceable components: evidence retrieval, reasoning and imaging staging. Each has a mock and a live option. Live reasoning uses a configurable language model. Live retrieval searches a curated literature corpus with PostgreSQL full-text search, but no passages have been clinically reviewed yet, so it is not enabled. Live staging sends one MRI slice to a general vision model, which is not a validated imaging model. The mock staging is based on a file checksum and does not read the image. Every result states which parts were live and which were simulated.
 
 “The trend module compares recorded symptoms across visits. If a relevant symptom is worsening but a condition remains low likelihood, our demo logic can mark it early watch. The reference points back to the patient's own visits, while citations point to external-style evidence fixtures. Those are separate traces. Clinical evaluation remains future work.”
 
 ### 3:15–4:10 — Work completed
 
-“The code includes account provisioning and login, patient and visit management, symptoms, scan storage, structured analysis, sign-off, reports and triage. The current frontend now has clinical endpoint calls and displays findings, provenance and report actions. In this audit the backend exposed 35 versioned API operations, there were 13 migration files, and all 437 backend tests passed. Frontend tests and CI also exist, but we still need to execute our complete browser demonstration in the final environment.”
+“The code includes account provisioning and login, patient and visit management, symptoms, scan storage, structured analysis, sign-off, reports and triage. The current frontend now has clinical endpoint calls and displays findings, provenance and report actions. In this audit the backend exposed 36 versioned API operations, there were 16 migration files, and all 523 backend tests passed. Frontend tests and CI also exist, but we still need to execute our complete browser demonstration in the final environment.”
 
 ### 4:10–5:00 — Remaining work
 
-“Our next work is to complete clinical input and retry handling, pass imaging outputs into live reasoning, enforce the required stage-candidate ranking, and include reviewer details in the report. We also need reliable scan storage and complete deployment configuration. A curated literature retrieval design is recorded but remains proposed and unimplemented. A trained imaging model, reviewed literature content and clinical evaluation are separate remaining milestones. We can demonstrate the architecture and workflow today without presenting simulated outputs as validated medical results.”
+“Since the first audit we have passed imaging results into live reasoning, pinned the stage estimate first, built the curated retrieval pipeline and added a live staging path. Next, a clinical reviewer has to approve our draft literature passages before live retrieval can run. We also need to include reviewer details in the report and complete clinical input and retry handling. A trained, validated imaging model and clinical evaluation are separate remaining milestones. We can demonstrate the architecture and workflow today without presenting simulated outputs as validated medical results.”
 
 ## The progress slide to use
 
@@ -40,11 +40,11 @@ Use these labels in your report. Do not add a completion percentage unless your 
 |---|---|---|
 | Password login and admin account creation | OTP is enforced by default; codes and auth rate limits are process-local | Production OTP/session review |
 | Authorized patient/visit CRUD and symptoms | Clinical input UI exposes only part of FR-03 | Full symptom duration/observation input and retry recovery |
-| Scan attachment and retained bytes/checksum | Imaging staging is simulated | Real MRI parsing, dimensions and trained model |
-| Structured candidates, citations, trends | Retrieval uses synthetic fixtures; reasoning is live-capable | Reviewed curated corpus and real retrieval code |
+| Scan attachment, retained bytes/checksum, live single-slice staging | Mock staging is simulated; live staging is an unvalidated general model | Dimensions, a trained and evaluated imaging model |
+| Structured candidates, citations, trends; curated FTS retriever | Default retrieval uses synthetic fixtures; curated corpus is empty | Clinical review and ingestion of the seed corpus |
 | Sign-off and gated PDF generation | PDF snapshot lacks reviewer/time | Review details, amendment semantics and input-time consistency |
 | Clinical frontend calls and finding/report UI | Browser journey not verified in this audit | Frontend checks and final-environment demo rehearsal |
-| 437 backend tests passing | SQLite/mocked paths, not full live PostgreSQL verification | Real database integration and model evaluation |
+| 523 backend tests passing | SQLite/mocked paths, not full live PostgreSQL verification | Real database integration and model evaluation |
 
 ## Team sections and handoffs
 
@@ -113,16 +113,17 @@ Compose in this checkout needs Gmail settings for default email delivery (or exp
 | Is it diagnosing the patient? | It proposes ranked possibilities. The clinician interprets them and signs off. Clinical diagnostic validation is not established. |
 | What is the main contribution so far? | A structured, traceable workflow integrating visit history, candidate reasoning, citation attachment, review and report generation behind testable contracts. |
 | What makes it early detection? | The demo tracks worsening recorded symptoms across visits and flags lower-likelihood conditions worth watching. The broader clinical early-detection ambition still needs evaluation. |
-| Which MRI model are you using? | Current staging is MockImagingStager, a checksum-based deterministic stand-in. A trained imaging model has not been integrated in the audited checkout. |
+| Which MRI model are you using? | By default a checksum-based mock. Optionally, a general vision model (configured by `AI_VISION_MODEL`) reads one 2D slice of the scan. Neither is a trained or validated radiology model; a CNN trained on ADNI/OASIS is the upgrade path behind the same seam. |
 | Are you using ADNI or OASIS? | They appear in the feasibility slide. This audit found no verified training pipeline or evaluation results using them. |
 | What is your accuracy? | We do not have a validated clinical accuracy result. Confidence values and the 0.92 ceiling are not accuracy metrics. |
 | Does 92% mean accuracy? | No. It is the provider output ceiling chosen to avoid certainty framing. |
 | How does explainability work? | The result carries recorded findings, reasoning, contradictory findings, history references and citations. Mock region contributions are synthetic, not measured imaging attribution. |
-| Where does the literature come from? | Current retrieval uses a Python fixture corpus. A reviewed local corpus using PostgreSQL full-text search is proposed in ADR-007. |
-| Why use RAG? | The design supplies evidence to reasoning and makes citation sources inspectable. Current fixtures test the mechanics; real retrieval remains unfinished. |
+| Where does the literature come from? | By default, a Python fixture corpus. The curated option (ADR-007, accepted) searches reviewed guideline and systematic-review passages with PostgreSQL full-text search. Five CC-BY-4.0 drafts are waiting for a clinical reviewer, so nothing is loaded yet. |
+| Why use RAG? | The design supplies evidence to reasoning and makes citation sources inspectable. The retrieval code is complete; reviewed content is the missing piece. |
+| Do you use embeddings or a vector database? | No. For a small reviewed corpus, PostgreSQL full-text search is explainable and needs no extra infrastructure. ADR-007 records that choice. |
 | Can the model invent evidence? | It selects ids from supplied evidence. The system resolves them back to retrieved records and excludes invalid/uncited candidates. This constrains citations but does not guarantee medical truth. |
 | Which LLM? | The endpoint and model are configuration. The client supports a compatible chat-completions format; this audit did not check current hosted-model availability. |
-| Does the live LLM use the scan? | The orchestrator runs staging, but the current live prompt omits that output. Passing it through is a specific remaining integration task. |
+| Does the live LLM use the scan? | Yes, indirectly. It receives the stage estimate, its regions and the stage trend across visits, never the image itself. The stage is pinned first, and the analysis fails if the model drops it. |
 | Why one scan per visit? | A new visit preserves a new point in time, supporting historical comparison and source retention. |
 | Why separate services and repositories? | Business rules/authorization stay separate from SQL, allowing focused tests and reuse. |
 | Why return 404 to another clinician? | It avoids confirming another patient's record exists. Role-level exclusions still return 403. |
@@ -130,9 +131,9 @@ Compose in this checkout needs Gmail settings for default email delivery (or exp
 | Can a clinician amend the analysis? | Sign-off exists. A structured amendment workflow is not implemented yet. |
 | What is stored for the PDF? | A JSON snapshot and metadata. Protected download renders bytes from the saved content. |
 | Does the PDF include reviewer details? | Not currently. Analysis stores them, but adding them to the report is an identified FR-07 gap. |
-| What does testing prove? | 437 backend tests passed under synthetic/mocked conditions. They check software behavior, not clinical efficacy or every live deployment path. |
+| What does testing prove? | 523 backend tests passed under synthetic/mocked conditions. They check software behavior, not clinical efficacy or every live deployment path. |
 | Is the frontend still a mockup? | The old status is stale: clinical calls and finding/report UI now exist. Full browser execution still needs final-environment verification. |
-| What remains before completion? | Complete input/retry and AI/report integration, deploy reliably, implement reviewed retrieval, integrate/evaluate real imaging and verify the full journey. |
+| What remains before completion? | Get the corpus reviewed and ingested, add reviewer details to the report, complete input/retry handling, integrate and evaluate a real imaging model, and verify the full journey. |
 | How much is complete? | We can enumerate delivered modules and verified checks. We have not established a defensible overall percentage or remaining-effort estimate. |
 
 ## Existing presentation: slide-by-slide speaking guidance

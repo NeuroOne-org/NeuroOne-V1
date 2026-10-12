@@ -354,7 +354,7 @@ Per `NEUROONE-MVP-SCOPE.md`, the `AI-01` phase is deliberately split. (`AI-01` i
 
 - the retrieval corpus — **swapped, code landed, content pending review** (`AI-02b`; see [ADR-007](docs/decisions/ADR-007-curated-retrieval-corpus.md)). `AI_RETRIEVAL_PROVIDER=corpus` selects the curated Postgres full-text retriever; the default stays `mock` until a named clinical reviewer signs off the seed corpus (AI-02b-9),
 - the LLM call — **swapped** (`AI-02a`, done; see [ADR-005](docs/decisions/ADR-005-live-llm-provider.md)),
-- the scan staging model — mocked behind its own seam (`SCAN-02`; see [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md)).
+- the scan staging model — **swapped** behind its own seam (`SCAN-02` mock; live path via a general vision model, see [ADR-006](docs/decisions/ADR-006-mri-primary-with-symptoms-as-context.md) and [ADR-008](docs/decisions/ADR-008-live-vision-staging.md)). `AI_STAGING_PROVIDER=live-vision` sends one rendered 2D slice to `AI_VISION_MODEL` and persists each result in `staging_results`; it is not a validated radiology classifier, and the default stays `mock`.
 
 Staging is a **third** seam, not a variant of the other two, so provenance is three-dimensional and `AI_PROVIDER` as a single literal does not stretch to cover it — staging carries its own setting. A stage estimate enters the contract as the top-ranked `DiagnosisCandidate`, subject to every rule below: the `MAX_CONFIDENCE` ceiling, likelihood rather than certainty, and citations. It is never a standalone verdict, in the schema or in UI copy.
 
@@ -366,7 +366,9 @@ Mock providers return **schema-valid deterministic results** and sit **behind th
 |---|---|---|
 | mock | mock | `pipeline complete, evidence retrieval simulated` |
 | live | mock | `pipeline complete, live model reasoning, evidence retrieval simulated` |
-| live | live | `pipeline complete, evidence retrieved from live corpus` |
+| live | live | `pipeline complete, evidence retrieved from live corpus, corpus <corpus_version>` |
+
+A scanned visit's note then gains `, imaging staging simulated` or `, imaging staging live`, from the staging provider that ran.
 
 The orchestrator derives this from **both** providers, never from the model alone. `AI_PROVIDER` defaults to `mock`; `live-llm` sends clinical context to a third party, which §12's synthetic-demo-data assumption permits and real PHI does not.
 
@@ -756,6 +758,7 @@ REPORT-01     PDF assembly — full acceptance journey becomes demoable end-to-e
 AI-02a        real LLM swap-in behind the AI-01 interface (done, ADR-005)
 SCAN-01       scan per visit: entity, storage, checksum, ownership via ADR-002
 SCAN-02       mocked staging provider behind its own seam + trend extension
+              (live-vision staging behind the same seam landed later, ADR-008)
 REVIEW-01     clinician sign-off state, gating the report endpoint
 DASH-01       triage queue endpoint, dashboard, intake split (patient / visit)
 AI-02b        real RAG corpus behind the same interface (code landed, ADR-007; content pending review)

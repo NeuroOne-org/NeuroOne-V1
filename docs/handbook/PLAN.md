@@ -102,6 +102,8 @@ Presentation time and actual team responsibilities are unknown. Main risks are s
 
 Documentation tasks completed. Created the five linked learning/audit documents plus this plan. Original backend validation: 414 tests passed. PR preparation fast-forwarded to `a01ae83`, refreshed auth/configuration and upstream graph metadata, and reran the suite: 437 tests passed in 7.68 seconds. Document validation: 151 local links resolved and code fences paired. Frontend execution, live PostgreSQL verification and visual slide inspection remain disclosed limitations. No production implementation was performed.
 
+**AI pipeline refresh, 12 October 2026 (`c336492`).** Updated the handbook, audit, presentation and study guides for the work since AI-02a: the curated FTS retriever (ADR-007), live vision staging and stored stages (ADR-008), and the stage pinned first. Reran the backend suite in a clean venv: 523 passed, 12 PostgreSQL tests skipped. Added findings HB-21 to HB-25 to the audit. Fixed stale comments only; no behaviour changed.
+
 ## 23. Build Readiness
 
 The user's request explicitly authorizes authoring the handbook. No unresolved decision prevents this documentation work. Production fixes need their own plan.
