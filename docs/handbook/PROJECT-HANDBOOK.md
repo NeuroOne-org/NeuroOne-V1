@@ -480,7 +480,7 @@ Remember each decision as **problem, choice, reason, cost**.
 | [005: live reasoning](../decisions/ADR-005-live-llm-provider.md) | Accepted | Configurable compatible HTTP client with narrow model-authored payload | System resolves citations/history ids; live reasoning can still use simulated literature |
 | [006: MRI primary](../decisions/ADR-006-mri-primary-with-symptoms-as-context.md) | Accepted | MRI joins existing visit pipeline, stage becomes candidate, own staging seam, sign-off gate and queue | Scan storage becomes deployment dependency; simulation disclosure must travel with every result |
 | [007: curated retrieval](../decisions/ADR-007-curated-retrieval-corpus.md) | Accepted (2026-09-22) | Local curated YAML, human review gate, PostgreSQL full-text search, guidelines/systematic reviews only | Code landed; content waits on a named clinical reviewer (AI-02b-9). Lexical search can miss synonyms |
-| [008: live vision staging](../decisions/ADR-008-live-vision-staging.md) | **Proposed** (amended 2026-10-12) | General vision model on the existing endpoint, one 2D slice, results stored per (checksum, model) | Merged and running behind `live-vision`; not a validated radiology model; scan pixels go to a third party |
+| [008: live vision staging](../decisions/ADR-008-live-vision-staging.md) | Accepted (2026-10-12) | General vision model on the existing endpoint, one 2D slice, results stored per (checksum, model) | Merged and running behind `live-vision`; not a validated radiology model; scan pixels go to a third party |
 
 Important rejected alternatives:
 
@@ -508,23 +508,22 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Analysis contract | Typed differential, citations, trends and controlled failure paths; schema-enforced 0.92 ceiling; stage pinned first with its own citation budget; `ai_stage_missing` guard | Content coverage for every stage label in the curated corpus |
 | Live LLM | Configurable transport and validated mapping; stage and scan trend in the prompt (resolves HB-03) | Record a rehearsed run against a real model; no automated live check exists |
 | Retrieval | Mock corpus default; curated FTS retriever, ingestion CLI, review gate, PostgreSQL tests and prompt hardening landed (ADR-007 accepted) | A named reviewer approves the five drafts, moves them to `documents/`, lists them in the manifest and runs ingestion |
-| Imaging model | Mock default; live general-vision stager on one slice, stored per (checksum, model) | Accept ADR-008 (blank-slice and not-an-MRI handling fixed, HB-21/22); then select/train/evaluate a real staging model with dataset provenance behind the same seam |
+| Imaging model | Mock default; live general-vision stager on one slice, stored per (checksum, model) | ADR-008 accepted; blank-slice and not-an-MRI handling fixed (HB-21/22). Next, select/train/evaluate a real staging model with dataset provenance behind the same seam |
 | Review | Sign-off records id/time and gates report creation | Amendment workflow and explicit review-role policy |
 | Reports | Snapshot storage and PDF generation exist | Include reviewer details and address analysis/report input-time mismatch |
 | Dashboard | Current clinical calls, server order, filters and error states | Full browser rehearsal and larger-panel pagination strategy |
 | Testing | 523 backend tests passed, 12 PostgreSQL tests skipped locally (run in CI); frontend tests and CI exist | Local frontend execution, PostgreSQL migration/integration verification and full UI journey |
 | Deployment | Compose runs Postgres, migrations, API and frontend; scans on a named volume; console OTP by default; AI settings passed through | Confirm a clean boot/restart; decide on object storage for scans |
-| Documentation | Requirements, eight ADRs (ADR-008 still Proposed), Graphify context exist | Reconcile stale APP-FLOW/README/progress/checklists and graph freshness |
+| Documentation | Requirements, eight accepted ADRs, Graphify context exist | Reconcile stale APP-FLOW/README/progress/checklists and graph freshness |
 
 The development sequence recorded in AGENTS.md is SEC-01, AUTH-01, PAT-01, CASE-01, AI-01, REPORT-01, AI-02a, SCAN-01, SCAN-02, REVIEW-01, DASH-01, then AI-02b. The inspected repository has artifacts across all those phases. AI-02b code is done and its content is pending review; live vision staging (ADR-008) came after it. Artifact presence does not mean every acceptance criterion in a phase is complete.
 
 Recommended next work, as an **audit recommendation rather than an approved implementation plan**:
 
 1. Name a clinical reviewer and get the five pending corpus drafts reviewed and ingested. This is the only thing between the code and live retrieval.
-2. Decide ADR-008's status (accept, or keep it as a demo-only path).
-3. Rehearse the full synthetic browser journey with all three seams live, and record it.
-4. Report reviewer fields, temporal context consistency and scan dimensions (HB-05, HB-11, HB-15).
-5. Integrate and evaluate a real imaging model separately from software-contract tests.
+2. Rehearse the full synthetic browser journey with all three seams live, and record it.
+3. Report reviewer fields, temporal context consistency and scan dimensions (HB-05, HB-11, HB-15).
+4. Integrate and evaluate a real imaging model separately from software-contract tests.
 
 No schedule or remaining-effort estimate is established. The team should assign owners and dates after reviewing these tasks.
 

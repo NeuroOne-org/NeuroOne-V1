@@ -1,7 +1,7 @@
 # ADR-008: Live Vision Staging Behind the ADR-006 Seam
 
 ## Status
-Proposed (2026-10-07).
+Accepted (2026-10-12). Proposed 2026-10-07. Accepted as an opt-in path for synthetic demo data, with the default staying `mock`. It is not a validated radiology model, and a trained, evaluated model remains the upgrade path behind the same seam.
 
 ## Context
 [ADR-006](ADR-006-mri-primary-with-symptoms-as-context.md) put MRI staging behind its own `ImagingStager` seam, and only `MockImagingStager` filled it. That mock derives a stage from a sha256 of the scan's checksum and never reads a pixel. Reasoning ([ADR-005](ADR-005-live-llm-provider.md)) and retrieval ([ADR-007](ADR-007-curated-retrieval-corpus.md)) already have live providers. Staging was the last seam that could only be simulated.
