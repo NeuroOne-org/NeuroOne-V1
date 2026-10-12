@@ -434,8 +434,8 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Accounts | Password, default-enforced OTP, purpose isolation, auth rate limits, reset and admin create-account API exist | Multi-process OTP storage, leftover public signup cleanup, admin UI if required |
 | Patients/visits | CRUD, search, structured symptoms and history exist | Complete symptom fields in UI; temporal history filtering; new-intake resume behavior |
 | Scan intake | One scan per visit, local bytes and checksum metadata | Real format parsing/validation, dimensions, durable storage and broader failure cleanup |
-| Analysis contract | Typed differential, citations, trends and controlled failure paths | Universal confidence ceiling and guaranteed required stage handling/ranking |
-| Live LLM | Configurable transport and validated mapping exist | Pass staging/scan trend into prompt and verify combined reasoning |
+| Analysis contract | Typed differential, citations, trends and controlled failure paths; schema-enforced 0.92 ceiling; stage pinned first (ADR-006 ranking semantics) | Content coverage for every stage label in the curated corpus |
+| Live LLM | Configurable transport and validated mapping; stage and scan trend in the prompt | Verify combined reasoning against a real model |
 | Retrieval | Mock keyword corpus works | Accept/implement ADR-007, reviewed/licensed content, PostgreSQL tests and prompt hardening |
 | Imaging model | Deterministic seam and mock results exist | Select/train/integrate/evaluate a real staging model and establish dataset provenance |
 | Review | Sign-off records id/time and gates report creation | Amendment workflow and explicit review-role policy |

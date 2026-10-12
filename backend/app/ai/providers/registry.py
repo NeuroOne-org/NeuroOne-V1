@@ -18,6 +18,7 @@ from app.ai.providers.base import (
     ImagingStager,
     LLMClient,
     ScanImages,
+    StagingStore,
 )
 from app.ai.providers.corpus_retriever import CorpusEvidenceRetriever
 from app.ai.providers.live_llm import LiveLLMClient
@@ -25,6 +26,7 @@ from app.ai.providers.live_staging import LiveImagingStager
 from app.ai.providers.mock_llm import MockLLMClient
 from app.ai.providers.mock_retriever import MockEvidenceRetriever
 from app.ai.providers.mock_staging import MockImagingStager
+from app.ai.providers.stored_staging import StoredImagingStager
 from app.core.config import Settings, settings
 
 
@@ -37,6 +39,7 @@ CORPUS_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "corpus" / "manifes
 def _build_stager(
     config: Settings,
     scan_images: ScanImages | None,
+    staging_store: StagingStore | None,
     http_client: httpx.Client | None,
 ) -> ImagingStager:
     if config.AI_STAGING_PROVIDER == "mock":
@@ -54,7 +57,17 @@ def _build_stager(
                 "AI_STAGING_PROVIDER='live-vision' requires a ScanImages to be "
                 "passed to build_providers(scan_images=...)."
             )
-        return LiveImagingStager(config, scan_images, client=http_client)
+        # Each analysis re-stages every prior scan; without a durable store
+        # that is N paid calls per run and stages that drift after a restart.
+        if staging_store is None:
+            raise ValueError(
+                "AI_STAGING_PROVIDER='live-vision' requires a StagingStore to "
+                "be passed to build_providers(staging_store=...)."
+            )
+        return StoredImagingStager(
+            LiveImagingStager(config, scan_images, client=http_client),
+            staging_store,
+        )
 
     raise ValueError(f"Unknown AI staging provider: {config.AI_STAGING_PROVIDER!r}")
 
@@ -118,18 +131,19 @@ def build_providers(
     http_client: httpx.Client | None = None,
     corpus_search: CorpusSearch | None = None,
     scan_images: ScanImages | None = None,
+    staging_store: StagingStore | None = None,
 ) -> tuple[EvidenceRetriever, LLMClient, ImagingStager]:
     """Return the (retriever, llm, stager) triple for the configured providers.
 
     `corpus_search` is only consulted when `AI_RETRIEVAL_PROVIDER=corpus`; it
     is `None` in every other configuration, including every existing test
     and the default `mock`/`mock` state, which is why this stays additive
-    rather than a breaking signature change. `scan_images` is the same for
-    `AI_STAGING_PROVIDER=live-vision`.
+    rather than a breaking signature change. `scan_images` and
+    `staging_store` are the same for `AI_STAGING_PROVIDER=live-vision`.
     """
 
     config = config or settings
-    stager = _build_stager(config, scan_images, http_client)
+    stager = _build_stager(config, scan_images, staging_store, http_client)
     retriever = _build_retriever(config, corpus_search)
 
     if config.AI_PROVIDER == "mock":

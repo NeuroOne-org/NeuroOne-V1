@@ -19,17 +19,15 @@ from pydantic import (
 )
 
 from app.schemas.clinical_context import ClinicalContext, ScanTrend
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import MAX_CONFIDENCE, PaginatedResponse
 from app.schemas.evidence import EvidenceRef, RetrievedDocument
-from app.schemas.imaging import StagingResult
+from app.schemas.imaging import STAGE_LABELS, StagingResult
 
 
 DiagnosisCategory = Literal["differential_diagnosis", "early_watch"]
 ProviderMode = Literal["simulated", "live"]
 LikelihoodBand = Literal["low", "moderate", "high"]
 
-# Section 8.2 forbids expressing certainty, so the pipeline clamps below 1.0.
-MAX_CONFIDENCE = 0.92
 MODERATE_CONFIDENCE = 0.40
 HIGH_CONFIDENCE = 0.70
 
@@ -87,7 +85,10 @@ class DiagnosisCandidate(BaseModel):
 
     name: str = Field(min_length=1, max_length=200)
     category: DiagnosisCategory
-    confidence: float = Field(ge=0.0, le=1.0)
+    # Enforced here, not trusted to each provider (section 8.2): a future
+    # provider that forgets to clamp fails the contract instead of
+    # displaying a certainty.
+    confidence: float = Field(ge=0.0, le=MAX_CONFIDENCE)
     supporting_findings: list[str] = Field(min_length=1)
     contradicting_findings: list[str] = Field(default_factory=list)
     explanation: str = Field(min_length=1)
@@ -170,6 +171,9 @@ class ReasoningResult(BaseModel):
     candidates: list[DiagnosisCandidate] = Field(default_factory=list)
 
 
+_STAGE_NAMES = {label.casefold() for label in STAGE_LABELS.values()}
+
+
 class AnalysisResult(BaseModel):
     """Validated pipeline output, before persistence."""
 
@@ -186,7 +190,14 @@ class AnalysisResult(BaseModel):
 
     @model_validator(mode="after")
     def _candidates_ranked_descending(self) -> "AnalysisResult":
-        confidences = [candidate.confidence for candidate in self.candidates]
+        # An MRI stage estimate is pinned first whatever its confidence
+        # (PRD FR-04, ADR-006 decision 3); only the rest are confidence-ranked.
+        # Pinning reorders, it never rewrites a number, so the likelihoods
+        # shown stay the ones the providers produced.
+        candidates = self.candidates
+        if candidates[0].name.casefold() in _STAGE_NAMES:
+            candidates = candidates[1:]
+        confidences = [candidate.confidence for candidate in candidates]
         if any(
             earlier < later
             for earlier, later in zip(confidences, confidences[1:])

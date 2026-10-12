@@ -43,6 +43,8 @@ Cross-visit scan comparison then costs nothing structurally, because `detect_tre
 
 Output stays a ranked list with likelihood bands, supporting *and* contradicting findings, and citations. `CN / MCI / Mild / Moderate / Severe` may appear as the highest-ranked candidate; it may not appear as a single headline answer with a certainty figure. The word "certainty" does not appear in UI copy.
 
+*Ranking semantics (2026-10-12):* the stage is **pinned** first; it is not given a higher number. Every other candidate is ranked by descending confidence, so a stronger symptom-derived candidate can sit second while showing a higher likelihood than the stage. Confidence values are never rewritten to make the order look monotonic. `AnalysisResult` lets only a stage label sit out of confidence order. A scanned visit whose analysis has no cited stage candidate fails with `ai_stage_missing` instead of returning a symptoms-only differential. The stage's citations are retrieved with their own budget so symptom matches cannot crowd them out.
+
 **4. The staging model is mocked behind its own provider seam.**
 
 A third seam alongside the retriever and the reasoning client, following the pattern that has now worked twice ([ADR-003](ADR-003-ai-analysis-contract-and-provider-seam.md), [ADR-005](ADR-005-live-llm-provider.md)): schema-real, provider-mocked, deterministic, labelled as simulated. Because provenance is now three-dimensional — simulated retrieval, live reasoning, simulated staging — `AI_PROVIDER` as a single literal no longer stretches, and staging needs its own setting.

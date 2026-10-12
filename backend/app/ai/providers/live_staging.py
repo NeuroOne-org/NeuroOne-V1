@@ -80,12 +80,6 @@ class LiveImagingStager:
         self._config = config
         self._scan_images = scan_images
         self._client = client
-        # The orchestrator re-stages every prior scan on each analysis
-        # (orchestrator._stage); without this, each run costs N paid calls and
-        # a prior visit's stage could change between runs.
-        # ponytail: per-process cache, persist StagingResult per scan if
-        # restarts or multiple workers make the drift matter.
-        self._cache: dict[str, StagingResult] = {}
 
     def _request_body(self, png: bytes) -> dict[str, Any]:
         image_url = "data:image/png;base64," + base64.b64encode(png).decode("ascii")
@@ -133,11 +127,7 @@ class LiveImagingStager:
         )
 
     def stage(self, request: StagingRequest) -> StagingResult:
-        """Stage one scan, reusing the result for a checksum already seen."""
-
-        cached = self._cache.get(request.checksum)
-        if cached is not None:
-            return cached
+        """Stage one scan. Reuse across analyses is `StoredImagingStager`'s job."""
 
         png = self._scan_images.preview_png(request.checksum)
         if png is None:
@@ -151,9 +141,7 @@ class LiveImagingStager:
             model=self.name,
             ref=request.checksum[:12],
         )
-        result = self._to_result(LiveStagingPayload.model_validate_json(text))
-        self._cache[request.checksum] = result
-        return result
+        return self._to_result(LiveStagingPayload.model_validate_json(text))
 
 
 __all__ = ["LiveImagingStager", "LiveStagingPayload"]

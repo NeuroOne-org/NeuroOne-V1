@@ -52,17 +52,20 @@ target_metadata = Base.metadata
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    """Exclude `corpus_documents.search_vector` from autogenerate.
+    """Exclude `corpus_documents.search_vector` and its GIN index from autogenerate.
 
     It is a generated Postgres `tsvector` column created by raw SQL in its
     migration (ADR-007 decision 2), never declared on the `CorpusDocument`
     ORM model, so that SQLite -- the fast test suite's engine -- never has
     to represent a type it does not support. Without this hook, autogenerate
     would see it in the reflected database but not in `target_metadata` and
-    propose dropping it on every run.
+    propose dropping it on every run. Its GIN index is migration-only DDL
+    for the same reason.
     """
 
     if type_ == "column" and name == "search_vector" and object.table.name == "corpus_documents":
+        return False
+    if type_ == "index" and name == "ix_corpus_documents_search_vector":
         return False
     return True
 

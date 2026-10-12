@@ -253,3 +253,143 @@ def test_a_worsening_imaging_trend_enriches_the_staged_candidates_traceability()
     assert staged.trend_basis
     assert all(ref.symptom_name == "MRI-derived stage" for ref in staged.trend_basis)
     assert all(ref.visit_id in {prior_visit.id, context.current_visit.id} for ref in staged.trend_basis)
+
+
+# --------------------------------------------------------------------------
+# Stage-first ranking (PRD FR-04, ADR-006 decision 3) and the ceiling
+# --------------------------------------------------------------------------
+
+
+def _strong_parkinsonian_context(checksum: str) -> ClinicalContext:
+    """The audit's counterexample: symptoms that out-score the stage."""
+    current = ContextVisit(
+        id=uuid4(),
+        visit_date=BASE_DATE,
+        chief_complaint="intermittent hand tremor",
+        symptoms=[
+            ContextSymptom(id=uuid4(), symptom_name=name, severity=10)
+            for name in ("tremor", "bradykinesia", "rigidity", "gait disturbance")
+        ],
+        scan=_scan(checksum),
+    )
+    return ClinicalContext(
+        patient_id=uuid4(),
+        visit_id=current.id,
+        current_visit=current,
+        prior_visits=[],
+        trends=detect_trends([current]),
+    )
+
+
+def test_the_stage_ranks_first_even_below_a_stronger_symptom_candidate() -> None:
+    result = _orchestrator().run(_strong_parkinsonian_context("0" * 63 + "1"))
+
+    stage, *rest = result.candidates
+    assert stage.name in STAGE_LABELS.values()
+    # Pinned, not inflated: a stronger symptom candidate keeps its number.
+    assert any(c.confidence > stage.confidence for c in rest)
+    assert [c.confidence for c in rest] == sorted(
+        (c.confidence for c in rest), reverse=True
+    )
+
+
+def test_trimming_to_one_candidate_keeps_the_stage() -> None:
+    result = _orchestrator(max_candidates=1).run(
+        _strong_parkinsonian_context("0" * 63 + "1")
+    )
+
+    assert [c.name for c in result.candidates][0] in STAGE_LABELS.values()
+    assert len(result.candidates) == 1
+
+
+class _StageDroppingLLM:
+    """A reasoner that ignores the scan, as a live model might."""
+
+    name = "drops-stage"
+    provenance = "simulated"
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def generate_analysis(self, request):
+        result = self._inner.generate_analysis(request)
+        return result.model_copy(
+            update={
+                "candidates": [
+                    c
+                    for c in result.candidates
+                    if c.name not in STAGE_LABELS.values()
+                ]
+            }
+        )
+
+
+def test_a_scanned_visit_whose_stage_was_dropped_fails_controlled() -> None:
+    retriever, llm, stager = build_providers()
+    orchestrator = AnalysisOrchestrator(
+        retriever, _StageDroppingLLM(llm), stager
+    )
+
+    with pytest.raises(AIError) as exc_info:
+        orchestrator.run(_context(_scan()))
+
+    assert exc_info.value.error_code == "ai_stage_missing"
+
+
+def _candidate(name: str, confidence: float):
+    from app.ai.providers.mock_retriever import MockEvidenceRetriever
+    from app.schemas.analysis import DiagnosisCandidate
+    from app.schemas.evidence import RetrievalQuery
+
+    [document, *_] = MockEvidenceRetriever().retrieve(
+        RetrievalQuery(symptom_names=["tremor"], chief_complaint="tremor")
+    )
+    return DiagnosisCandidate(
+        name=name,
+        category="differential_diagnosis",
+        confidence=confidence,
+        supporting_findings=["finding"],
+        explanation="why",
+        evidence=[document],
+    )
+
+
+def _result(*candidates):
+    from app.schemas.analysis import AnalysisResult
+
+    return AnalysisResult(
+        visit_id=uuid4(),
+        patient_id=uuid4(),
+        model_name="m",
+        provider_mode="simulated",
+        pipeline_note="n",
+        disclaimer="d",
+        generated_at=BASE_DATE,
+        candidates=list(candidates),
+    )
+
+
+def test_only_a_stage_may_sit_above_a_more_confident_candidate() -> None:
+    from pydantic import ValidationError
+
+    _result(_candidate("Mild dementia", 0.6), _candidate("Essential tremor", 0.8))
+
+    with pytest.raises(ValidationError):
+        _result(
+            _candidate("Essential tremor", 0.6),
+            _candidate("Parkinsonian syndrome", 0.8),
+        )
+
+
+def test_the_ceiling_is_enforced_by_the_contract_not_only_the_providers() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        _candidate("Essential tremor", MAX_CONFIDENCE + 0.01)
+    with pytest.raises(ValidationError):
+        StagingResult(
+            model_name="x",
+            provenance="live",
+            stage="CN",
+            confidence=MAX_CONFIDENCE + 0.01,
+        )

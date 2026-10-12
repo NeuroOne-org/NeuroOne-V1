@@ -142,6 +142,23 @@ class ScanImages(Protocol):
         ...
 
 
+@runtime_checkable
+class StagingStore(Protocol):
+    """Durable staging results, keyed by scan checksum and model (ADR-008).
+
+    Implemented outside `app/ai/` (`app/services/staging_store.py`), like
+    `ScanImages`, so the AI layer stays database-free.
+    """
+
+    def get(self, checksum: str, model_name: str) -> StagingResult | None:
+        """Return the stored result for these bytes and this model, if any."""
+        ...
+
+    def put(self, checksum: str, result: StagingResult) -> None:
+        """Store a result; a concurrent duplicate is not an error."""
+        ...
+
+
 __all__ = [
     "CorpusHit",
     "CorpusSearch",
@@ -151,4 +168,5 @@ __all__ = [
     "LLMClient",
     "ProviderMode",
     "ScanImages",
+    "StagingStore",
 ]

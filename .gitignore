@@ -25,3 +25,10 @@ graphify-out/
 
 # Large binaries: share decks and slide exports outside the repo
 *.pptx
+
+# Uploaded scans from local runs (SCAN_STORAGE_DIR)
+backend/storage/
+
+# Handbook: Obsidian vault settings and zipped exports
+docs/handbook/.obsidian/
+docs/handbook.zip

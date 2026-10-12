@@ -12,6 +12,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.common import MAX_CONFIDENCE
+
 
 StageLabel = Literal["CN", "MCI", "Mild", "Moderate", "Severe"]
 
@@ -90,11 +92,9 @@ class StagingResult(BaseModel):
     provenance: ImagingProviderMode
     stage: StageLabel
 
-    # Section 8.2's certainty ceiling (MAX_CONFIDENCE = 0.92) applies here
-    # too. It is enforced by the provider that constructs this value, not by
-    # a field constraint: importing MAX_CONFIDENCE from app.schemas.analysis
-    # here would cycle back, since that module holds ReasoningRequest.imaging.
-    confidence: float = Field(ge=0.0, le=1.0)
+    # Section 8.2's certainty ceiling applies here too. Providers clamp; the
+    # field rejects any provider that does not.
+    confidence: float = Field(ge=0.0, le=MAX_CONFIDENCE)
 
     contributing_regions: list[RegionContribution] = Field(default_factory=list)
 
