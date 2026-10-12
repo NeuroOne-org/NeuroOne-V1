@@ -70,7 +70,8 @@ export const patientIntakeSchema = z.object({
       const date = new Date(value);
       return !Number.isNaN(date.getTime()) && date <= new Date();
     }, "Enter a date of birth in the past"),
-  gender: z.enum(["male", "female", "other"], {
+  // The backend stores gender as a single character (String(1)).
+  gender: z.enum(["M", "F", "O"], {
     required_error: "Select a gender",
   }),
   email: emailSchema,

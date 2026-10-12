@@ -60,12 +60,24 @@ def rank_candidates(
     candidates: Sequence[DiagnosisCandidate],
     *,
     limit: int | None = None,
+    pinned: str | None = None,
 ) -> list[DiagnosisCandidate]:
-    """Order candidates by descending confidence, name breaking ties."""
+    """Order candidates by descending confidence, name breaking ties.
 
+    A candidate named ``pinned`` (case-insensitive) goes first regardless of
+    confidence: the MRI stage estimate is the top-ranked candidate
+    (PRD FR-04, ADR-006 decision 3). Pinning here, before ``limit``, also
+    means trimming can never drop it.
+    """
+
+    target = pinned.strip().casefold() if pinned else None
     ordered = sorted(
         candidates,
-        key=lambda candidate: (-candidate.confidence, candidate.name),
+        key=lambda candidate: (
+            candidate.name.strip().casefold() != target,
+            -candidate.confidence,
+            candidate.name,
+        ),
     )
 
     return ordered[:limit] if limit is not None else ordered

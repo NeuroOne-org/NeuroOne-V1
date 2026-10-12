@@ -19,6 +19,7 @@ from app.ai.corpus.mock_corpus import (
     TREND_WEIGHT,
     MockCondition,
 )
+from app.ai.ranking import rank_candidates
 from app.ai.trends import (
     normalize_symptom_name,
     stage_trend_basis_ref,
@@ -34,7 +35,7 @@ from app.schemas.analysis import (
 )
 from app.schemas.clinical_context import ClinicalContext, ScanTrend
 from app.schemas.evidence import RetrievedDocument
-from app.schemas.imaging import StagingResult
+from app.schemas.imaging import STAGE_LABELS, StagingResult
 
 
 class MockLLMClient:
@@ -225,13 +226,19 @@ class MockLLMClient:
             if stage_finding is not None:
                 candidates.append(stage_finding)
 
-        # Name as secondary key makes the ordering total, so ties are stable.
-        candidates.sort(key=lambda candidate: (-candidate.confidence, candidate.name))
-
         return ReasoningResult(
             model_name=self.name,
             provider_mode="simulated",
-            candidates=candidates[: request.max_candidates],
+            # The stage is pinned first, so trimming cannot drop it (ADR-006).
+            candidates=rank_candidates(
+                candidates,
+                limit=request.max_candidates,
+                pinned=(
+                    STAGE_LABELS[request.imaging.stage]
+                    if request.imaging
+                    else None
+                ),
+            ),
         )
 
 

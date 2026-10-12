@@ -168,6 +168,16 @@ class AnalysisOrchestrator:
             documents = self.retriever.retrieve(
                 self._build_query(context, imaging)
             )
+            if imaging is not None:
+                # The stage's citations get their own budget. Sharing the
+                # main query's cap lets strong symptom matches crowd them
+                # out, and an uncited stage cannot be pinned first.
+                documents += self.retriever.retrieve(
+                    RetrievalQuery(
+                        condition_names=[STAGE_LABELS[imaging.stage]],
+                        max_results=self.evidence_per_candidate,
+                    )
+                )
         except Exception as exc:  # provider failure, not a contract failure
             raise AIError(
                 "Evidence retrieval is unavailable. The clinical record was "
@@ -183,7 +193,9 @@ class AnalysisOrchestrator:
                 error_code="rag_no_evidence",
             )
 
-        return rank_evidence(documents)
+        # One copy per document, since both queries can return the same one.
+        unique = {document.document_id: document for document in documents}
+        return rank_evidence(list(unique.values()))
 
     def _reason(
         self,
@@ -264,16 +276,36 @@ class AnalysisOrchestrator:
     def _finalize(
         self,
         candidates: list[DiagnosisCandidate],
+        imaging: StagingResult | None,
     ) -> list[DiagnosisCandidate]:
         """Drop uncited candidates, then rank and trim.
 
         A ranked condition without a citation is exactly the untraceable output
         AGENTS.md section 18 forbids, so it is removed rather than surfaced.
+
+        A scanned visit's stage estimate is pinned first (PRD FR-04, ADR-006
+        decision 3). The MRI is the primary input, so an analysis that lost
+        its stage -- a live model that ignored it, or a stage with no
+        citation -- fails rather than presenting a symptoms-only differential
+        as if the scan had been read.
         """
 
         cited = [candidate for candidate in candidates if candidate.evidence]
 
-        ranked = rank_candidates(cited, limit=self.max_candidates)
+        stage_name = STAGE_LABELS[imaging.stage] if imaging else None
+        ranked = rank_candidates(
+            cited, limit=self.max_candidates, pinned=stage_name
+        )
+        if stage_name and (
+            not ranked
+            or ranked[0].name.strip().casefold() != stage_name.casefold()
+        ):
+            raise AIError(
+                "The analysis did not include a cited estimate for the MRI "
+                "stage. The clinical record was not modified; the analysis "
+                "can be retried.",
+                error_code="ai_stage_missing",
+            )
         return cap_evidence_per_candidate(
             ranked, limit=self.evidence_per_candidate
         )
@@ -327,7 +359,7 @@ class AnalysisOrchestrator:
         evidence = self._retrieve(context, imaging)
         reasoning = self._reason(context, evidence, imaging, scan_trend)
         resolved = self._resolve_evidence(list(reasoning.candidates), evidence)
-        candidates = self._finalize(resolved)
+        candidates = self._finalize(resolved, imaging)
 
         if not candidates:
             raise AIError(

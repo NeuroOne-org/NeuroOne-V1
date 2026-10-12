@@ -4,6 +4,13 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel, Field
 
 
+# Section 8.2 forbids expressing certainty, so no confidence anywhere in the
+# pipeline may exceed this. Lives here, below both app.schemas.analysis and
+# app.schemas.imaging, so each can enforce it as a field constraint without
+# importing the other.
+MAX_CONFIDENCE = 0.92
+
+
 class MessageResponse(BaseModel):
     """A simple response containing a human-readable message."""
 

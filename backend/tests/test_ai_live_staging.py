@@ -14,14 +14,20 @@ import numpy as np
 import pytest
 from PIL import Image
 from pydantic import ValidationError
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.ai.providers import build_providers
 from app.ai.providers.live_staging import LiveImagingStager
 from app.ai.providers.mock_staging import MockImagingStager
+from app.ai.providers.stored_staging import StoredImagingStager
 from app.core.config import Settings
 from app.schemas.analysis import MAX_CONFIDENCE
 from app.schemas.imaging import StagingRequest
+from app.models.staging import StagingRecord
 from app.services.scan_images import render_png
+from app.services.staging_store import SessionStagingStore
 
 
 PNG = b"\x89PNG-test-bytes"
@@ -116,22 +122,79 @@ def test_missing_image_raises():
         _stager({"stage": "CN", "confidence": 0.1}, images=FakeImages(None)).stage(REQUEST)
 
 
-def test_same_scan_is_only_sent_once():
-    requests = []
-    stager = _stager({"stage": "Mild", "confidence": 0.7}, requests)
+def _store():
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        # One shared connection, so every short-lived session sees the table.
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+    StagingRecord.__table__.create(engine)
+    return SessionStagingStore(sessionmaker(bind=engine))
 
-    assert stager.stage(REQUEST) == stager.stage(REQUEST)
+
+def test_a_stored_stage_survives_a_new_stager_without_a_second_call():
+    """What the per-process cache could not do: outlive the process."""
+    store, requests = _store(), []
+    first = StoredImagingStager(
+        _stager({"stage": "Mild", "confidence": 0.7}, requests), store
+    ).stage(REQUEST)
+
+    # A "restarted" stager whose model would now answer differently.
+    again = StoredImagingStager(
+        _stager({"stage": "Severe", "confidence": 0.9}, requests), store
+    ).stage(REQUEST)
+
+    assert again == first
+    assert again.stage == "Mild"
     assert len(requests) == 1
 
 
+def test_a_different_model_stages_the_scan_again():
+    store = _store()
+    StoredImagingStager(_stager({"stage": "Mild", "confidence": 0.7}), store).stage(
+        REQUEST
+    )
+
+    other = MockImagingStager()
+    result = StoredImagingStager(other, store).stage(REQUEST)
+
+    assert result.model_name == other.name
+    assert store.get(REQUEST.checksum, "test-vision-v1").stage == "Mild"
+
+
+def test_a_duplicate_put_keeps_the_first_result():
+    store = _store()
+    first = _stager({"stage": "Mild", "confidence": 0.7}).stage(REQUEST)
+    second = _stager({"stage": "Severe", "confidence": 0.9}).stage(REQUEST)
+
+    store.put(REQUEST.checksum, first)
+    store.put(REQUEST.checksum, second)  # a concurrent analysis lost the race
+
+    assert store.get(REQUEST.checksum, first.model_name) == first
+
+
+def test_a_failed_staging_call_stores_nothing():
+    store = _store()
+    with pytest.raises(ValidationError):
+        StoredImagingStager(_stager("not json"), store).stage(REQUEST)
+
+    assert store.get(REQUEST.checksum, "test-vision-v1") is None
+
+
 def test_registry_builds_and_refuses_live_vision():
-    _, _, stager = build_providers(_settings(), scan_images=FakeImages())
-    assert isinstance(stager, LiveImagingStager)
+    _, _, stager = build_providers(
+        _settings(), scan_images=FakeImages(), staging_store=_store()
+    )
+    assert isinstance(stager, StoredImagingStager)
+    assert stager.name == "test-vision-v1"
 
     with pytest.raises(ValueError, match="AI_LLM_API_KEY"):
         build_providers(_settings(AI_LLM_API_KEY=None), scan_images=FakeImages())
     with pytest.raises(ValueError, match="scan_images"):
         build_providers(_settings())
+    with pytest.raises(ValueError, match="staging_store"):
+        build_providers(_settings(), scan_images=FakeImages())
 
     _, _, stager = build_providers(_settings(AI_STAGING_PROVIDER="mock"))
     assert isinstance(stager, MockImagingStager)

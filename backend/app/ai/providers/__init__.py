@@ -9,6 +9,7 @@ from .base import (
     LLMClient,
     ProviderMode,
     ScanImages,
+    StagingStore,
 )
 from .corpus_retriever import CorpusEvidenceRetriever
 from .mock_llm import MockLLMClient
@@ -29,5 +30,6 @@ __all__ = [
     "MockLLMClient",
     "ProviderMode",
     "ScanImages",
+    "StagingStore",
     "build_providers",
 ]

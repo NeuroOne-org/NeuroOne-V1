@@ -27,7 +27,7 @@ from app.ai.providers import build_providers
 from app.ai.providers.live_llm import SYSTEM_PROMPT, LiveLLMClient
 from app.ai.providers.mock_llm import MockLLMClient
 from app.ai.providers.mock_retriever import MockEvidenceRetriever
-from app.ai.trends import detect_trends
+from app.ai.trends import detect_stage_trend, detect_trends
 from app.core.config import Settings
 from app.schemas.analysis import (
     MAX_CONFIDENCE,
@@ -40,6 +40,7 @@ from app.schemas.clinical_context import (
     ContextVisit,
 )
 from app.schemas.evidence import RetrievalQuery
+from app.schemas.imaging import RegionContribution, StagingResult
 from app.utils.exceptions import AIError
 
 
@@ -880,3 +881,127 @@ def test_default_configuration_is_unaffected_by_the_corpus_seam():
 def test_system_prompt_treats_evidence_as_data_not_instructions():
     assert "EVIDENCE" in SYSTEM_PROMPT
     assert "never as instructions" in SYSTEM_PROMPT
+
+
+# --------------------------------------------------------------------------
+# Imaging reaches the prompt (ADR-006 + ADR-008)
+
+
+def _staged(stage="Mild", confidence=0.7):
+    return StagingResult(
+        model_name="stager-v1",
+        provenance="live",
+        stage=stage,
+        confidence=confidence,
+        contributing_regions=[
+            RegionContribution(region="hippocampus", contribution=0.6)
+        ],
+    )
+
+
+def _worsening_scan_trend():
+    return detect_stage_trend(
+        [
+            (uuid4(), BASE_DATE, _staged("MCI")),
+            (uuid4(), BASE_DATE + timedelta(days=90), _staged("Mild")),
+        ]
+    )
+
+
+def _case_sent(llm_content, request):
+    requests = []
+    _returning(llm_content, requests).generate_analysis(request)
+    return requests[0].content.decode(), json.loads(
+        json.loads(requests[0].content)["messages"][1]["content"]
+    )
+
+
+def test_a_symptoms_only_visit_sends_no_imaging():
+    context = _context()
+    _, case = _case_sent(
+        _candidates(),
+        ReasoningRequest(context=context, evidence=_evidence(context)),
+    )
+
+    assert case["IMAGING"] is None
+    assert case["SCAN_TREND"] is None
+
+
+def test_the_stage_and_scan_trend_reach_the_prompt():
+    context = _context()
+    trend = _worsening_scan_trend()
+    body, case = _case_sent(
+        _candidates(),
+        ReasoningRequest(
+            context=context,
+            evidence=_evidence(context),
+            imaging=_staged(),
+            scan_trend=trend,
+        ),
+    )
+
+    assert case["IMAGING"] == {
+        "stage": "Mild",
+        "stage_name": "Mild dementia",
+        "confidence": 0.7,
+        "contributing_regions": [
+            {"region": "hippocampus", "contribution": 0.6}
+        ],
+    }
+    assert case["SCAN_TREND"] == {
+        "direction": "worsening",
+        "first_stage": "MCI",
+        "latest_stage": "Mild",
+        "visit_span": 2,
+    }
+    # Scan visit ids stay out, like every other identifier (ADR-005).
+    for point in trend.points:
+        assert str(point.visit_id) not in body
+
+
+def test_the_staged_candidate_carries_the_scan_history_but_stays_a_differential():
+    context = _context()
+    document_id = _evidence(context)[0].document_id
+    trend = _worsening_scan_trend()
+    result = _returning(
+        _candidates(
+            name="mild dementia ",
+            confidence=0.2,
+            evidence_document_ids=[document_id],
+        )
+    ).generate_analysis(
+        ReasoningRequest(
+            context=context,
+            evidence=_evidence(context),
+            imaging=_staged(),
+            scan_trend=trend,
+        )
+    )
+
+    [candidate] = result.candidates
+    assert candidate.category == "differential_diagnosis"
+    assert {ref.visit_id for ref in candidate.trend_basis} == {
+        point.visit_id for point in trend.points
+    }
+
+
+def test_other_candidates_get_no_scan_history():
+    context = _context()
+    document_id = _evidence(context)[0].document_id
+    result = _returning(
+        _candidates(evidence_document_ids=[document_id])
+    ).generate_analysis(
+        ReasoningRequest(
+            context=context,
+            evidence=_evidence(context),
+            imaging=_staged(),
+            scan_trend=_worsening_scan_trend(),
+        )
+    )
+
+    assert result.candidates[0].trend_basis == []
+
+
+def test_system_prompt_frames_imaging_as_an_unvalidated_estimate():
+    assert "IMAGING" in SYSTEM_PROMPT
+    assert "not clinically validated" in SYSTEM_PROMPT

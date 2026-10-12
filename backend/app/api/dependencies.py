@@ -31,6 +31,7 @@ from app.services.corpus_search import SessionCorpusSearch
 from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
 from app.services.scan_images import StorageScanImages
+from app.services.staging_store import SessionStagingStore
 from app.services.scan_service import ScanService
 from app.services.triage_service import TriageService
 from app.services.user_service import UserService
@@ -57,13 +58,12 @@ _corpus_search = (
     SessionCorpusSearch() if settings.AI_RETRIEVAL_PROVIDER == "corpus" else None
 )
 _scan_storage = LocalScanStorage(settings.SCAN_STORAGE_DIR)
-_scan_images = (
-    StorageScanImages(_scan_storage)
-    if settings.AI_STAGING_PROVIDER == "live-vision"
-    else None
-)
+_live_vision = settings.AI_STAGING_PROVIDER == "live-vision"
 _retriever, _llm, _stager = build_providers(
-    settings, corpus_search=_corpus_search, scan_images=_scan_images
+    settings,
+    corpus_search=_corpus_search,
+    scan_images=StorageScanImages(_scan_storage) if _live_vision else None,
+    staging_store=SessionStagingStore() if _live_vision else None,
 )
 _analysis_service = AnalysisService(
     AnalysisRepository(),

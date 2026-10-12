@@ -183,9 +183,9 @@ export default function UploadPage() {
                 <option value="" disabled>
                   Select
                 </option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
               </Select>
             </Field>
 

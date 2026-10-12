@@ -44,9 +44,11 @@ function fillForm(container: HTMLElement) {
   fireEvent.change(container.querySelector("#dob")!, {
     target: { value: "1990-01-01" },
   });
-  fireEvent.change(container.querySelector("#gender")!, {
-    target: { value: "female" },
-  });
+  // Pick by the visible label, so the test sends whatever value the option
+  // actually carries rather than one the test assumes.
+  const gender = container.querySelector("#gender") as HTMLSelectElement;
+  const female = Array.from(gender.options).find((o) => o.text === "Female")!;
+  fireEvent.change(gender, { target: { value: female.value } });
   fireEvent.change(container.querySelector("#email")!, {
     target: { value: "jane@example.com" },
   });
@@ -92,6 +94,17 @@ describe("Upload intake", () => {
       expect(push).toHaveBeenCalledWith("/dashboard/patients/p9")
     );
     expect(calls).toEqual(["createPatient", "createVisit", "runAnalysis"]);
+  });
+
+  it("sends gender as the single-letter code the backend stores", async () => {
+    const { container } = render(<UploadPage />);
+    fillForm(container);
+    submit();
+
+    await waitFor(() => expect(createPatient).toHaveBeenCalled());
+    expect(createPatient).toHaveBeenCalledWith(
+      expect.objectContaining({ gender: "F" })
+    );
   });
 
   it("uploads an attached scan between creating the visit and analysing", async () => {
