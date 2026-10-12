@@ -13,7 +13,7 @@ Proposed (2026-10-07).
    - NIfTI: the middle axial slice.
    - DICOM: `pixel_array` only. Headers carry PHI and are never forwarded.
    - PNG/JPEG: re-encoded, which drops EXIF.
-4. **Output is untrusted.** It is validated against a narrow payload model. Confidence is clamped to `MAX_CONFIDENCE`, and regions outside the mock's fixed vocabulary are dropped. A failure becomes `AIError(staging_error)` through the orchestrator, as before.
+4. **Output is untrusted.** It is validated against a narrow payload model. Confidence is clamped to `MAX_CONFIDENCE`, and regions outside the mock's fixed vocabulary are dropped. *(Amended 2026-10-12: a blank, single-value slice is refused before the call, and the model declines an unreadable image with stage `NOT_MRI` rather than a guessed `CN`. A `NOT_MRI` answer or a confidence of 0 raises, so it is never stored or pinned as a stage.)* A failure becomes `AIError(staging_error)` through the orchestrator, as before.
 5. **Results are persisted per checksum and model.** The orchestrator re-stages every prior scan on each analysis. Without a store, each run would cost N paid calls and a prior visit's stage could drift between runs. *(Amended 2026-10-12: originally an in-memory cache. Results now live in the `staging_results` table, keyed on (checksum, model_name), behind a `StagingStore` seam wrapped around the stager by `StoredImagingStager`. A changed `AI_VISION_MODEL` stages again rather than serving the old model's answer. `build_providers()` refuses `live-vision` without a store.)*
 6. **The default stays `mock`.** `build_providers()` refuses `live-vision` at startup when there is no API key or no `ScanImages`.
 
@@ -31,4 +31,4 @@ It needs no new infrastructure, no model weights and no GPU, and it fills the se
 - **A hosted inference endpoint.** It would only move the same model question somewhere else.
 
 ## Testing Impact
-`tests/test_ai_live_staging.py`, using `httpx.MockTransport` with no network: the happy path, confidence clamping, unknown regions, malformed output, the cache, registry refusals, and PNG/NIfTI rendering.
+`tests/test_ai_live_staging.py`, using `httpx.MockTransport` with no network: the happy path, confidence clamping, unknown regions, malformed output, declined reads, blank and NaN slices, the stored stage, registry refusals, and PNG/NIfTI rendering.
