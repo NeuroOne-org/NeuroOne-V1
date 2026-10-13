@@ -4,6 +4,45 @@ MODE: TEST
 
 Audit date: **13 September 2026**. Checkout: **`5d391b1`** (`5d391b1` is the implementation baseline before these documentation additions). Purpose: produce an accurate professor-facing learning and progress reference. This is a focused code/documentation audit, not a clinical evaluation or full security assessment.
 
+## AI pipeline update — `c336492` (12 October 2026)
+
+Scope: the AI work after AI-02a. That covers the curated retriever (`9f3dfd3`, ADR-007), live vision staging (`ff33e40`, ADR-008) and persisted staging with the stage pinned first (`683258f`). Everything outside the AI pipeline keeps its `a01ae83` evidence below.
+
+### Checks run
+
+| Check | Observation |
+|---|---|
+| Backend suite | **523 passed, 12 skipped, 16 s.** Run in a clean venv built from `requirements.txt` + `requirements-dev.txt`. The 12 skips are `tests/postgres/` (FTS and ingestion), which need PostgreSQL and run in CI |
+| Developer interpreter | The global Python 3.11 lacked `nibabel`/`pydicom` and had drifted from the `fastapi`/`pydantic` pins, so collection failed with 10 errors. `app/api/dependencies.py` imports `scan_images` unconditionally, so these are hard dependencies even in mock mode. Fix: `pip install -r requirements.txt` |
+| OpenAPI | **36** `/api/v1` operations (`POST /auth/logout` added since `a01ae83`) |
+| ORM / migrations | **12** tables (+ `corpus_documents`, `staging_results`), **16** migration files |
+| Ingestion dry run | `scripts/ingest_documents.py --dry-run` on the shipped manifest: "Validated 0 file(s) for corpus_version='curated-v1'". The manifest is empty |
+| Pipeline-note probe | live/live/live → `pipeline complete, evidence retrieved from live corpus, corpus curated-v1, imaging staging live`; live reasoning with mock retrieval and live staging → `pipeline complete, live model reasoning, evidence retrieval simulated, imaging staging live` |
+| Embeddings | None in code. ADR-007 rejected pgvector, and `scripts/build_embeddings.py` is a one-line stub |
+| Live calls | None made. No live database, no API key used |
+
+### Status of earlier AI findings
+
+| ID | Status at `c336492` | Evidence |
+|---|---|---|
+| HB-03 | **Resolved.** The live prompt carries `IMAGING` and `SCAN_TREND` | `LiveLLMClient._render_case` |
+| HB-04 | **Resolved.** The stage is pinned first, retrieved on its own budget, and its absence fails as `ai_stage_missing` | `rank_candidates(pinned=…)`, `AnalysisOrchestrator._finalize` |
+| HB-08 | **Partly resolved.** The mock still hashes the checksum. An opt-in live stager now reads real pixels, but through a general vision model on one slice, not a validated classifier | `live_staging.py`, ADR-008 |
+| HB-09 | **Code resolved, content open.** Curated FTS retriever, ingestion CLI, review gate and PostgreSQL tests landed, and ADR-007 is accepted. No reviewed content exists, so `corpus` mode returns `rag_no_evidence` | `corpus/manifest.yaml` `files: []`; 5 drafts in `corpus/pending/` |
+| HB-10 | **Resolved on paper.** Compose defaults to console OTP, mounts a scan volume and runs the frontend. A clean boot/restart was not re-run | `docker-compose.yml` |
+| HB-20 | **Resolved.** `DiagnosisCandidate.confidence` is capped at `MAX_CONFIDENCE` in the schema | `schemas/analysis.py` |
+| HB-05, HB-11, HB-12, HB-15 | **Still open.** No reviewer fields in `ReportSnapshot`; history excludes only the current id, not later dates; the report reads clinical inputs at report time; upload stores `dimensions={}` | Unchanged source |
+
+### New findings
+
+| ID | Priority | Verified finding | Recommended next step |
+|---|---|---|---|
+| HB-21 | Medium — **resolved** | `scan_images._to_uint8` uses `np.percentile`, so a NIfTI slice containing any `NaN` voxel renders as an **all-black PNG** (probe: 16-voxel slice with one NaN → all zeros). The vision model then reads a blank image, and because results are stored per (checksum, model), that answer is kept. | Fixed: `np.nanpercentile` + `np.nan_to_num`, and `render_png` refuses a single-value slice, so the analysis fails as `staging_error` and nothing is stored. Tests: `test_render_png_survives_a_nan_voxel`, `test_render_png_refuses_a_blank_slice` |
+| HB-22 | Medium — **resolved** | The vision prompt tells the model to answer `CN` with confidence 0.0 when the image is not a brain MRI. That fallback becomes a pinned "Cognitively normal" candidate and is stored permanently. A clinician cannot tell "not an MRI" from "normal at low confidence". | Fixed: the prompt now asks for stage `NOT_MRI` instead of a guessed `CN`, and `LiveImagingStager` raises on `NOT_MRI` or a confidence of 0, before anything is stored. Tests: `test_malformed_output_raises`, `test_a_declined_read_stores_nothing` |
+| HB-23 | Low — **resolved** | ADR-008 was still **Proposed** although its code is merged, wired into Compose, and amended on 2026-10-12. | Accepted 2026-10-12, as an opt-in path for synthetic demo data |
+| HB-24 | Low | Stale comments said the corpus was "still simulated" (`live_llm.py`, `.env.example`) and that live staging used a per-process cache (`orchestrator.py`). README said staging had "no live path", the frontend was not in Compose, and listed 35 endpoints and 499 tests. | Fixed in this refresh (comments and docs only) |
+| HB-25 | Info | `StoredImagingStager` commits a stage result in its own session, before the analysis transaction. This is a deliberate exception to "nothing is written before the analysis succeeds", and it is safe because `staging_results` holds no clinical record. | Documented in handbook section 8; no change |
+
 ## PR preparation update — `a01ae83`
 
 Before publication, `main` advanced through PR #41. This follow-up on 13 September 2026 inspected the changed auth/config/frontend sources and reran the complete backend suite: **437 passed in 7.68 seconds**. The historical table and findings below remain evidence from `5d391b1`; the following updates supersede their auth/config/graph descriptions:

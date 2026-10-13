@@ -23,10 +23,15 @@ def _to_uint8(pixels: np.ndarray) -> np.ndarray:
     """Window to the 1st-99th percentile and scale to 8-bit greyscale."""
 
     pixels = np.asarray(pixels, dtype=np.float64)
-    low, high = np.percentile(pixels, (1, 99))
-    if high <= low:
+    # NaN-aware: one NaN voxel would make np.percentile NaN and the whole
+    # slice render black (audit HB-21).
+    if np.isnan(pixels).all():
         return np.zeros(pixels.shape, dtype=np.uint8)
-    return (np.clip((pixels - low) / (high - low), 0, 1) * 255).astype(np.uint8)
+    low, high = np.nanpercentile(pixels, (1, 99))
+    if not high > low:
+        return np.zeros(pixels.shape, dtype=np.uint8)
+    scaled = np.clip((np.nan_to_num(pixels, nan=low) - low) / (high - low), 0, 1)
+    return (scaled * 255).astype(np.uint8)
 
 
 def _nifti_slice(content: bytes, extension: str) -> np.ndarray:
@@ -61,6 +66,13 @@ def render_png(content: bytes, filename: str) -> bytes:
     else:
         # PNG/JPEG: re-encoding drops EXIF and any other metadata chunks.
         image = Image.open(io.BytesIO(content)).convert("L")
+
+    # A single-value slice carries no anatomy. Staging it would store
+    # whatever the model guesses for a blank image, so refuse it; the
+    # orchestrator reports a staging_error and nothing is stored.
+    low, high = image.getextrema()
+    if low == high:
+        raise ValueError("scan slice is blank; nothing to stage")
 
     out = io.BytesIO()
     image.save(out, format="PNG")

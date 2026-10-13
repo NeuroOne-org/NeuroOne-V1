@@ -1,6 +1,6 @@
 # NeuroONE project handbook
 
-Audit date: **2026-09-13**. Implementation baseline: **`a01ae83`**. Audience: you and your team preparing to explain the project to your professor.
+Audit date: **2026-09-13**, AI pipeline refreshed **2026-10-12**. Implementation baseline: **`c336492`** for the AI pipeline and every count (sections 2, 5–9, 11, 14–17, 19); **`a01ae83`** for everything else. Audience: you and your team preparing to explain the project to your professor.
 
 For evidence and unresolved differences, use [AUDIT.md](AUDIT.md). For spoken explanations, use [PROFESSOR-PRESENTATION.md](PROFESSOR-PRESENTATION.md).
 
@@ -47,11 +47,11 @@ Sources: [PRD §1–§4 and §7](../PRD.md), [MVP purpose and early-detection de
 | FR-01 Authentication | Secure login, hashed passwords, JWTs and protected access | Password login, backend-enforced OTP by default, reset and admin provisioning exist. OTP and rate-limit state remain process-local. |
 | FR-02 Patient management | Create, retrieve and update patients, associated with cases | Authorized CRUD, search and soft deletion exist. Frontend consumers exist. |
 | FR-03 Clinical input | Symptoms, duration, severity, observations, history and additional case information | Backend schemas support these fields. Follow-up UI captures symptom name, severity and onset; duration and observations are not exposed there. New-patient intake does not submit structured symptoms. |
-| FR-04 Differential diagnosis | Ranked possibilities with uncertainty and reasoning | Enforced structured output and likelihood bands. Stage-first ranking is a requirement with an observed enforcement gap. |
-| FR-05 Literature retrieval | Trusted literature with preserved metadata | Retrieval workflow is implemented over a simulated corpus. Real curated retrieval remains proposed. |
+| FR-04 Differential diagnosis | Ranked possibilities with uncertainty and reasoning | Enforced structured output and likelihood bands. A scanned visit's stage estimate is pinned first, and an analysis that loses it fails with `ai_stage_missing`. |
+| FR-05 Literature retrieval | Trusted literature with preserved metadata | Two retrievers: the simulated fixture corpus (default) and a curated PostgreSQL full-text retriever (`AI_RETRIEVAL_PROVIDER=corpus`). The curated corpus holds no reviewed content yet, so it cannot return evidence. |
 | FR-06 Explainability | Patient findings, reasoning, evidence and citations | Backend returns them and current UI renders them. Mock imaging region values are not scientific attributions. |
 | FR-07 Report | Clinical information, findings, citations, disclaimer and review details | PDF creation is gated by sign-off. Snapshot/PDF omits reviewer identity and sign-off time despite the revised requirement. |
-| FR-08 Scan intake and staging | Scan per visit, retention, staging and provenance | Scan intake/storage and mock staging exist. File bytes are not interpreted as MRI anatomy. Dimensions are currently stored as an empty object by upload. |
+| FR-08 Scan intake and staging | Scan per visit, retention, staging and provenance | Scan intake/storage, mock staging and an opt-in live vision stager exist. The live stager reads one rendered 2D slice through a general vision model; it is not a validated radiology classifier. Dimensions are still stored as an empty object by upload. |
 
 MRI became in scope through accepted ADR-006 and revised PRD text. The APP-FLOW document still contains its earlier MRI exclusion. This is a documented inconsistency, not a reason to describe the inspected scan functionality as nonexistent.
 
@@ -136,7 +136,9 @@ Sources: [TRD §1 and §4](../TRD.md), [dependency wiring](../../backend/app/api
 | PostgreSQL | Application database | UUIDs, relationships, constraints, JSONB and supported production schema |
 | Passlib / bcrypt_sha256 | Password hashing | Store a verification hash instead of a plaintext password |
 | python-jose / JWT | Signed, expiring access tokens | Protected requests can authenticate a token |
-| httpx | Live LLM HTTP transport | Uses an OpenAI-compatible wire format without a vendor SDK |
+| httpx | Live LLM and vision HTTP transport | Uses an OpenAI-compatible wire format without a vendor SDK |
+| PostgreSQL full-text search | Curated corpus retrieval (`tsvector` + GIN index) | Small reviewed corpus; lexical search is explainable and needs no extension or embedding call |
+| nibabel / pydicom / Pillow / NumPy | Render a scan to one greyscale PNG slice for the vision stager | Read NIfTI/DICOM pixels without forwarding headers; re-encoding drops EXIF |
 | ReportLab | PDF rendering | Generates a PDF from a typed snapshot without browser printing |
 | Next.js 14 / React 18 / TypeScript | Actual frontend | Routes, components and typed API consumption |
 | Tailwind CSS | UI styling | Shared tokens and reusable primitives |
@@ -147,13 +149,13 @@ Sources: [TRD §1 and §4](../TRD.md), [dependency wiring](../../backend/app/api
 
 The repository also uses Three.js/React Three Fiber and motion libraries for landing-page presentation. Those visuals do not prove MRI inference works.
 
-PyTorch, ADNI, OASIS, Google Colab, Redis and vector embeddings appear in vision/design material or proposed directions. The inspected backend dependency list and provider code do not establish a trained PyTorch staging model, an ADNI/OASIS training pipeline, a Redis OTP service or a vector retrieval index. Keep those separate from the implemented stack.
+PyTorch, ADNI, OASIS, Google Colab, Redis and vector embeddings appear in vision/design material or proposed directions. The inspected backend dependency list and provider code do not establish a trained PyTorch staging model, an ADNI/OASIS training pipeline, a Redis OTP service or a vector retrieval index. **There are no embeddings anywhere in the code**: ADR-007 chose PostgreSQL full-text search over pgvector, and `scripts/build_embeddings.py` is an empty stub. Keep those separate from the implemented stack.
 
 Sources: [backend dependencies](../../backend/requirements.txt), [frontend package](../../frontend/package.json), [security helpers](../../backend/app/core/security.py), [existing presentation](../NeuroOne%20Project%20PPT.pptx).
 
 ## 6. Domain and database
 
-The mapped ORM metadata currently contains **ten tables**. File count, model-class count and migration count are different things. Thirteen migration files do not mean thirteen domain entities.
+The mapped ORM metadata currently contains **twelve tables**: the ten clinical tables below, plus two AI support tables (`corpus_documents`, `staging_results`) that hold no patient data. File count, model-class count and migration count are different things. Sixteen migration files do not mean sixteen domain entities.
 
 ```mermaid
 erDiagram
@@ -180,6 +182,8 @@ erDiagram
 | `analysis_findings` | Analysis id, zero-based rank, condition name, category, confidence, findings, explanation, trend JSON | Ranked possible conditions |
 | `analysis_evidence` | Finding-linked source, citation, passage and document metadata | Preserve each candidate's evidence |
 | `reports` | Analysis/generator ids, filename, generated time, JSON snapshot | Stable report contents for later download |
+| `corpus_documents` | Reviewed passage, citation, tier, licence, reviewer, `corpus_version`, `is_active`, generated `search_vector` | The curated retrieval corpus (ADR-007). Not linked to any patient |
+| `staging_results` | Scan checksum, staging model name, JSON stage result; unique on (checksum, model) | Pays for each live vision call once and keeps a prior visit's stage stable (ADR-008). Holds no storage key or filename |
 
 A visit has **at most one scan**, enforced through a unique visit foreign key. A later scan should belong to a new visit. A visit can have **multiple analyses**, because rerunning creates another result rather than overwriting its history. Accepted ADR-006's phrase “one analysis per visit” means one combined scan-plus-symptom analysis path, not a unique analysis-row constraint.
 
@@ -195,11 +199,11 @@ Sources: [models](../../backend/app/models/__init__.py), [patient](../../backend
 
 ## 7. API and typed contracts
 
-The application API prefix is **`/api/v1`**. Current OpenAPI generation produces **35 method/path operations** under this prefix. `/`, `/health` and documentation routes are outside this count. A path with GET and POST counts as two operations.
+The application API prefix is **`/api/v1`**. Current OpenAPI generation produces **36 method/path operations** under this prefix. `/`, `/health` and documentation routes are outside this count. A path with GET and POST counts as two operations.
 
 | Group | Actual method/path operations, without `/api/v1` |
 |---|---|
-| Authentication, 6 | `POST /auth/login`; `GET /auth/me`; `POST /auth/forgot-password`; `POST /auth/reset-password`; `POST /auth/request-otp`; `POST /auth/verify-otp` |
+| Authentication, 7 | `POST /auth/login`; `POST /auth/logout`; `GET /auth/me`; `POST /auth/forgot-password`; `POST /auth/reset-password`; `POST /auth/request-otp`; `POST /auth/verify-otp` |
 | Admin, 1 | `POST /admin/users` |
 | Patient records, 6 | `POST /patients`; `GET /patients`; `GET /patients/search`; `GET /patients/{id}`; `PATCH /patients/{id}`; `DELETE /patients/{id}` |
 | Patient visits/history, 3 | `POST /patients/{id}/visits`; `GET /patients/{id}/visits`; `GET /patients/{id}/visits/history` |
@@ -243,10 +247,12 @@ Authorize visit and patient
   → stage current/prior scans if a current scan exists
   → calculate stage trend
   → build literature query
-  → retrieve and rank evidence
+  → retrieve evidence (symptom query + a separate stage query with its own budget)
+  → de-duplicate and rank evidence
   → pass context/evidence to reasoning provider
   → resolve provider-selected citations against retrieved documents
-  → rank and trim cited candidates
+  → rank cited candidates, stage pinned first; fail if the stage is missing
+  → trim citations per candidate
   → validate final result
   → persist analysis, findings/evidence and visit status together
 ```
@@ -255,25 +261,63 @@ The service authorizes the requested visit through the patient ownership rule. T
 
 Current historical retrieval excludes the current visit id and requests the other records oldest-first. It does not filter them to dates strictly earlier than the target visit. An analysis run on an older visit can therefore include newer encounters. With more than ten other visits, the default selects the oldest ten. The current visit is appended to the trend sequence. This temporal assumption needs attention before claiming retrospective accuracy or a sophisticated longitudinal model.
 
-The orchestrator stages prior scanned visits to compare ordinal stage labels. That is a demo comparison of simulated stage outputs, not image registration or quantitative anatomical progression.
+The orchestrator stages prior scanned visits to compare ordinal stage labels. Under the mock those labels are simulated; under live vision each one is a general model's reading of one slice, stored once per scan. Either way it is a comparison of labels, not image registration or quantitative anatomical progression.
 
 Citation resolution is central. A provider selects an evidence `document_id`. The orchestrator looks it up in the actual retrieved set and restores the retrieved citation and passage. A provider cannot make an invented citation trustworthy just by writing a plausible title. The live client drops invalid document ids from a candidate; the orchestrator rejects unresolved ids if they reach it. Candidates without valid citations do not become saved recommendations.
 
-Failure ordering protects clinical data. All provider calls and final validation occur before a new analysis is written. Provider exceptions become controlled errors such as `rag_error`, `rag_no_evidence`, `ai_error`, `ai_contract_error`, `ai_no_candidates` and `staging_error`. The normal error translation uses HTTP 502 for AI failures. Existing clinical records survive; the user can retry.
+Failure ordering protects clinical data. All provider calls and final validation occur before a new analysis is written. Provider exceptions become controlled errors such as `rag_error`, `rag_no_evidence`, `ai_error`, `ai_contract_error`, `ai_no_candidates`, `ai_stage_missing`, `staging_error` and `staging_contract_error`. One deliberate exception to "nothing is written": a live stage result is committed to `staging_results` as soon as it is paid for, so a later failure does not waste the call. That table holds no clinical record. The normal error translation uses HTTP 502 for AI failures. Existing clinical records survive; the user can retry.
 
 Sources: [analysis service](../../backend/app/services/analysis_service.py), [context builder](../../backend/app/ai/context.py), [orchestrator](../../backend/app/ai/orchestrator.py), [history repository](../../backend/app/repositories/visit_repository.py), [exceptions](../../backend/app/utils/exceptions.py).
 
 ## 9. What the three providers actually do
 
-| Provider seam | Current implementation | What it establishes |
-|---|---|---|
-| `EvidenceRetriever.retrieve(query)` | `MockEvidenceRetriever` searches Python fixtures by keyword overlap | Retrieval/ranking/metadata contracts can be exercised offline |
-| `LLMClient.generate_analysis(request)` | `MockLLMClient` or configurable `LiveLLMClient` | Deterministic demo reasoning or external model reasoning over the supplied context |
-| `ImagingStager.stage(request)` | `MockImagingStager` only | Deterministic stage-result contract and provenance plumbing |
+Every provider sits behind a small `Protocol` in `app/ai/providers/base.py`. One file, `registry.py`, maps configuration to concrete classes. Each seam is swapped independently.
+
+| Provider seam | Setting | Mock (default) | Live option |
+|---|---|---|---|
+| `EvidenceRetriever.retrieve(query)` | `AI_RETRIEVAL_PROVIDER` | `MockEvidenceRetriever`: Python fixture passages, keyword overlap | `corpus` → `CorpusEvidenceRetriever`: reviewed passages, PostgreSQL full-text search |
+| `LLMClient.generate_analysis(request)` | `AI_PROVIDER` | `MockLLMClient`: rule table over symptoms and trends | `live-llm` → `LiveLLMClient`: any OpenAI-compatible chat endpoint |
+| `ImagingStager.stage(request)` | `AI_STAGING_PROVIDER` | `MockImagingStager`: hash of the checksum | `live-vision` → `StoredImagingStager(LiveImagingStager)`: a vision model reads one slice; each result is stored |
+
+### How the providers are embedded in the app
+
+"Embedded" here means wired in. Nothing is trained or packaged inside the API process; every live model is a remote HTTP call.
+
+```text
+app/api/dependencies.py  (runs once, at import)
+  ├─ SessionCorpusSearch()                       only if AI_RETRIEVAL_PROVIDER=corpus
+  ├─ StorageScanImages(storage), SessionStagingStore()   only if live-vision
+  └─ build_providers(settings, corpus_search=…, scan_images=…, staging_store=…)
+        → (retriever, llm, stager)
+           → AnalysisOrchestrator(retriever, llm, stager)
+              → AnalysisService → POST /visits/{id}/analyses
+```
+
+Three rules make this safe:
+
+1. **`app/ai/` never touches the database or the filesystem.** Anything that needs a session or a file (`CorpusSearch`, `ScanImages`, `StagingStore`) is a protocol declared in `base.py` and implemented in `app/services/`. The AI layer sees a checksum, never a storage key or filename.
+2. **Bad configuration fails at startup, not on a clinician's screen.** `build_providers()` refuses a live provider with no `AI_LLM_API_KEY`, `corpus` retrieval with mock reasoning (the mock cannot cite real documents), `corpus` without a PostgreSQL `DATABASE_URL`, and `live-vision` without a `ScanImages` or `StagingStore`.
+3. **One transport.** Live reasoning and live staging share `chat_completion_text()`: two attempts on 429/5xx, a timeout, and logs that record status and latency but never the prompt or the response.
 
 ### Retrieval
 
-The mock retriever uses weighted condition, symptom and complaint matches with source-tier bonuses. Its corpus contains simulated passages, even when source names resemble medical publications. A citation field is not proof that the passage was checked against a real publication.
+**Mock.** Weighted condition, symptom and complaint matches with source-tier bonuses, over simulated passages. A citation field there is not proof the passage was checked against a real publication.
+
+**Curated corpus.** There are **no vector embeddings**. Each row in `corpus_documents` has a generated `search_vector` column (a PostgreSQL `tsvector`, GIN-indexed). A search builds three OR-combined `plainto_tsquery` groups (stage/condition names, symptom names, the first 20 complaint words) and scores each row as `0.5 × condition + 0.3 × symptom + 0.2 × complaint` using `ts_rank_cd`. Every term is a bound parameter. The retriever adds the tier bonus, normalises scores to 0–1 and sorts by score then `document_id`, so an unchanged corpus answers the same query the same way every time.
+
+The content pipeline is the safety mechanism:
+
+```text
+backend/corpus/pending/*.yaml        draft; never loadable
+   ↓ a human reviewer checks every passage verbatim, sets reviewed_by
+backend/corpus/documents/*.yaml  +  listed in manifest.yaml
+   ↓ scripts/ingest_documents.py  (validate all → load in one transaction)
+corpus_documents rows, is_active only for the manifest's corpus_version
+```
+
+Ingestion rejects anything outside the tier policy (`guideline`, `systematic_review`), outside the licence list (`CC0-1.0`, `CC-BY-4.0`, `public-domain`), longer than 2,000 characters, or matching an injection tripwire (role markers, "ignore previous instructions", chat-template tokens, code fences). The tier is enforced three times: source schema, database `CHECK`, and a re-filter in the retriever.
+
+**Current state.** Five CC-BY-4.0 systematic-review drafts are in `pending/` with `reviewed_by: PENDING`, and `manifest.yaml` lists no files. So `AI_RETRIEVAL_PROVIDER=corpus` currently returns no evidence, and every analysis fails with `rag_no_evidence`. The blocker is a named clinical reviewer, not code.
 
 ### Mock reasoning
 
@@ -283,19 +327,45 @@ The six symptom-driven fixture conditions are Parkinsonian syndrome, Essential t
 
 ### Live reasoning
 
-The live client sends JSON context to an OpenAI-compatible `/chat/completions` endpoint using httpx. Base URL, model id, key and timeout are configuration. It requests JSON output, validates an intermediate payload, resolves symptom trend names to system-owned references and maps surviving candidates into the same structured contract.
+The live client sends the case as **JSON**, so clinician free text reads as data rather than instructions, to `/chat/completions` with `response_format: json_object` and temperature 0.2. The JSON has `PATIENT` (age, sex), `CURRENT_VISIT`, `PRIOR_VISITS`, `TRENDS`, `IMAGING` (stage, stage name, confidence, regions), `SCAN_TREND`, `EVIDENCE` and `MAX_CANDIDATES`. No checksum, model name or UUID is sent, so the model has no identifier to echo back.
 
-It makes at most two transport attempts for retryable statuses including 429 and common server errors. That is limited retry behavior, not a background job queue. Switching a model endpoint does not by itself make retrieval or staging live.
+The model may only *select*: evidence by `document_id` from the list it was given, and trends by symptom name. The client then rebuilds every candidate from system data:
 
-**Observed integration gap:** `ReasoningRequest` has `imaging` and `scan_trend`, but `LiveLLMClient._render_case` currently serializes neither them nor scan metadata. Its prompt covers patient/visits/symptom trends/evidence. Consequently, do not claim the current live LLM demonstrably combines MRI staging with symptoms. An imaging provenance suffix says the staging provider ran, not that its result reached the live prompt.
+- unknown evidence ids are dropped, and a candidate left with none is dropped;
+- trend names resolve to the patient's own trend references, so no model-written UUID reaches `trend_basis`;
+- confidence is clamped to 0–0.92;
+- `category` is **re-derived** (`early_watch` only with a worsening trend and confidence below 0.40), so the mock and live providers cannot mean different things by the same label;
+- the stage candidate gets the scan's trend history attached and is pinned first.
+
+The system prompt tells the model to treat both CASE and EVIDENCE as data, never instructions, and to treat IMAGING as an unvalidated estimate rather than a verdict. Malformed JSON or an invented field fails the whole response as `ai_contract_error`; a single bad candidate is only dropped.
 
 ### Mock imaging staging
 
-The stager hashes the scan checksum string, selects one of five labels and derives a confidence and region breakdown from digest bytes. It does **not read the scan image**. Labels are `CN`, `MCI`, `Mild`, `Moderate`, `Severe`. The project maps CN to “Cognitively normal” and MCI to “Mild cognitive impairment” in candidate names.
+The stager hashes the scan checksum string, selects one of five labels and derives a confidence and region breakdown from digest bytes. It does **not read the scan image**. Labels are `CN`, `MCI`, `Mild`, `Moderate`, `Severe`. The project maps CN to "Cognitively normal" and MCI to "Mild cognitive impairment" in candidate names. Region values are synthetic.
 
-Region contribution names include hippocampus and cortical regions, but their numerical values are synthetic. No segmentation, Grad-CAM, measured atrophy or real anatomical explanation is established by this provider. Editing file bytes can change the checksum and demo stage without changing a clinically meaningful image property.
+### Live imaging staging
 
-Sources: [provider protocols](../../backend/app/ai/providers/base.py), [registry](../../backend/app/ai/providers/registry.py), [mock retriever](../../backend/app/ai/providers/mock_retriever.py), [mock corpus](../../backend/app/ai/corpus/mock_corpus.py), [mock reasoning](../../backend/app/ai/providers/mock_llm.py), [live reasoning](../../backend/app/ai/providers/live_llm.py), [mock staging](../../backend/app/ai/providers/mock_staging.py).
+```text
+StagingRequest(checksum)
+  → StoredImagingStager: staging_results has (checksum, AI_VISION_MODEL)? → return it
+  → LiveImagingStager
+      → ScanImages.preview_png(checksum)            app/services/scan_images.py
+           NIfTI: middle axial slice │ DICOM: pixel_array only │ PNG/JPEG: re-encoded
+           → window to 1st–99th percentile (NaN-safe) → 8-bit greyscale PNG
+           → a blank, single-value slice is refused
+      → base64 image + prompt → AI_VISION_MODEL (temperature 0)
+      → validate {stage, confidence, contributing_regions}
+           NOT_MRI, confidence 0 or unknown stage → error, nothing stored;
+           confidence clamped to 0.92;
+           unknown regions dropped; contributions renormalised; top 3 kept
+  → store in staging_results → return
+```
+
+Storing per (checksum, model) does two things: a prior visit is paid for once rather than on every analysis, and its stage cannot drift between runs. Changing `AI_VISION_MODEL` stages again rather than reusing the old model's answer. The cost is that a bad first answer sticks until its row is deleted.
+
+**Say aloud:** "Live staging shows that the imaging seam works with a real model. It is a general vision model reading one 2D slice. It is not trained on ADNI or OASIS and has not been validated, so we present its stage as one cited candidate, never as a result."
+
+Sources: [provider protocols](../../backend/app/ai/providers/base.py), [registry](../../backend/app/ai/providers/registry.py), [dependency wiring](../../backend/app/api/dependencies.py), [corpus retriever](../../backend/app/ai/providers/corpus_retriever.py), [corpus SQL](../../backend/app/repositories/corpus_repository.py), [ingestion policy](../../backend/app/ai/corpus/policy.py), [review gate](../../backend/corpus/pending/README.md), [mock reasoning](../../backend/app/ai/providers/mock_llm.py), [live reasoning](../../backend/app/ai/providers/live_llm.py), [mock staging](../../backend/app/ai/providers/mock_staging.py), [live staging](../../backend/app/ai/providers/live_staging.py), [stored staging](../../backend/app/ai/providers/stored_staging.py), [scan rendering](../../backend/app/services/scan_images.py), [ADR-007](../decisions/ADR-007-curated-retrieval-corpus.md), [ADR-008](../decisions/ADR-008-live-vision-staging.md).
 
 ## 10. Early detection and trends
 
@@ -314,7 +384,7 @@ Example from the synthetic demo panel:
 
 `trend_basis` answers **“Which of this patient's findings changed?”** Evidence answers **“Which external passage supports considering this condition?”** They solve different traceability problems.
 
-Imaging trends compare mock stage labels on an ordinal scale. Worsening stage references enrich the stage candidate's history. The stage candidate stays `differential_diagnosis`; a worsening imaging trend alone does not make it `early_watch` in the mock logic. Triage can still mark it as worsening.
+Imaging trends compare stage labels (mock or live) on an ordinal scale. Worsening stage references enrich the stage candidate's history. The stage candidate stays `differential_diagnosis`; a worsening imaging trend alone does not make it `early_watch` in the mock logic. Triage can still mark it as worsening.
 
 The triage queue derives flags from the **latest generated analysis** for each authorized patient. It prioritizes early-watch presence, then worsening, then awaiting sign-off, before server pagination. It does not independently infer current disease urgency from unsaved data. A new unanalysed visit may not affect the queue until analysis is run.
 
@@ -326,7 +396,7 @@ Sources: [trend functions](../../backend/app/ai/trends.py), [reasoning category 
 
 ## 11. Ranking, uncertainty and provenance
 
-Candidates sort by descending confidence with name as a tie-breaker. Evidence sorts by relevance, source-tier preference on ties, recency and document id. Evidence count and candidate count are bounded by configuration.
+Candidates sort by descending confidence with name as a tie-breaker, except that a scanned visit's stage candidate is pinned first. Evidence sorts by relevance, source-tier preference on ties, recency and document id. Evidence count and candidate count are bounded by configuration.
 
 | Confidence in shipped output | Derived band |
 |---|---|
@@ -336,7 +406,7 @@ Candidates sort by descending confidence with name as a tie-breaker. Evidence so
 
 Shipped providers cap confidence at **0.92**. This number is a design ceiling intended to avoid certainty framing. It is not a measured accuracy, sensitivity, specificity or calibrated probability. A displayed 83% likelihood does not mean 83% diagnostic accuracy.
 
-PRD/ADR-006 require the stage estimate to be the top-ranked candidate. The current ranker simply sorts confidence. A verified counterexample ranks Parkinsonian syndrome at 0.83 above a stage candidate at 0.7444. Explain stage-as-candidate as the implemented representation; describe guaranteed stage-first behavior as unfinished.
+PRD/ADR-006 require the stage estimate to be the top-ranked candidate. This is now enforced (resolves audit HB-04): `rank_candidates(..., pinned=stage_name)` puts the stage first regardless of confidence, before trimming, so trimming cannot drop it. The stage also gets its own retrieval query, so strong symptom matches cannot crowd out its citations. If a scanned visit's final list does not start with a cited stage, for example because a live model ignored it, the analysis fails with `ai_stage_missing` instead of presenting a symptoms-only differential as if the scan had been read.
 
 Provenance describes how a result was produced:
 
@@ -344,9 +414,9 @@ Provenance describes how a result was produced:
 |---|---|---|---|
 | Simulated | Simulated | `pipeline complete, evidence retrieval simulated` | Yes, default |
 | Live | Simulated | `pipeline complete, live model reasoning, evidence retrieval simulated` | Yes, opt-in |
-| Live | Live | `pipeline complete, evidence retrieved from live corpus` | Constant/branch exists, real retriever not wired |
+| Live | Live | `pipeline complete, evidence retrieved from live corpus, corpus curated-v1` | Wired (`AI_RETRIEVAL_PROVIDER=corpus`), but the corpus has no reviewed content yet |
 
-For a scanned visit, append `, imaging staging simulated`. Symptoms-only runs omit that suffix. `provider_mode` describes the reasoning provider, not the whole pipeline. Read the full note before calling a result “live.”
+For a scanned visit, append `, imaging staging simulated` or `, imaging staging live`, from the staging provider that ran. Symptoms-only runs omit that suffix. Mock reasoning with live retrieval is not in the table because the registry refuses it. `provider_mode` describes the reasoning provider, not the whole pipeline. Read the full note before calling a result “live.”
 
 The frontend displays provenance and disclaimer above findings. The PDF carries the note and disclaimer too. This lets a screenshot or report retain the relevant simulation disclosure.
 
@@ -379,7 +449,7 @@ Every token carries the account's `token_version` as its `ver` claim, and each r
 
 Sign-off (`POST /analyses/{id}/review`) is clinician-only. The route and `AnalysisService.sign_off_analysis` both refuse other roles with 403. Administrators pass every ownership check, and without this guard their sign-off would unlock a report that no clinician reviewed. Analyses an admin signed before this guard existed keep that sign-off until someone clears it.
 
-Sources: [security helpers](../../backend/app/core/security.py), [auth service](../../backend/app/services/auth_service.py), [OTP implementation](../../backend/app/services/otp_service.py), [auth dependencies](../../backend/app/api/dependencies.py), [patient service](../../backend/app/services/patient_service.py), [auth provider](../../frontend/src/components/auth-provider.tsx), [middleware](../../frontend/src/middleware.ts), [review API](../../backend/app/api/v1/analysis.py).
+Sources: [security helpers](../../backend/app/core/security.py), [auth service](../../backend/app/services/auth_service.py), [OTP implementation](../../backend/app/services/otp_service.py), [auth dependencies](../../backend/app/api/dependencies.py), [patient service](../../backend/app/services/patient_service.py), [auth provider](../../frontend/src/components/auth-provider.tsx), [route proxy](../../frontend/src/proxy.ts), [review API](../../backend/app/api/v1/analysis.py).
 
 ## 13. Reports and snapshots
 
@@ -409,7 +479,8 @@ Remember each decision as **problem, choice, reason, cost**.
 | [004: report snapshot](../decisions/ADR-004-clinical-report-snapshot-and-rendering.md) | Accepted | Persist JSON snapshot and render with ReportLab | No stored PDF binary; downloads regenerate content, source data still needs retention decisions |
 | [005: live reasoning](../decisions/ADR-005-live-llm-provider.md) | Accepted | Configurable compatible HTTP client with narrow model-authored payload | System resolves citations/history ids; live reasoning can still use simulated literature |
 | [006: MRI primary](../decisions/ADR-006-mri-primary-with-symptoms-as-context.md) | Accepted | MRI joins existing visit pipeline, stage becomes candidate, own staging seam, sign-off gate and queue | Scan storage becomes deployment dependency; simulation disclosure must travel with every result |
-| [007: curated retrieval](../decisions/ADR-007-curated-retrieval-corpus.md) | **Proposed** | Local curated YAML, PostgreSQL full-text search, guidelines/systematic reviews | Owner choices recorded, acceptance/reviewer/licensing and actual code/content still outstanding |
+| [007: curated retrieval](../decisions/ADR-007-curated-retrieval-corpus.md) | Accepted (2026-09-22) | Local curated YAML, human review gate, PostgreSQL full-text search, guidelines/systematic reviews only | Code landed; content waits on a named clinical reviewer (AI-02b-9). Lexical search can miss synonyms |
+| [008: live vision staging](../decisions/ADR-008-live-vision-staging.md) | Accepted (2026-10-12) | General vision model on the existing endpoint, one 2D slice, results stored per (checksum, model) | Merged and running behind `live-vision`; not a validated radiology model; scan pixels go to a third party |
 
 Important rejected alternatives:
 
@@ -422,7 +493,7 @@ Important rejected alternatives:
 - Attaching one “current scan” to the patient would remove the visit-based trajectory.
 - A single stage badge or “model certainty” would conflict with ranked-possibility framing.
 
-ADR-007's proposed retrieval favors existing PostgreSQL full-text search over new embedding infrastructure for a small reviewed English corpus. A future PubMed refresh would place candidate sources behind a human review gate. This is a recorded design, not code already executing in this checkout.
+ADR-007 chose existing PostgreSQL full-text search over pgvector embeddings for a small reviewed English corpus: no new extension, no embedding calls, explainable ranking. A future PubMed refresh would write candidate files into `pending/`, behind the same human review gate. ADR-008 rejected a pretrained CNN (ADNI/OASIS) in the API container for now because of dependencies, weights and preprocessing; it remains the upgrade path behind the same `ImagingStager` seam.
 
 ## 15. Progress and remaining work
 
@@ -434,35 +505,33 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Accounts | Password, default-enforced OTP, purpose isolation, auth rate limits, reset and admin create-account API exist | Multi-process OTP storage, leftover public signup cleanup, admin UI if required |
 | Patients/visits | CRUD, search, structured symptoms and history exist | Complete symptom fields in UI; temporal history filtering; new-intake resume behavior |
 | Scan intake | One scan per visit, local bytes and checksum metadata | Real format parsing/validation, dimensions, durable storage and broader failure cleanup |
-| Analysis contract | Typed differential, citations, trends and controlled failure paths; schema-enforced 0.92 ceiling; stage pinned first (ADR-006 ranking semantics) | Content coverage for every stage label in the curated corpus |
-| Live LLM | Configurable transport and validated mapping; stage and scan trend in the prompt | Verify combined reasoning against a real model |
-| Retrieval | Mock keyword corpus works | Accept/implement ADR-007, reviewed/licensed content, PostgreSQL tests and prompt hardening |
-| Imaging model | Deterministic seam and mock results exist | Select/train/integrate/evaluate a real staging model and establish dataset provenance |
+| Analysis contract | Typed differential, citations, trends and controlled failure paths; schema-enforced 0.92 ceiling; stage pinned first with its own citation budget; `ai_stage_missing` guard | Content coverage for every stage label in the curated corpus |
+| Live LLM | Configurable transport and validated mapping; stage and scan trend in the prompt (resolves HB-03) | Record a rehearsed run against a real model; no automated live check exists |
+| Retrieval | Mock corpus default; curated FTS retriever, ingestion CLI, review gate, PostgreSQL tests and prompt hardening landed (ADR-007 accepted) | A named reviewer approves the five drafts, moves them to `documents/`, lists them in the manifest and runs ingestion |
+| Imaging model | Mock default; live general-vision stager on one slice, stored per (checksum, model) | ADR-008 accepted; blank-slice and not-an-MRI handling fixed (HB-21/22). Next, select/train/evaluate a real staging model with dataset provenance behind the same seam |
 | Review | Sign-off records id/time and gates report creation | Amendment workflow and explicit review-role policy |
 | Reports | Snapshot storage and PDF generation exist | Include reviewer details and address analysis/report input-time mismatch |
 | Dashboard | Current clinical calls, server order, filters and error states | Full browser rehearsal and larger-panel pagination strategy |
-| Testing | 437 backend tests passed; frontend tests and CI exist | Local frontend execution, PostgreSQL migration/integration verification and full UI journey |
-| Deployment | Dockerfiles and Compose definition exist | Supply required SMTP settings, scan volume/object store, confirm boot/restart behavior |
-| Documentation | Requirements, seven ADRs including one proposal, Graphify context exist | Reconcile stale APP-FLOW/README/progress/checklists and graph freshness |
+| Testing | 523 backend tests passed, 12 PostgreSQL tests skipped locally (run in CI); frontend tests and CI exist | Local frontend execution, PostgreSQL migration/integration verification and full UI journey |
+| Deployment | Compose runs Postgres, migrations, API and frontend; scans on a named volume; console OTP by default; AI settings passed through | Confirm a clean boot/restart; decide on object storage for scans |
+| Documentation | Requirements, eight accepted ADRs, Graphify context exist | Reconcile stale APP-FLOW/README/progress/checklists and graph freshness |
 
-The development sequence recorded in AGENTS.md is SEC-01, AUTH-01, PAT-01, CASE-01, AI-01, REPORT-01, AI-02a, SCAN-01, SCAN-02, REVIEW-01, DASH-01, then AI-02b. The inspected repository has artifacts across all those phases except implemented AI-02b. Artifact presence does not mean every acceptance criterion in a phase is complete.
+The development sequence recorded in AGENTS.md is SEC-01, AUTH-01, PAT-01, CASE-01, AI-01, REPORT-01, AI-02a, SCAN-01, SCAN-02, REVIEW-01, DASH-01, then AI-02b. The inspected repository has artifacts across all those phases. AI-02b code is done and its content is pending review; live vision staging (ADR-008) came after it. Artifact presence does not mean every acceptance criterion in a phase is complete.
 
 Recommended next work, as an **audit recommendation rather than an approved implementation plan**:
 
-1. Rehearse the full synthetic browser journey and close the input/retry issues that block it.
-2. Fix live imaging context, stage handling/ranking, report reviewer fields and temporal context consistency.
-3. Make demo deployment restart-safe and configuration-complete.
-4. Review and implement the curated retrieval plan, with a named reviewer and licensed source passages.
-5. Integrate and evaluate real imaging separately from software-contract tests.
-6. Reconcile documentation and refresh recorded context after verified changes.
+1. Name a clinical reviewer and get the five pending corpus drafts reviewed and ingested. This is the only thing between the code and live retrieval.
+2. Rehearse the full synthetic browser journey with all three seams live, and record it.
+3. Report reviewer fields, temporal context consistency and scan dimensions (HB-05, HB-11, HB-15).
+4. Integrate and evaluate a real imaging model separately from software-contract tests.
 
 No schedule or remaining-effort estimate is established. The team should assign owners and dates after reviewing these tasks.
 
 ## 16. Tests and what they prove
 
-PR preparation reran the full backend suite at `a01ae83`: **437 passed in 7.68 seconds**, using a sandbox-permitted temporary directory. The original audit at `5d391b1` passed 414 tests in 30.33 seconds after recovering from five permission-related fixture setup errors. These were environment errors, not demonstrated product failures. Test settings use development mode, explicitly disable OTP where appropriate and use console delivery; dedicated tests cover enforced OTP and rate limits.
+The AI pipeline refresh reran the full backend suite at `c336492` in a clean venv built from the pinned requirements: **523 passed, 12 skipped in 16 seconds**. The 12 skipped are the PostgreSQL-only corpus tests, which run in CI against a `postgres:16-alpine` service. Earlier, PR preparation reran the suite at `a01ae83`: 437 passed in 7.68 seconds, using a sandbox-permitted temporary directory. The original audit at `5d391b1` passed 414 tests in 30.33 seconds after recovering from five permission-related fixture setup errors. These were environment errors, not demonstrated product failures. Test settings use development mode, explicitly disable OTP where appropriate and use console delivery; dedicated tests cover enforced OTP and rate limits.
 
-Tests cover auth, authorization, repositories, visits, input validation, AI contracts, staging determinism, citation resolution, trend behavior, report generation, controlled failures and synthetic seed scenarios. Live LLM transport tests use mocked HTTP; they are not evidence of a current live endpoint's availability or clinical quality.
+Tests cover auth, authorization, repositories, visits, input validation, AI contracts, staging determinism, citation resolution, trend behavior, report generation, controlled failures and synthetic seed scenarios. Live LLM and live vision tests use `httpx.MockTransport`; they are not evidence of a current live endpoint's availability or clinical quality. AI test files: `test_ai_orchestrator`, `test_ai_mock_providers`, `test_ai_live_llm`, `test_ai_live_staging`, `test_ai_staging`, `test_ai_corpus_retriever`, plus `tests/postgres/` for real full-text search and ingestion.
 
 The suite defaults to in-memory SQLite, uses selected real persistence tests and mocks for PostgreSQL-specific paths. Patient's PostgreSQL ARRAY fields prevent treating this as a complete SQLite replica of the production schema. Seed scenario tests replay the pipeline without inserting the whole patient schema into a real database.
 
@@ -509,7 +578,9 @@ Core configuration names to recognize:
 | `OTP_DELIVERY` | `email` default; `console` permits local synthetic-data rehearsal |
 | `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD` | Required when `OTP_DELIVERY=email`; optional with console delivery |
 | `AI_PROVIDER` | `mock` default, or `live-llm` |
-| `AI_STAGING_PROVIDER` | Only `mock` currently allowed |
+| `AI_STAGING_PROVIDER` | `mock` default, or `live-vision` (needs the API key) |
+| `AI_VISION_MODEL` | Vision-capable model id on the same endpoint; default `qwen/qwen3.8-27b` |
+| `AI_RETRIEVAL_PROVIDER` | `mock` default, or `corpus` (needs `live-llm` and PostgreSQL) |
 | `AI_MAX_CANDIDATES` / `AI_EVIDENCE_PER_CANDIDATE` | Defaults 5 / 3 |
 | `AI_LLM_BASE_URL`, `AI_LLM_MODEL`, `AI_LLM_API_KEY` | Configure compatible reasoning endpoint; a live selection requires a key |
 | `AI_LLM_TIMEOUT_SECONDS` | Default 30 seconds per request attempt |
@@ -518,13 +589,13 @@ Core configuration names to recognize:
 | `SESSION_COOKIE_SECURE` | True by default; false permitted only outside production |
 | `NEXT_PUBLIC_API_URL` | Frontend URL including `/api/v1`, localhost:8000 default. Must share the frontend's host for `proxy.ts` to see the session cookie |
 
-`AI_RETRIEVAL_PROVIDER=corpus` belongs to the proposal; it is not an implemented setting. Public example files contain placeholders and development defaults, which should not be treated as production configuration. This handbook does not verify a configured hosted model id is currently available.
+`AI_LLM_MAX_OUTPUT_TOKENS` (default 2048) caps both live calls. Public example files contain placeholders and development defaults, which should not be treated as production configuration. This handbook does not verify a configured hosted model id is currently available.
 
-The Compose API service currently omits Gmail settings while email delivery is the default, and backend Docker build excludes `.env`. Thus the checked-in definition is incomplete for clean API boot with default OTP delivery. Explicit console delivery avoids the Gmail configuration requirement for local synthetic-data rehearsal. It also lacks scan-storage mounting. Do not rely on the older “Compose runs” claim without testing a correctly configured environment.
+Compose now defaults to `OTP_DELIVERY=console`, mounts scans on the `neuroone_scan_data` volume, runs the frontend, and passes every `AI_*` setting through from the host (mock by default). This resolves HB-10 on paper; a clean boot and restart was not re-run in this refresh.
 
-The seed script creates six synthetic patients across two clinician accounts. Rerunning it deletes and recreates data for those demo usernames and deletes their stored scan files. It is a reset tool, not a harmless read-only preview. This audit did not run it against a live database. The ingest, embedding and backup scripts currently contain only docstrings.
+The seed script creates six synthetic patients across two clinician accounts. Rerunning it deletes and recreates data for those demo usernames and deletes their stored scan files. It is a reset tool, not a harmless read-only preview. This audit did not run it against a live database. `scripts/ingest_documents.py` is implemented (validate every file, then load in one transaction; `--dry-run` writes nothing). The embedding and backup scripts still contain only docstrings.
 
-Sources: [config](../../backend/app/core/config.py), [Compose](../../docker-compose.yml), [Dockerfile](../../backend/Dockerfile), [seed](../../scripts/seed_demo_case.py), [ingest stub](../../scripts/ingest_documents.py), [embedding stub](../../scripts/build_embeddings.py), [backup stub](../../scripts/backup.py).
+Sources: [config](../../backend/app/core/config.py), [Compose](../../docker-compose.yml), [Dockerfile](../../backend/Dockerfile), [seed](../../scripts/seed_demo_case.py), [ingestion CLI](../../scripts/ingest_documents.py), [embedding stub](../../scripts/build_embeddings.py), [backup stub](../../scripts/backup.py).
 
 ## 18. Graphify and project memory
 
@@ -559,8 +630,11 @@ Sources: [root graph report](../../graphify-out/GRAPH_REPORT.md), [dated graph r
 | Foreign key | Database relationship tying one record to another |
 | JWT | Signed expiring token; signing is not the same as encrypting its contents |
 | Soft delete | Mark a row deleted and hide it from normal reads without physically erasing it |
-| Checksum | Digest of bytes used here as stored file metadata and mock staging input |
-| Full-text search | Proposed PostgreSQL lexical search over curated passages |
+| Checksum | Digest of bytes used as stored file metadata, mock staging input and the key for stored live stages |
+| Full-text search | PostgreSQL lexical search (`tsvector`, `ts_rank_cd`) over curated passages; no embeddings |
+| Embedding | A learned vector for a text; **not used** in this project (ADR-007 chose full-text search) |
+| Vision model | A model that accepts an image; used here to estimate a stage from one MRI slice |
+| Review gate | `pending/` → human check → `documents/` + manifest; only reviewed files can be ingested |
 | PHI | Patient-identifying health information requiring privacy controls |
 
 Practice without the document:
@@ -569,9 +643,11 @@ Practice without the document:
 2. Draw patient, visit, scan, analysis, finding, evidence and report relationships.
 3. Describe an analysis request from the browser to persistence.
 4. Explain why a low confidence score does not automatically create `early_watch`.
-5. Explain why live LLM does not mean live RAG or live MRI inference.
+5. Explain why live LLM does not mean live RAG or validated MRI inference, and why `corpus` mode currently returns `rag_no_evidence`.
 6. Name one accepted design tradeoff and one implementation gap for each subsystem you present.
-7. Explain what 437 passing tests establish and what they do not establish.
+7. Explain what 523 passing tests establish and what they do not establish.
+9. Explain how a live stage result is stored, and one cost of storing it.
+10. Explain why the curated corpus uses full-text search rather than embeddings.
 8. Describe the next work without inventing owners, dates or results.
 
 Use the [AI tutor](STUDY-WITH-AI.md) to mark your answers and repeat only the concepts you miss.

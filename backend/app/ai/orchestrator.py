@@ -103,7 +103,8 @@ class AnalysisOrchestrator:
         feed ``detect_stage_trend`` (ADR-006 consequence: without this, the
         scan contributes nothing to trend-aware early detection). A prior
         visit's own persisted analysis, if any, is not reused -- the mock is
-        deterministic and the live stager caches per checksum (ADR-008), so
+        deterministic and the live stager is served from the
+        ``staging_results`` table per (checksum, model) (ADR-008), so
         re-running it here is cheap and keeps this module the only place that
         talks to the provider.
         """

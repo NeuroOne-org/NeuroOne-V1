@@ -24,6 +24,10 @@ from app.schemas.analysis import MAX_CONFIDENCE
 from app.schemas.imaging import RegionContribution, StagingRequest, StagingResult
 
 
+# The model's way to decline. Never a stage: a declined image must not become
+# a stored, pinned "Cognitively normal" candidate (audit HB-22).
+NOT_MRI = "NOT_MRI"
+
 SYSTEM_PROMPT = f"""You are a decision-support assistant estimating a \
 dementia stage from one 2D slice of a brain MRI. Your estimate is one input \
 for a clinician, never a diagnosis.
@@ -43,8 +47,9 @@ Hard rules:
 ventricular enlargement) most informed the stage.
 - confidence is a likelihood, never a certainty. It must not exceed \
 {MAX_CONFIDENCE}. A single slice is limited evidence, so be conservative.
-- If the image is not a brain MRI, still return the shape with stage "CN" \
-and confidence 0.0."""
+- If the image is not a brain MRI, or you cannot read it, return the shape \
+with stage "{NOT_MRI}" and confidence 0.0. Never guess "CN" for an image you \
+cannot read."""
 
 
 class LiveRegionPayload(BaseModel):
@@ -101,6 +106,12 @@ class LiveImagingStager:
         }
 
     def _to_result(self, payload: LiveStagingPayload) -> StagingResult:
+        # Raising here, before StoredImagingStager stores anything, turns a
+        # declined or zero-likelihood read into a retryable staging_error.
+        if payload.stage == NOT_MRI:
+            raise ValueError("live staging provider could not read a brain MRI")
+        if payload.confidence <= 0:
+            raise ValueError("live staging provider returned no likelihood")
         if payload.stage not in STAGES:
             raise ValueError("live staging provider returned an unknown stage")
 

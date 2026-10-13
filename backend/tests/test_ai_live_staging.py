@@ -110,6 +110,10 @@ def test_clamps_confidence_and_drops_unknown_regions():
         ("not json", ValidationError),
         ({"stage": "MCI", "confidence": 0.5, "verdict": "x"}, ValidationError),
         ({"stage": "Alzheimer's", "confidence": 0.5}, ValueError),
+        # A declined read, and a stage with no likelihood, are failures, not
+        # a "Cognitively normal" candidate (audit HB-22).
+        ({"stage": "NOT_MRI", "confidence": 0.0}, ValueError),
+        ({"stage": "CN", "confidence": 0.0}, ValueError),
     ],
 )
 def test_malformed_output_raises(content, error):
@@ -182,6 +186,16 @@ def test_a_failed_staging_call_stores_nothing():
     assert store.get(REQUEST.checksum, "test-vision-v1") is None
 
 
+def test_a_declined_read_stores_nothing():
+    store = _store()
+    with pytest.raises(ValueError):
+        StoredImagingStager(
+            _stager({"stage": "NOT_MRI", "confidence": 0.0}), store
+        ).stage(REQUEST)
+
+    assert store.get(REQUEST.checksum, "test-vision-v1") is None
+
+
 def test_registry_builds_and_refuses_live_vision():
     _, _, stager = build_providers(
         _settings(), scan_images=FakeImages(), staging_store=_store()
@@ -208,7 +222,9 @@ def _decoded(png: bytes) -> Image.Image:
 
 def test_render_png_reencodes_jpeg_to_greyscale_png():
     source = io.BytesIO()
-    Image.new("RGB", (8, 6), (200, 10, 10)).save(source, format="JPEG")
+    rgb = np.zeros((6, 8, 3), dtype=np.uint8)
+    rgb[:, 4:] = (200, 10, 10)
+    Image.fromarray(rgb).save(source, format="JPEG")
 
     image = _decoded(render_png(source.getvalue(), "scan.jpg"))
     assert (image.size, image.mode) == ((8, 6), "L")
@@ -226,3 +242,24 @@ def test_render_png_takes_middle_slice_of_nifti(filename):
     # rot90 of a 10x12 slice; a non-middle slice would render all black.
     assert pixels.shape == (12, 10)
     assert pixels.max() == 255
+
+
+def _nifti(volume):
+    return nibabel.Nifti1Image(volume.astype(np.float32), np.eye(4)).to_bytes()
+
+
+def test_render_png_survives_a_nan_voxel():
+    volume = np.zeros((10, 12, 5), dtype=np.float32)
+    volume[:, :, 2] = np.arange(120).reshape(10, 12)
+    volume[0, 0, 2] = np.nan
+
+    pixels = np.asarray(_decoded(render_png(_nifti(volume), "brain.nii")))
+    # Audit HB-21: one NaN used to render the whole slice black.
+    assert pixels.max() == 255
+
+
+@pytest.mark.parametrize("fill", [0.0, 7.0, np.nan])
+def test_render_png_refuses_a_blank_slice(fill):
+    volume = np.full((10, 12, 5), fill, dtype=np.float32)
+    with pytest.raises(ValueError, match="blank"):
+        render_png(_nifti(volume), "brain.nii")
