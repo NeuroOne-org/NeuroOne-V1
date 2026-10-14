@@ -12,8 +12,10 @@ import tracemalloc
 import httpx
 import nibabel
 import numpy as np
+import pydicom
 import pytest
 from PIL import Image
+from pydicom.dataset import FileDataset, FileMetaDataset
 from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -27,7 +29,7 @@ from app.core.config import Settings
 from app.schemas.analysis import MAX_CONFIDENCE
 from app.schemas.imaging import StagingRequest
 from app.models.staging import StagingRecord
-from app.services.scan_images import render_png
+from app.services.scan_images import read_dimensions, render_png
 from app.services.staging_store import SessionStagingStore
 
 
@@ -293,3 +295,74 @@ def test_render_png_refuses_an_oversized_slice_before_reading_it():
 
     with pytest.raises(ValueError, match="too large"):
         render_png(content, "brain.nii.gz")
+
+
+def _dicom(frames, *, syntax=pydicom.uid.ExplicitVRLittleEndian, samples=1, size=None):
+    """An uncompressed DICOM; ``frames`` is (n, rows, cols[, samples]) uint8."""
+    meta = FileMetaDataset()
+    meta.TransferSyntaxUID = syntax
+    meta.MediaStorageSOPClassUID = pydicom.uid.MRImageStorage
+    meta.MediaStorageSOPInstanceUID = pydicom.uid.generate_uid()
+    ds = FileDataset("scan.dcm", {}, file_meta=meta, preamble=bytes(128))
+    rows, columns = size or frames.shape[1:3]
+    ds.Rows, ds.Columns = rows, columns
+    ds.NumberOfFrames = frames.shape[0]
+    ds.BitsAllocated, ds.BitsStored, ds.HighBit = 8, 8, 7
+    ds.SamplesPerPixel, ds.PixelRepresentation = samples, 0
+    ds.PhotometricInterpretation = "RGB" if samples == 3 else "MONOCHROME2"
+    if samples == 3:
+        ds.PlanarConfiguration = 0
+    ds.PixelData = frames.tobytes()
+    out = io.BytesIO()
+    pydicom.dcmwrite(out, ds, enforce_file_format=True)
+    return out.getvalue()
+
+
+def test_render_png_reads_one_dicom_frame_not_every_frame():
+    frames = np.zeros((512, 256, 256), dtype=np.uint8)
+    frames[256] = np.arange(256, dtype=np.uint8)
+    content = _dicom(frames)
+    del frames
+
+    tracemalloc.start()
+    pixels = np.asarray(_decoded(render_png(content, "scan.dcm")))
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    # Only the middle frame is non-blank, so a wrong frame would raise.
+    assert pixels.shape == (256, 256)
+    assert peak < 8 * 1024 * 1024
+
+
+def test_render_png_renders_a_colour_dicom_as_the_whole_image():
+    frame = np.zeros((1, 6, 8, 3), dtype=np.uint8)
+    frame[0, :, 4:] = (200, 10, 10)
+
+    pixels = np.asarray(_decoded(render_png(_dicom(frame, samples=3), "scan.dcm")))
+
+    # Used to take the middle row and render an 8x3 strip.
+    assert pixels.shape == (6, 8)
+
+
+def test_render_png_refuses_an_oversized_dicom_frame_before_reading_it():
+    content = _dicom(np.zeros((1, 2, 2), dtype=np.uint8), size=(30_000, 30_000))
+
+    with pytest.raises(ValueError, match="too large"):
+        render_png(content, "scan.dcm")
+
+
+def test_a_deflated_dicom_is_refused_without_inflating_it():
+    """Deflated DICOM is zlib over the whole dataset; pydicom inflates it at once."""
+    content = _dicom(
+        np.zeros((256, 256, 1024), dtype=np.uint8),
+        syntax=pydicom.uid.DeflatedExplicitVRLittleEndian,
+    )
+
+    tracemalloc.start()
+    for read in (render_png, read_dimensions):
+        with pytest.raises(ValueError, match="Deflated"):
+            read(content, "scan.dcm")
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert peak < 8 * 1024 * 1024

@@ -66,13 +66,36 @@ def _nifti_slice(content: bytes, extension: str) -> np.ndarray:
     return np.rot90(pixels) if len(shape) > 2 else pixels
 
 
+def _dicom_header(content: bytes) -> pydicom.Dataset:
+    """The dataset without pixel data, refusing Deflated DICOM first.
+
+    Deflated DICOM is zlib over the whole dataset, and pydicom inflates it
+    in one go even with stop_before_pixels, so a small upload could expand
+    ~1000x. Only the file meta is read before deciding.
+    """
+
+    stream = io.BytesIO(content)
+    pydicom.filereader.read_preamble(stream, False)
+    meta = pydicom.filereader._read_file_meta_info(stream)
+    if meta.get("TransferSyntaxUID") == pydicom.uid.DeflatedExplicitVRLittleEndian:
+        raise ValueError("Deflated DICOM is not accepted")
+    return pydicom.dcmread(io.BytesIO(content), stop_before_pixels=True)
+
+
 def _dicom_slice(content: bytes) -> np.ndarray:
     # Pixel data only: the dataset's headers carry PHI and are never read
     # further or forwarded.
-    pixels = pydicom.dcmread(io.BytesIO(content)).pixel_array
-    while pixels.ndim > 2:
-        pixels = pixels[pixels.shape[0] // 2]
-    return pixels
+    header = _dicom_header(content)
+    if header.Rows * header.Columns > _MAX_SLICE_PIXELS:
+        raise ValueError(
+            f"scan slice is too large to render: {(header.Rows, header.Columns)}"
+        )
+
+    # Decode only the middle frame, never the whole multi-frame volume.
+    frames = int(header.get("NumberOfFrames", 1) or 1)
+    pixels = pydicom.pixels.pixel_array(io.BytesIO(content), index=frames // 2)
+    # A colour frame is (rows, columns, samples); average it to greyscale.
+    return pixels.mean(axis=-1) if pixels.ndim == 3 else pixels
 
 
 def read_dimensions(content: bytes, filename: str) -> dict[str, int]:
@@ -91,7 +114,7 @@ def read_dimensions(content: bytes, filename: str) -> dict[str, int]:
         shape = nibabel.Nifti1Header.from_fileobj(stream).get_data_shape()
         width, height, slices = (tuple(shape[:3]) + (1, 1))[:3]
     elif extension == ".dcm":
-        header = pydicom.dcmread(io.BytesIO(content), stop_before_pixels=True)
+        header = _dicom_header(content)
         width, height = header.Columns, header.Rows
         slices = header.get("NumberOfFrames", 1)
     else:
