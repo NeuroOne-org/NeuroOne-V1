@@ -7,6 +7,7 @@ leave an orphaned file in storage.
 
 import gzip
 import io
+import tracemalloc
 from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
@@ -20,6 +21,7 @@ from pydicom.uid import ExplicitVRLittleEndian
 
 from app.models.user import User, UserRole
 from app.models.visit import Visit, VisitStatus
+from app.services.scan_images import read_dimensions
 from app.services.scan_service import ScanService
 from app.utils.exceptions import (
     ConflictError,
@@ -315,11 +317,30 @@ def test_bytes_that_are_not_the_named_format_are_rejected(filename) -> None:
     with pytest.raises(ValidationApplicationError, match="could not be read"):
         service.upload_scan(
             Mock(), uuid4(), _user(),
-            filename=filename, content_type="application/octet-stream", content=b"x",
+            # Longer than a NIfTI header, so a header-only parser must reject
+            # the content, not just run out of bytes.
+            filename=filename, content_type="application/octet-stream",
+            content=b"x" * 512,
         )
 
     storage.save.assert_not_called()
     repository.create.assert_not_called()
+
+
+def test_a_compressed_nifti_is_not_inflated_to_read_its_header() -> None:
+    """A small .nii.gz can expand ~1000x; only the header may be read."""
+    header = nibabel.Nifti1Image(
+        np.zeros((5, 6, 7), dtype=np.uint8), np.eye(4)
+    ).to_bytes()
+    bomb = gzip.compress(header + bytes(64 * 1024 * 1024), compresslevel=1)
+
+    tracemalloc.start()
+    dimensions = read_dimensions(bomb, "brain.nii.gz")
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert dimensions == {"width": 5, "height": 6, "slices": 7}
+    assert peak < 8 * 1024 * 1024
 
 
 # --------------------------------------------------------------------------

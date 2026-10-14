@@ -70,9 +70,12 @@ def read_dimensions(content: bytes, filename: str) -> dict[str, int]:
 
     extension = _scan_extension(filename)
     if extension in {".nii", ".nii.gz"}:
+        # Stream the header only: a small .nii.gz can inflate ~1000x, so
+        # never decompress the whole upload just to read its shape.
+        stream = io.BytesIO(content)
         if extension == ".nii.gz":
-            content = gzip.decompress(content)
-        shape = nibabel.Nifti1Image.from_bytes(content).header.get_data_shape()
+            stream = gzip.GzipFile(fileobj=stream)
+        shape = nibabel.Nifti1Header.from_fileobj(stream).get_data_shape()
         width, height, slices = (tuple(shape[:3]) + (1, 1))[:3]
     elif extension == ".dcm":
         header = pydicom.dcmread(io.BytesIO(content), stop_before_pixels=True)
