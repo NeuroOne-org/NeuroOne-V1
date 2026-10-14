@@ -12,6 +12,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.ai.context import build_clinical_context
 from app.models.analysis import (
     Analysis,
     AnalysisEvidence,
@@ -169,10 +170,18 @@ def _service():
     return service, repository, analysis_service, visit_service, patient_service
 
 
+def _context(visit: Visit, patient: Patient) -> dict:
+    """What AnalysisService.analyze_visit persists as context_snapshot."""
+    return build_clinical_context(visit, patient=patient, today=NOW.date()).model_dump(
+        mode="json"
+    )
+
+
 def _wire_happy_path(analysis_service, visit_service, patient_service):
     patient = _patient()
     visit = _visit(patient.id)
     analysis = _analysis(visit.id)
+    analysis.context_snapshot = _context(visit, patient)
     analysis_service.get_analysis.return_value = analysis
     visit_service.get_visit.return_value = visit
     patient_service.get_patient.return_value = patient
@@ -200,6 +209,33 @@ def test_generating_a_report_persists_a_snapshot() -> None:
     assert report.filename == f"neuroone-report-{report.id}.pdf"
     assert report.snapshot["patient"]["full_name"] == "Ada Lovelace"
     assert report.snapshot["findings"][0]["condition_name"] == "Parkinsonian syndrome"
+
+
+def test_the_report_shows_the_case_as_the_analysis_saw_it() -> None:
+    """HB-12: edits after the analysis must not reach the report."""
+    service, repository, analysis_service, visit_service, patient_service = (
+        _service()
+    )
+    analysis, visit, patient = _wire_happy_path(
+        analysis_service, visit_service, patient_service
+    )
+    repository.create.side_effect = lambda db, obj: obj
+
+    visit.chief_complaint = "edited after sign-off"
+    visit.symptoms = [_symptom(symptom_name="headache", severity=2)]
+    patient.dob = date(1990, 1, 1)
+    patient.last_name = "Byron"
+
+    report = service.generate_report(Mock(), analysis.id, _user())
+
+    assert report.snapshot["visit"]["chief_complaint"] == "intermittent hand tremor"
+    assert [s["symptom_name"] for s in report.snapshot["visit"]["symptoms"]] == [
+        "resting tremor"
+    ]
+    assert report.snapshot["patient"]["age_years"] == 62
+    # The name is identification, not a clinical input, and the AI context
+    # never carries it, so it stays current.
+    assert report.snapshot["patient"]["full_name"] == "Ada Byron"
 
 
 def test_an_unreviewed_analysis_refuses_report_generation() -> None:
@@ -283,6 +319,7 @@ def test_no_early_watch_finding_loses_its_trend_basis_in_the_snapshot() -> None:
     patient = _patient()
     visit = _visit(patient.id)
     analysis = _analysis(visit.id, findings=[finding])
+    analysis.context_snapshot = _context(visit, patient)
     analysis_service.get_analysis.return_value = analysis
     visit_service.get_visit.return_value = visit
     patient_service.get_patient.return_value = patient
