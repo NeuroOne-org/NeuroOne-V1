@@ -103,6 +103,18 @@ def _build_story(snapshot: ReportSnapshot) -> list:
             "Generated "
             f"{snapshot.generated_at.astimezone(timezone.utc):%Y-%m-%d %H:%M} UTC"
         ),
+    ]
+
+    # Reports stored before HB-05 carry no reviewer; they still re-render.
+    if snapshot.reviewed_by_name and snapshot.reviewed_at:
+        story.append(
+            _p(
+                f"Signed off by {snapshot.reviewed_by_name} on "
+                f"{snapshot.reviewed_at.astimezone(timezone.utc):%Y-%m-%d %H:%M} UTC"
+            )
+        )
+
+    story += [
         Spacer(1, 8),
         Paragraph(_safe(snapshot.disclaimer), _DISCLAIMER),
         Spacer(1, 10),

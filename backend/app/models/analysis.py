@@ -32,6 +32,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .user import User
     from .visit import Visit
 
 
@@ -107,6 +108,10 @@ class Analysis(BaseModel):
     reviewed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    # Two foreign keys point at users, so the join must be named.
+    reviewed_by: Mapped["User | None"] = relationship(
+        "User", foreign_keys=[reviewed_by_id]
     )
 
     findings: Mapped[list["AnalysisFinding"]] = relationship(

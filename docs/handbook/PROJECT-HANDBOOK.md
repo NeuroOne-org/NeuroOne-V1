@@ -50,7 +50,7 @@ Sources: [PRD §1–§4 and §7](../PRD.md), [MVP purpose and early-detection de
 | FR-04 Differential diagnosis | Ranked possibilities with uncertainty and reasoning | Enforced structured output and likelihood bands. A scanned visit's stage estimate is pinned first, and an analysis that loses it fails with `ai_stage_missing`. |
 | FR-05 Literature retrieval | Trusted literature with preserved metadata | Two retrievers: the simulated fixture corpus (default) and a curated PostgreSQL full-text retriever (`AI_RETRIEVAL_PROVIDER=corpus`). The curated corpus holds no reviewed content yet, so it cannot return evidence. |
 | FR-06 Explainability | Patient findings, reasoning, evidence and citations | Backend returns them and current UI renders them. Mock imaging region values are not scientific attributions. |
-| FR-07 Report | Clinical information, findings, citations, disclaimer and review details | PDF creation is gated by sign-off. Snapshot/PDF omits reviewer identity and sign-off time despite the revised requirement. |
+| FR-07 Report | Clinical information, findings, citations, disclaimer and review details | PDF creation is gated by sign-off. The PDF names the reviewer and sign-off time (HB-05), and its clinical inputs come from the analysis's own context snapshot (HB-12). |
 | FR-08 Scan intake and staging | Scan per visit, retention, staging and provenance | Scan intake/storage, mock staging and an opt-in live vision stager exist. The live stager reads one rendered 2D slice through a general vision model; it is not a validated radiology classifier. Dimensions are still stored as an empty object by upload. |
 
 MRI became in scope through accepted ADR-006 and revised PRD text. The APP-FLOW document still contains its earlier MRI exclusion. This is a documented inconsistency, not a reason to describe the inspected scan functionality as nonexistent.
@@ -510,7 +510,7 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Retrieval | Mock corpus default; curated FTS retriever, ingestion CLI, review gate, PostgreSQL tests and prompt hardening landed (ADR-007 accepted) | A named reviewer approves the five drafts, moves them to `documents/`, lists them in the manifest and runs ingestion |
 | Imaging model | Mock default; live general-vision stager on one slice, stored per (checksum, model) | ADR-008 accepted; blank-slice and not-an-MRI handling fixed (HB-21/22). Next, select/train/evaluate a real staging model with dataset provenance behind the same seam |
 | Review | Sign-off records id/time and gates report creation | Amendment workflow and explicit review-role policy |
-| Reports | Snapshot storage and PDF generation exist | Include reviewer details and address analysis/report input-time mismatch |
+| Reports | Snapshot storage and PDF generation exist; reviewer and sign-off time in the PDF (HB-05); inputs taken from the analysis snapshot (HB-12) | Nothing open in the report itself |
 | Dashboard | Current clinical calls, server order, filters and error states | Full browser rehearsal and larger-panel pagination strategy |
 | Testing | 523 backend tests passed, 12 PostgreSQL tests skipped locally (run in CI); frontend tests and CI exist | Local frontend execution, PostgreSQL migration/integration verification and full UI journey |
 | Deployment | Compose runs Postgres, migrations, API and frontend; scans on a named volume; console OTP by default; AI settings passed through | Confirm a clean boot/restart; decide on object storage for scans |
@@ -522,7 +522,7 @@ Recommended next work, as an **audit recommendation rather than an approved impl
 
 1. Name a clinical reviewer and get the five pending corpus drafts reviewed and ingested. This is the only thing between the code and live retrieval.
 2. Rehearse the full synthetic browser journey with all three seams live, and record it.
-3. Report reviewer fields, temporal context consistency and scan dimensions (HB-05, HB-11, HB-15).
+3. Record scan dimensions (HB-15). Reviewer fields, temporal history and report input consistency are done (HB-05, HB-11, HB-12).
 4. Integrate and evaluate a real imaging model separately from software-contract tests.
 
 No schedule or remaining-effort estimate is established. The team should assign owners and dates after reviewing these tasks.

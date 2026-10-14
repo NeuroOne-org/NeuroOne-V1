@@ -96,6 +96,11 @@ class ReportSnapshot(BaseModel):
     pipeline_note: str
     disclaimer: str
     generated_at: datetime
+    # FR-07: who signed the analysis off and when. Optional only so reports
+    # stored before HB-05 still validate and re-render; every new report
+    # sets both, because generation requires sign-off.
+    reviewed_by_name: str | None = None
+    reviewed_at: datetime | None = None
     findings: list[ReportFindingSnapshot] = Field(min_length=1)
 
 
