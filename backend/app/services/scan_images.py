@@ -7,6 +7,7 @@ the rendered PNG, never the storage key, filename or file headers.
 
 import gzip
 import io
+from pathlib import Path
 
 import nibabel
 import numpy as np
@@ -15,8 +16,14 @@ from PIL import Image
 
 from app.core.database import SessionLocal
 from app.repositories.scan_repository import ScanRepository
-from app.services.scan_service import _scan_extension
 from app.storage.scan_storage import ScanStorage
+
+
+def _scan_extension(filename: str) -> str:
+    name = filename.lower()
+    if name.endswith(".nii.gz"):
+        return ".nii.gz"
+    return Path(name).suffix
 
 
 def _to_uint8(pixels: np.ndarray) -> np.ndarray:
@@ -53,6 +60,30 @@ def _dicom_slice(content: bytes) -> np.ndarray:
     while pixels.ndim > 2:
         pixels = pixels[pixels.shape[0] // 2]
     return pixels
+
+
+def read_dimensions(content: bytes, filename: str) -> dict[str, int]:
+    """Parse the file's header for its geometry; raise if it isn't that format.
+
+    Headers only: DICOM stops before pixel data and PHI is not kept.
+    """
+
+    extension = _scan_extension(filename)
+    if extension in {".nii", ".nii.gz"}:
+        # Stream the header only: a small .nii.gz can inflate ~1000x, so
+        # never decompress the whole upload just to read its shape.
+        stream = io.BytesIO(content)
+        if extension == ".nii.gz":
+            stream = gzip.GzipFile(fileobj=stream)
+        shape = nibabel.Nifti1Header.from_fileobj(stream).get_data_shape()
+        width, height, slices = (tuple(shape[:3]) + (1, 1))[:3]
+    elif extension == ".dcm":
+        header = pydicom.dcmread(io.BytesIO(content), stop_before_pixels=True)
+        width, height = header.Columns, header.Rows
+        slices = header.get("NumberOfFrames", 1)
+    else:
+        (width, height), slices = Image.open(io.BytesIO(content)).size, 1
+    return {"width": int(width), "height": int(height), "slices": int(slices)}
 
 
 def render_png(content: bytes, filename: str) -> bytes:
@@ -96,4 +127,4 @@ class StorageScanImages:
         return render_png(self._storage.load(storage_key), filename)
 
 
-__all__ = ["StorageScanImages", "render_png"]
+__all__ = ["StorageScanImages", "read_dimensions", "render_png"]

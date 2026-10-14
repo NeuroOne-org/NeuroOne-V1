@@ -51,7 +51,7 @@ Sources: [PRD §1–§4 and §7](../PRD.md), [MVP purpose and early-detection de
 | FR-05 Literature retrieval | Trusted literature with preserved metadata | Two retrievers: the simulated fixture corpus (default) and a curated PostgreSQL full-text retriever (`AI_RETRIEVAL_PROVIDER=corpus`). The curated corpus holds no reviewed content yet, so it cannot return evidence. |
 | FR-06 Explainability | Patient findings, reasoning, evidence and citations | Backend returns them and current UI renders them. Mock imaging region values are not scientific attributions. |
 | FR-07 Report | Clinical information, findings, citations, disclaimer and review details | PDF creation is gated by sign-off. The PDF names the reviewer and sign-off time (HB-05), and its clinical inputs come from the analysis's own context snapshot (HB-12). |
-| FR-08 Scan intake and staging | Scan per visit, retention, staging and provenance | Scan intake/storage, mock staging and an opt-in live vision stager exist. The live stager reads one rendered 2D slice through a general vision model; it is not a validated radiology classifier. Dimensions are still stored as an empty object by upload. |
+| FR-08 Scan intake and staging | Scan per visit, retention, staging and provenance | Scan intake/storage, mock staging and an opt-in live vision stager exist. The live stager reads one rendered 2D slice through a general vision model; it is not a validated radiology classifier. |
 
 MRI became in scope through accepted ADR-006 and revised PRD text. The APP-FLOW document still contains its earlier MRI exclusion. This is a documented inconsistency, not a reason to describe the inspected scan functionality as nonexistent.
 
@@ -504,7 +504,7 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Foundation/security housekeeping | Config, health, centralized errors, hashing and server auth exist | Full security review, production configuration and session hardening |
 | Accounts | Password, default-enforced OTP, purpose isolation, auth rate limits, reset and admin create-account API exist | Multi-process OTP storage, leftover public signup cleanup, admin UI if required |
 | Patients/visits | CRUD, search, structured symptoms and history exist | Complete symptom fields in UI; temporal history filtering; new-intake resume behavior |
-| Scan intake | One scan per visit, local bytes and checksum metadata | Real format parsing/validation, dimensions, durable storage and broader failure cleanup |
+| Scan intake | One scan per visit, local bytes, checksum, header-parsed dimensions and format check (HB-15); failed inserts delete the stored file | Durable storage; MIME type is still client-supplied |
 | Analysis contract | Typed differential, citations, trends and controlled failure paths; schema-enforced 0.92 ceiling; stage pinned first with its own citation budget; `ai_stage_missing` guard | Content coverage for every stage label in the curated corpus |
 | Live LLM | Configurable transport and validated mapping; stage and scan trend in the prompt (resolves HB-03) | Record a rehearsed run against a real model; no automated live check exists |
 | Retrieval | Mock corpus default; curated FTS retriever, ingestion CLI, review gate, PostgreSQL tests and prompt hardening landed (ADR-007 accepted) | A named reviewer approves the five drafts, moves them to `documents/`, lists them in the manifest and runs ingestion |
@@ -522,7 +522,7 @@ Recommended next work, as an **audit recommendation rather than an approved impl
 
 1. Name a clinical reviewer and get the five pending corpus drafts reviewed and ingested. This is the only thing between the code and live retrieval.
 2. Rehearse the full synthetic browser journey with all three seams live, and record it.
-3. Record scan dimensions (HB-15). Reviewer fields, temporal history and report input consistency are done (HB-05, HB-11, HB-12).
+3. Reviewer fields, temporal history, report input consistency and scan dimensions are done (HB-05, HB-11, HB-12, HB-15).
 4. Integrate and evaluate a real imaging model separately from software-contract tests.
 
 No schedule or remaining-effort estimate is established. The team should assign owners and dates after reviewing these tasks.

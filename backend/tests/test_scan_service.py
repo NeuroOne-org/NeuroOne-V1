@@ -5,14 +5,23 @@ VisitService, and a conflict (a visit that already has a scan) must not
 leave an orphaned file in storage.
 """
 
+import gzip
+import io
+import tracemalloc
 from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
 
+import nibabel
+import numpy as np
+import pydicom
 import pytest
+from pydicom.dataset import FileDataset, FileMetaDataset
+from pydicom.uid import ExplicitVRLittleEndian
 
 from app.models.user import User, UserRole
 from app.models.visit import Visit, VisitStatus
+from app.services.scan_images import read_dimensions
 from app.services.scan_service import ScanService
 from app.utils.exceptions import (
     ConflictError,
@@ -23,6 +32,26 @@ from app.utils.exceptions import (
 
 
 NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+
+
+def _dicom(rows: int = 3, columns: int = 4) -> bytes:
+    meta = FileMetaDataset()
+    meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds = FileDataset("scan.dcm", {}, file_meta=meta, preamble=bytes(128))
+    ds.Rows, ds.Columns = rows, columns
+    ds.BitsAllocated, ds.BitsStored, ds.HighBit = 8, 8, 7
+    ds.SamplesPerPixel, ds.PixelRepresentation = 1, 0
+    ds.PhotometricInterpretation = "MONOCHROME2"
+    ds.PixelData = bytes(rows * columns)
+    out = io.BytesIO()
+    pydicom.dcmwrite(out, ds)
+    return out.getvalue()
+
+
+DICOM = _dicom()
+NIFTI_GZ = gzip.compress(
+    nibabel.Nifti1Image(np.zeros((5, 6, 7), dtype=np.uint8), np.eye(4)).to_bytes()
+)
 
 
 def _user(role: UserRole = UserRole.CLINICIAN) -> User:
@@ -83,13 +112,13 @@ def test_uploading_persists_a_checksum_of_the_actual_bytes() -> None:
         _user(),
         filename="scan.dcm",
         content_type="application/dicom",
-        content=b"scan-bytes",
+        content=DICOM,
     )
 
     import hashlib
 
-    assert scan.checksum == hashlib.sha256(b"scan-bytes").hexdigest()
-    assert scan.size_bytes == len(b"scan-bytes")
+    assert scan.checksum == hashlib.sha256(DICOM).hexdigest()
+    assert scan.size_bytes == len(DICOM)
     assert scan.visit_id == visit.id
 
 
@@ -105,10 +134,10 @@ def test_uploading_saves_to_storage_before_persisting() -> None:
         _user(),
         filename="scan.dcm",
         content_type="application/dicom",
-        content=b"scan-bytes",
+        content=DICOM,
     )
 
-    storage.save.assert_called_once_with(visit.id, "scan.dcm", b"scan-bytes")
+    storage.save.assert_called_once_with(visit.id, "scan.dcm", DICOM)
 
 
 def test_uploading_records_the_uploading_clinician() -> None:
@@ -124,7 +153,7 @@ def test_uploading_records_the_uploading_clinician() -> None:
         clinician,
         filename="scan.dcm",
         content_type="application/dicom",
-        content=b"x",
+        content=DICOM,
     )
 
     assert scan.uploaded_by_id == clinician.id
@@ -198,7 +227,7 @@ def test_a_second_scan_on_the_same_visit_is_a_conflict_and_cleans_up_storage() -
             _user(),
             filename="scan.dcm",
             content_type="application/dicom",
-            content=b"x",
+            content=DICOM,
         )
 
     storage.delete.assert_called_once_with(storage.save.return_value)
@@ -218,7 +247,7 @@ def test_a_non_conflict_database_error_also_cleans_up_storage() -> None:
             _user(),
             filename="scan.dcm",
             content_type="application/dicom",
-            content=b"x",
+            content=DICOM,
         )
 
     storage.delete.assert_called_once_with(storage.save.return_value)
@@ -255,10 +284,63 @@ def test_a_double_extension_nifti_file_is_accepted() -> None:
         _user(),
         filename="brain.nii.gz",
         content_type="application/octet-stream",
-        content=b"x",
+        content=NIFTI_GZ,
     )
 
     assert scan.original_filename == "brain.nii.gz"
+
+
+def test_uploading_records_the_parsed_dimensions() -> None:
+    service, repository, visit_service, storage = _service()
+    visit_service.get_visit.return_value = _visit()
+    repository.create.side_effect = lambda db, obj: obj
+
+    dicom = service.upload_scan(
+        Mock(), uuid4(), _user(),
+        filename="scan.dcm", content_type="application/dicom", content=DICOM,
+    )
+    nifti = service.upload_scan(
+        Mock(), uuid4(), _user(),
+        filename="brain.nii.gz", content_type="application/gzip", content=NIFTI_GZ,
+    )
+
+    # Audit HB-15: these used to be stored as {}.
+    assert dicom.dimensions == {"width": 4, "height": 3, "slices": 1}
+    assert nifti.dimensions == {"width": 5, "height": 6, "slices": 7}
+
+
+@pytest.mark.parametrize("filename", ["scan.dcm", "brain.nii", "brain.nii.gz", "scan.png"])
+def test_bytes_that_are_not_the_named_format_are_rejected(filename) -> None:
+    service, repository, visit_service, storage = _service()
+    visit_service.get_visit.return_value = _visit()
+
+    with pytest.raises(ValidationApplicationError, match="could not be read"):
+        service.upload_scan(
+            Mock(), uuid4(), _user(),
+            # Longer than a NIfTI header, so a header-only parser must reject
+            # the content, not just run out of bytes.
+            filename=filename, content_type="application/octet-stream",
+            content=b"x" * 512,
+        )
+
+    storage.save.assert_not_called()
+    repository.create.assert_not_called()
+
+
+def test_a_compressed_nifti_is_not_inflated_to_read_its_header() -> None:
+    """A small .nii.gz can expand ~1000x; only the header may be read."""
+    header = nibabel.Nifti1Image(
+        np.zeros((5, 6, 7), dtype=np.uint8), np.eye(4)
+    ).to_bytes()
+    bomb = gzip.compress(header + bytes(64 * 1024 * 1024), compresslevel=1)
+
+    tracemalloc.start()
+    dimensions = read_dimensions(bomb, "brain.nii.gz")
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert dimensions == {"width": 5, "height": 6, "slices": 7}
+    assert peak < 8 * 1024 * 1024
 
 
 # --------------------------------------------------------------------------

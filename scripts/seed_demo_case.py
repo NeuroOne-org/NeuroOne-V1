@@ -276,18 +276,25 @@ CLINICIANS: tuple[DemoClinician, ...] = (
 
 
 def synthetic_scan(label: str, stage: str) -> bytes:
-    """Placeholder scan bytes that the mock stager stages as ``stage``.
+    """A tiny synthetic NIfTI volume that the mock stager stages as ``stage``.
 
-    Asks the real ``MockImagingStager`` rather than re-deriving its hash, so
-    this cannot drift from the provider. Deterministic: the same label and
-    stage always return the same bytes.
+    A real NIfTI header because upload parses it (audit HB-15); the voxels
+    are a plain gradient, not anatomy. Asks the real ``MockImagingStager``
+    rather than re-deriving its hash, so this cannot drift from the provider.
+    Deterministic: the same label and stage always return the same bytes.
     """
 
     import hashlib
 
+    import nibabel
+    import numpy as np
+
+    volume = np.arange(8 * 8 * 4, dtype=np.uint8).reshape(8, 8, 4)
     stager = MockImagingStager()
     for counter in range(10_000):
-        content = f"SYNTHETIC-DEMO-SCAN (not an image)\n{label}\n{counter}\n".encode()
+        image = nibabel.Nifti1Image(volume, np.eye(4))
+        image.header["descrip"] = f"SYNTHETIC-DEMO-SCAN {label} {counter}".encode()[:79]
+        content = image.to_bytes()
         request = StagingRequest(
             checksum=hashlib.sha256(content).hexdigest(),
             content_type=SCAN_CONTENT_TYPE,

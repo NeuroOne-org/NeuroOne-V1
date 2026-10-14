@@ -7,7 +7,6 @@ stays in one place.
 
 import hashlib
 from datetime import datetime, timezone
-from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -16,6 +15,7 @@ from app.models.scan import Scan
 from app.models.user import User
 from app.repositories.scan_repository import ScanRepository
 from app.services.base_service import BaseService
+from app.services.scan_images import _scan_extension, read_dimensions
 from app.services.visit_service import VisitService
 from app.storage.scan_storage import ScanStorage
 from app.utils.exceptions import (
@@ -28,13 +28,6 @@ from app.utils.exceptions import (
 # browser filter is a UX convenience only, so the server enforces the same
 # allow-list since a client can send any extension or content-type it likes.
 ALLOWED_SCAN_EXTENSIONS = {".nii", ".nii.gz", ".dcm", ".png", ".jpg", ".jpeg"}
-
-
-def _scan_extension(filename: str) -> str:
-    name = filename.lower()
-    if name.endswith(".nii.gz"):
-        return ".nii.gz"
-    return Path(name).suffix
 
 
 class ScanService(BaseService[ScanRepository]):
@@ -84,6 +77,14 @@ class ScanService(BaseService[ScanRepository]):
             raise ValidationApplicationError(
                 f"The scan exceeds the {self.max_size_bytes} byte upload limit."
             )
+        try:
+            dimensions = read_dimensions(content, filename)
+        except Exception as exc:
+            # nibabel, pydicom and PIL each raise their own error types; any
+            # of them means the bytes are not the format the name claims.
+            raise ValidationApplicationError(
+                "The scan file could not be read as its file type."
+            ) from exc
 
         storage_key = self.storage.save(visit.id, filename, content)
         scan = Scan(
@@ -94,7 +95,7 @@ class ScanService(BaseService[ScanRepository]):
             content_type=content_type,
             size_bytes=len(content),
             checksum=hashlib.sha256(content).hexdigest(),
-            dimensions={},
+            dimensions=dimensions,
             uploaded_at=datetime.now(timezone.utc),
         )
 
