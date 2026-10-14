@@ -125,14 +125,17 @@ class AnalysisService(BaseService[AnalysisRepository]):
         patient = self.patient_service.get_patient(
             db, visit.patient_id, current_user
         )
-        prior_visits, _ = self.visit_service.get_patient_history(
+        # The newest `history_limit` visits before this one, then flipped to
+        # the oldest-first order the context builder expects (audit HB-11).
+        recent_visits, _ = self.visit_service.get_patient_history(
             db,
             visit.patient_id,
             current_user,
             limit=history_limit,
-            newest_first=False,
-            exclude_visit_id=visit_id,
+            newest_first=True,
+            before=visit,
         )
+        prior_visits = recent_visits[::-1]
 
         # 4. Pure.
         context = build_clinical_context(visit, prior_visits, patient=patient)

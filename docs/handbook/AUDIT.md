@@ -31,7 +31,8 @@ Scope: the AI work after AI-02a. That covers the curated retriever (`9f3dfd3`, A
 | HB-09 | **Code resolved, content open.** Curated FTS retriever, ingestion CLI, review gate and PostgreSQL tests landed, and ADR-007 is accepted. No reviewed content exists, so `corpus` mode returns `rag_no_evidence` | `corpus/manifest.yaml` `files: []`; 5 drafts in `corpus/pending/` |
 | HB-10 | **Resolved on paper.** Compose defaults to console OTP, mounts a scan volume and runs the frontend. A clean boot/restart was not re-run | `docker-compose.yml` |
 | HB-20 | **Resolved.** `DiagnosisCandidate.confidence` is capped at `MAX_CONFIDENCE` in the schema | `schemas/analysis.py` |
-| HB-05, HB-11, HB-12, HB-15 | **Still open.** No reviewer fields in `ReportSnapshot`; history excludes only the current id, not later dates; the report reads clinical inputs at report time; upload stores `dimensions={}` | Unchanged source |
+| HB-11 | **Resolved.** Analysis history is now the newest `history_limit` visits strictly before the target in (visit_date, created_at) order, reversed to oldest-first. Later encounters never enter the context. The public history endpoint is unchanged | `VisitRepository.get_history(before=…)`, `test_history_before_a_visit_keeps_only_earlier_visits` |
+| HB-05, HB-12, HB-15 | **Still open.** No reviewer fields in `ReportSnapshot`; the report reads clinical inputs at report time; upload stores `dimensions={}` | Unchanged source |
 
 ### New findings
 

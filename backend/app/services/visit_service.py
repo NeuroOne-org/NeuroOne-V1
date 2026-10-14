@@ -163,6 +163,7 @@ class VisitService(BaseService[VisitRepository]):
         limit: int = 10,
         newest_first: bool = True,
         exclude_visit_id: UUID | None = None,
+        before: Visit | None = None,
     ) -> tuple[list[Visit], int]:
         """Return a patient's visit history ordered for trend comparison.
 
@@ -178,6 +179,7 @@ class VisitService(BaseService[VisitRepository]):
             limit=limit,
             newest_first=newest_first,
             exclude_visit_id=exclude_visit_id,
+            before=before,
         )
         total = self.repository.count_by_patient(db, patient_id)
         return visits, total

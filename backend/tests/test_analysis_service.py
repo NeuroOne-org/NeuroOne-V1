@@ -172,18 +172,23 @@ def test_success_persists_the_analysis_and_advances_the_visit() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_history_is_requested_oldest_first_excluding_the_current_visit() -> None:
+def test_history_is_the_newest_visits_before_this_one_reversed_to_oldest_first() -> None:
     service, repository, visit_service, patient_service, orchestrator = _service()
     visit = _visit()
     _wire_happy_path(visit_service, patient_service, orchestrator, visit)
+    newer, older = _visit(visit.patient_id), _visit(visit.patient_id)
+    visit_service.get_patient_history.return_value = ([newer, older], 2)
     repository.create_with_status.side_effect = lambda db, analysis, v: analysis
 
     service.analyze_visit(Mock(), visit.id, _user(), history_limit=7)
 
+    context = orchestrator.run.call_args.args[0]
+    assert [v.id for v in context.prior_visits] == [older.id, newer.id]
+
     kwargs = visit_service.get_patient_history.call_args.kwargs
     assert kwargs["limit"] == 7
-    assert kwargs["newest_first"] is False
-    assert kwargs["exclude_visit_id"] == visit.id
+    assert kwargs["newest_first"] is True
+    assert kwargs["before"] is visit
 
 
 def test_the_context_snapshot_is_persisted_with_the_analysis() -> None:

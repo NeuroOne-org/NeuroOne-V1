@@ -124,6 +124,29 @@ def test_history_honours_limit_and_excludes_the_current_visit() -> None:
         assert current_id not in {visit.id for visit in remaining}
 
 
+def test_history_before_a_visit_keeps_only_earlier_visits() -> None:
+    repository = VisitRepository()
+    patient_id = uuid4()
+
+    with Session(_engine()) as db:
+        visits = [_visit(patient_id, days_offset=day) for day in range(5)]
+        same_day_later = _visit(patient_id, days_offset=2, complaint="same day")
+        db.add_all(visits)
+        db.commit()
+        same_day_later.created_at = visits[2].created_at + timedelta(seconds=1)
+        db.add(same_day_later)
+        db.commit()
+
+        # Audit HB-11: analysing day 2 must not see days 3-4 or a visit
+        # recorded after it on the same day.
+        history = repository.get_history(db, patient_id, before=visits[2], limit=1)
+
+        assert [visit.id for visit in history] == [visits[1].id]
+        assert {
+            visit.id for visit in repository.get_history(db, patient_id, before=visits[2])
+        } == {visits[0].id, visits[1].id}
+
+
 def test_history_scopes_to_one_patient() -> None:
     repository = VisitRepository()
     patient_id, other_patient_id = uuid4(), uuid4()
