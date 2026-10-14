@@ -7,6 +7,7 @@ same convention as ``test_ai_live_llm.py``.
 import gzip
 import io
 import json
+import tracemalloc
 
 import httpx
 import nibabel
@@ -263,3 +264,32 @@ def test_render_png_refuses_a_blank_slice(fill):
     volume = np.full((10, 12, 5), fill, dtype=np.float32)
     with pytest.raises(ValueError, match="blank"):
         render_png(_nifti(volume), "brain.nii")
+
+
+def test_render_png_reads_one_slice_not_the_whole_volume():
+    """A small .nii.gz can inflate ~1000x; only the middle slice may load."""
+    volume = np.zeros((256, 256, 1024), dtype=np.uint8)
+    volume[:, :, 512] = np.arange(256, dtype=np.uint8)
+    content = gzip.compress(
+        nibabel.Nifti1Image(volume, np.eye(4)).to_bytes(), compresslevel=1
+    )
+    del volume
+
+    tracemalloc.start()
+    pixels = np.asarray(_decoded(render_png(content, "brain.nii.gz")))
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert pixels.max() == 255
+    assert peak < 8 * 1024 * 1024
+
+
+def test_render_png_refuses_an_oversized_slice_before_reading_it():
+    header = nibabel.Nifti1Header()
+    header.set_data_shape((30_000, 30_000, 1))
+    header.set_data_dtype(np.uint8)
+    header["vox_offset"] = 352
+    content = gzip.compress(header.binaryblock + bytes(4))
+
+    with pytest.raises(ValueError, match="too large"):
+        render_png(content, "brain.nii.gz")

@@ -41,16 +41,29 @@ def _to_uint8(pixels: np.ndarray) -> np.ndarray:
     return (scaled * 255).astype(np.uint8)
 
 
+# Clinical MRI slices are at most ~1024x1024. The cap stops a header that
+# lies about its size from making us read gigabytes for one slice.
+_MAX_SLICE_PIXELS = 2048 * 2048
+
+
 def _nifti_slice(content: bytes, extension: str) -> np.ndarray:
+    # Stream, never inflate the whole upload: a small .nii.gz can expand
+    # ~1000x. Slicing the proxy reads only the bytes of the slice we keep.
+    stream = io.BytesIO(content)
     if extension == ".nii.gz":
-        content = gzip.decompress(content)
-    volume = np.asanyarray(nibabel.Nifti1Image.from_bytes(content).dataobj)
-    # Drop any time/channel axes, then take the middle axial slice.
-    while volume.ndim > 3:
-        volume = volume[..., 0]
-    if volume.ndim == 3:
-        volume = np.rot90(volume[:, :, volume.shape[2] // 2])
-    return volume
+        stream = gzip.GzipFile(fileobj=stream)
+    holder = nibabel.FileHolder(fileobj=stream)
+    image = nibabel.Nifti1Image.from_file_map({"header": holder, "image": holder})
+
+    shape = image.shape
+    if len(shape) >= 2 and shape[0] * shape[1] > _MAX_SLICE_PIXELS:
+        raise ValueError(f"scan slice is too large to render: {shape[:2]}")
+
+    # The middle axial slice of the first time/channel volume.
+    index = (slice(None), slice(None), *((shape[2] // 2,) if len(shape) > 2 else ()))
+    index += (0,) * (len(shape) - len(index))
+    pixels = np.asanyarray(image.dataobj[index])
+    return np.rot90(pixels) if len(shape) > 2 else pixels
 
 
 def _dicom_slice(content: bytes) -> np.ndarray:

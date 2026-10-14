@@ -45,6 +45,7 @@ Scope: the AI work after AI-02a. That covers the curated retriever (`9f3dfd3`, A
 | HB-23 | Low — **resolved** | ADR-008 was still **Proposed** although its code is merged, wired into Compose, and amended on 2026-10-12. | Accepted 2026-10-12, as an opt-in path for synthetic demo data |
 | HB-24 | Low | Stale comments said the corpus was "still simulated" (`live_llm.py`, `.env.example`) and that live staging used a per-process cache (`orchestrator.py`). README said staging had "no live path", the frontend was not in Compose, and listed 35 endpoints and 499 tests. | Fixed in this refresh (comments and docs only) |
 | HB-25 | Info | `StoredImagingStager` commits a stage result in its own session, before the analysis transaction. This is a deliberate exception to "nothing is written before the analysis succeeds", and it is safe because `staging_results` holds no clinical record. | Documented in handbook section 8; no change |
+| HB-26 | Medium — **resolved** | `render_png` (live staging) decompressed a whole `.nii.gz` to take one slice. The 200 MB upload limit counts compressed bytes, so one upload could make staging inflate ~200 GB, and a header could also claim one enormous slice. | Fixed: the volume is streamed and only the middle slice is read, and a slice over 2048×2048 pixels is refused before any pixels are read. Tests: `test_render_png_reads_one_slice_not_the_whole_volume`, `test_render_png_refuses_an_oversized_slice_before_reading_it` |
 
 ## PR preparation update — `a01ae83`
 
