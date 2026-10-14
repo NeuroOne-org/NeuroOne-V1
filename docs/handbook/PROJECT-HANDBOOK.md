@@ -53,7 +53,7 @@ Sources: [PRD §1–§4 and §7](../PRD.md), [MVP purpose and early-detection de
 | FR-07 Report | Clinical information, findings, citations, disclaimer and review details | PDF creation is gated by sign-off. The PDF names the reviewer and sign-off time (HB-05), and its clinical inputs come from the analysis's own context snapshot (HB-12). |
 | FR-08 Scan intake and staging | Scan per visit, retention, staging and provenance | Scan intake/storage, mock staging and an opt-in live vision stager exist. The live stager reads one rendered 2D slice through a general vision model; it is not a validated radiology classifier. |
 
-MRI became in scope through accepted ADR-006 and revised PRD text. The APP-FLOW document still contains its earlier MRI exclusion. This is a documented inconsistency, not a reason to describe the inspected scan functionality as nonexistent.
+MRI became in scope through accepted ADR-006 and revised PRD text. APP-FLOW now matches: it describes scan intake, staging, the triage dashboard and the sign-off gate, and its V1 boundary no longer excludes MRI (HB-02).
 
 Hard exclusions remain uploaded diagnostic-report analysis, autonomous diagnosis and automated treatment decisions. Biomarkers and a receptionist role remain deferred. Proposed retrieval work does not authorize widening those exclusions.
 
@@ -514,7 +514,7 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Dashboard | Current clinical calls, server order, filters and error states | Full browser rehearsal and larger-panel pagination strategy |
 | Testing | 523 backend tests passed, 12 PostgreSQL tests skipped locally (run in CI); frontend tests and CI exist | Local frontend execution, PostgreSQL migration/integration verification and full UI journey |
 | Deployment | Compose runs Postgres, migrations, API and frontend; scans on a named volume; console OTP by default; AI settings passed through | Confirm a clean boot/restart; decide on object storage for scans |
-| Documentation | Requirements, eight accepted ADRs, Graphify context exist | Reconcile stale APP-FLOW/README/progress/checklists and graph freshness |
+| Documentation | Requirements, eight accepted ADRs, Graphify context exist | Reconcile stale README/progress/checklists and graph freshness (APP-FLOW reconciled, HB-02) |
 
 The development sequence recorded in AGENTS.md is SEC-01, AUTH-01, PAT-01, CASE-01, AI-01, REPORT-01, AI-02a, SCAN-01, SCAN-02, REVIEW-01, DASH-01, then AI-02b. The inspected repository has artifacts across all those phases. AI-02b code is done and its content is pending review; live vision staging (ADR-008) came after it. Artifact presence does not mean every acceptance criterion in a phase is complete.
 
