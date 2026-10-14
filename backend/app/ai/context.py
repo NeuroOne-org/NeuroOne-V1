@@ -73,8 +73,8 @@ def build_clinical_context(
     """Assemble the context the AI pipeline reasons over.
 
     ``prior_visits`` must be oldest-first and must not include the current
-    visit -- ``VisitService.get_patient_history(newest_first=False,
-    exclude_visit_id=...)`` returns exactly that.
+    visit -- ``AnalysisService.analyze_visit`` reverses
+    ``VisitService.get_patient_history(before=visit)`` to get exactly that.
 
     Trend detection runs across prior visits *and* the current one, because a
     symptom's latest severity is part of its trajectory.

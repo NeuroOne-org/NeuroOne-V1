@@ -1,7 +1,7 @@
 """Clinical case / visit persistence operations."""
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.symptom import Symptom
@@ -88,12 +88,17 @@ class VisitRepository(BaseRepository[Visit]):
         limit: int = 10,
         newest_first: bool = True,
         exclude_visit_id: UUID | None = None,
+        before: Visit | None = None,
     ) -> list[Visit]:
         """Return a patient's visit history ordered for trend comparison.
 
         This is the cross-visit retrieval CASE-01 exists to provide: it returns
         raw ordered history with symptoms attached and computes no trends --
         interpretation belongs to the AI layer.
+
+        ``before`` keeps only visits that precede it in the same
+        (visit_date, created_at) order, so the window never sees later
+        encounters (audit HB-11). It also excludes ``before`` itself.
         """
         order = (
             (Visit.visit_date.desc(), Visit.created_at.desc())
@@ -104,6 +109,17 @@ class VisitRepository(BaseRepository[Visit]):
         statement = self._patient_statement(patient_id)
         if exclude_visit_id is not None:
             statement = statement.where(Visit.id != exclude_visit_id)
+        if before is not None:
+            statement = statement.where(
+                Visit.id != before.id,
+                or_(
+                    Visit.visit_date < before.visit_date,
+                    and_(
+                        Visit.visit_date == before.visit_date,
+                        Visit.created_at < before.created_at,
+                    ),
+                )
+            )
 
         statement = (
             self._with_symptoms(statement).order_by(*order).limit(limit)
