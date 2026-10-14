@@ -32,7 +32,8 @@ Scope: the AI work after AI-02a. That covers the curated retriever (`9f3dfd3`, A
 | HB-10 | **Resolved on paper.** Compose defaults to console OTP, mounts a scan volume and runs the frontend. A clean boot/restart was not re-run | `docker-compose.yml` |
 | HB-20 | **Resolved.** `DiagnosisCandidate.confidence` is capped at `MAX_CONFIDENCE` in the schema | `schemas/analysis.py` |
 | HB-11 | **Resolved.** Analysis history is now the newest `history_limit` visits strictly before the target in (visit_date, created_at) order, reversed to oldest-first. Later encounters never enter the context. The public history endpoint is unchanged | `VisitRepository.get_history(before=…)`, `test_history_before_a_visit_keeps_only_earlier_visits` |
-| HB-05, HB-12, HB-15 | **Still open.** No reviewer fields in `ReportSnapshot`; the report reads clinical inputs at report time; upload stores `dimensions={}` | Unchanged source |
+| HB-12 | **Resolved.** The report takes the visit, symptoms, age and sex from the analysis's own `context_snapshot`, so edits after the analysis never reach its PDF. Only the patient's name is read live, because it identifies the patient and the AI context never carries it | `ReportService._build_snapshot`, `test_the_report_shows_the_case_as_the_analysis_saw_it` |
+| HB-05, HB-15 | **Still open.** No reviewer fields in `ReportSnapshot`; upload stores `dimensions={}` | Unchanged source |
 
 ### New findings
 

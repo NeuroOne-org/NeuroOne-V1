@@ -6,7 +6,7 @@ here re-derives ownership through ``AnalysisService`` -- exactly the chain
 re-implementing it.
 """
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
@@ -19,6 +19,7 @@ from app.models.visit import Visit
 from app.reports.renderer import render
 from app.repositories.report_repository import ReportRepository
 from app.schemas.analysis import likelihood_band_for
+from app.schemas.clinical_context import ClinicalContext
 from app.schemas.report import (
     ReportEvidenceSnapshot,
     ReportFindingSnapshot,
@@ -36,19 +37,6 @@ from app.utils.exceptions import (
     EntityNotFoundError,
     InternalServerError,
 )
-
-
-def _age_years(dob: date | None, *, today: date | None = None) -> int | None:
-    """Whole years, matching the same reduction ``app/ai/context.py`` uses."""
-
-    if dob is None:
-        return None
-
-    reference = today or date.today()
-    years = reference.year - dob.year
-    if (reference.month, reference.day) < (dob.month, dob.day):
-        years -= 1
-    return max(years, 0)
 
 
 def _render_or_fail(snapshot: ReportSnapshot) -> bytes:
@@ -81,23 +69,32 @@ class ReportService(BaseService[ReportRepository]):
     def _build_snapshot(
         self, analysis: Analysis, visit: Visit, patient: Patient
     ) -> ReportSnapshot:
+        """The clinical case comes from the analysis's own context snapshot
+        (HB-12), so edits made after the analysis never reach its report.
+        Only the name is read live: it identifies the patient, and the AI
+        context deliberately never carries it.
+        """
+
         full_name = patient.first_name
         if patient.last_name:
             full_name = f"{patient.first_name} {patient.last_name}"
+
+        context = ClinicalContext.model_validate(analysis.context_snapshot)
+        case = context.current_visit
 
         return ReportSnapshot(
             analysis_id=analysis.id,
             visit_id=visit.id,
             patient=ReportPatientSnapshot(
                 full_name=full_name,
-                age_years=_age_years(patient.dob),
-                gender=patient.gender,
+                age_years=context.patient_age_years,
+                gender=context.patient_sex,
             ),
             visit=ReportVisitSnapshot(
-                visit_date=visit.visit_date,
-                chief_complaint=visit.chief_complaint,
-                history=visit.history,
-                notes=visit.notes,
+                visit_date=case.visit_date,
+                chief_complaint=case.chief_complaint,
+                history=case.history,
+                notes=case.notes,
                 symptoms=[
                     ReportSymptomSnapshot(
                         symptom_name=symptom.symptom_name,
@@ -106,8 +103,7 @@ class ReportService(BaseService[ReportRepository]):
                         onset=symptom.onset,
                         observation=symptom.observation,
                     )
-                    for symptom in visit.symptoms
-                    if not symptom.is_deleted
+                    for symptom in case.symptoms
                 ],
             ),
             model_name=analysis.model_name,
