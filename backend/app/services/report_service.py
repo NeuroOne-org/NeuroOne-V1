@@ -111,6 +111,10 @@ class ReportService(BaseService[ReportRepository]):
             pipeline_note=analysis.pipeline_note,
             disclaimer=analysis.disclaimer,
             generated_at=analysis.generated_at,
+            reviewed_by_name=(
+                f"{analysis.reviewed_by.first_name} {analysis.reviewed_by.last_name}"
+            ),
+            reviewed_at=analysis.reviewed_at,
             findings=[
                 ReportFindingSnapshot(
                     rank=finding.rank,

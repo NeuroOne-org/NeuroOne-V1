@@ -156,6 +156,8 @@ def _analysis(
         reviewed_at=NOW if reviewed_at is ... else reviewed_at,
     )
     analysis.findings = findings if findings is not None else [_finding()]
+    if analysis.reviewed_by_id is not None:
+        analysis.reviewed_by = _user()
     return analysis
 
 
@@ -209,6 +211,27 @@ def test_generating_a_report_persists_a_snapshot() -> None:
     assert report.filename == f"neuroone-report-{report.id}.pdf"
     assert report.snapshot["patient"]["full_name"] == "Ada Lovelace"
     assert report.snapshot["findings"][0]["condition_name"] == "Parkinsonian syndrome"
+
+
+def test_the_report_records_who_signed_off_and_when() -> None:
+    """HB-05 / FR-07: the report names its reviewer and sign-off time."""
+    service, repository, analysis_service, visit_service, patient_service = (
+        _service()
+    )
+    analysis, *_ = _wire_happy_path(
+        analysis_service, visit_service, patient_service
+    )
+    analysis.reviewed_by = _user()
+    analysis.reviewed_by.first_name, analysis.reviewed_by.last_name = (
+        "Grace",
+        "Hopper",
+    )
+    repository.create.side_effect = lambda db, obj: obj
+
+    report = service.generate_report(Mock(), analysis.id, _user())
+
+    assert report.snapshot["reviewed_by_name"] == "Grace Hopper"
+    assert report.snapshot["reviewed_at"] == "2026-06-01T12:00:00Z"
 
 
 def test_the_report_shows_the_case_as_the_analysis_saw_it() -> None:

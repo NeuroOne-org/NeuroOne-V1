@@ -86,6 +86,8 @@ def _snapshot(**overrides) -> ReportSnapshot:
         "pipeline_note": "pipeline complete, evidence retrieval simulated",
         "disclaimer": DISCLAIMER,
         "generated_at": NOW,
+        "reviewed_by_name": "Grace Hopper",
+        "reviewed_at": NOW,
         "findings": [_finding()],
     }
     payload.update(overrides)
@@ -107,9 +109,11 @@ def test_render_produces_valid_pdf_bytes() -> None:
 
 def test_report_contains_every_fr07_element() -> None:
     """FR-07: patient/case, clinical inputs, differential, reasoning, evidence,
-    citations, and the disclaimer must all be present."""
+    citations, the disclaimer, and who signed it off and when must all be
+    present."""
     text = _text(render(_snapshot()))
 
+    assert "Signed off by Grace Hopper on 2026-06-01 12:00 UTC" in text
     assert "Ada Lovelace" in text
     assert "intermittent hand tremor" in text
     assert "resting tremor" in text
