@@ -25,6 +25,7 @@ from app.models.symptom import Symptom
 from app.models.user import User, UserRole
 from app.models.visit import Visit, VisitStatus
 from app.services.analysis_service import AnalysisService
+from app.services.scan_images import read_dimensions
 from app.services.triage_service import TriageService
 
 
@@ -81,7 +82,8 @@ def test_synthetic_scan_stages_as_requested_and_is_deterministic(stage):
     first = seed.synthetic_scan("label", stage)
 
     assert first == seed.synthetic_scan("label", stage)
-    assert first.startswith(b"SYNTHETIC-DEMO-SCAN")
+    # Upload parses the header (audit HB-15), so it must be a real NIfTI.
+    assert read_dimensions(first, "demo.nii") == {"width": 8, "height": 8, "slices": 4}
 
 
 @pytest.mark.parametrize("spec", ALL_PATIENTS, ids=lambda spec: spec.key)
