@@ -26,11 +26,11 @@ These are suggested speaking notes. Practice explaining them naturally instead o
 
 ### 3:15–4:10 — Work completed
 
-“The code includes account provisioning and login, patient and visit management, symptoms, scan storage, structured analysis, sign-off, reports and triage. The current frontend now has clinical endpoint calls and displays findings, provenance and report actions. In this audit the backend exposed 36 versioned API operations, there were 16 migration files, and all 523 backend tests passed. Frontend tests and CI also exist, but we still need to execute our complete browser demonstration in the final environment.”
+“The code includes account provisioning and login, patient and visit management, symptoms, scan storage, structured analysis, sign-off, reports and triage. The current frontend now has clinical endpoint calls and displays findings, provenance and report actions. In this audit the backend exposed 36 versioned API operations, there were 16 migration files, all 545 backend tests and 31 frontend tests passed, and a clean Docker stack booted, restarted and ran the journey through the API. We still need to rehearse the complete browser demonstration in the final environment.”
 
 ### 4:10–5:00 — Remaining work
 
-“Since the first audit we have passed imaging results into live reasoning, pinned the stage estimate first, built the curated retrieval pipeline and added a live staging path. Next, a clinical reviewer has to approve our draft literature passages before live retrieval can run. We also need to include reviewer details in the report and complete clinical input and retry handling. A trained, validated imaging model and clinical evaluation are separate remaining milestones. We can demonstrate the architecture and workflow today without presenting simulated outputs as validated medical results.”
+“Since the first audit we have passed imaging results into live reasoning, pinned the stage estimate first, built the curated retrieval pipeline and added a live staging path. Next, a clinical reviewer has to approve our draft literature passages before live retrieval can run. The report now records who signed off and when, and shows the case as the analysis saw it; intake captures every symptom field. A trained, validated imaging model and clinical evaluation are separate remaining milestones. We can demonstrate the architecture and workflow today without presenting simulated outputs as validated medical results.”
 
 ## The progress slide to use
 
@@ -40,11 +40,11 @@ Use these labels in your report. Do not add a completion percentage unless your 
 |---|---|---|
 | Password login and admin account creation | OTP is enforced by default; codes and auth rate limits are process-local | Production OTP/session review |
 | Authorized patient/visit CRUD and symptoms | Both intakes capture every FR-03 symptom field; retries resume without duplicates | Resume state that survives a page refresh |
-| Scan attachment, retained bytes/checksum, live single-slice staging | Mock staging is simulated; live staging is an unvalidated general model | Dimensions, a trained and evaluated imaging model |
+| Scan attachment, retained bytes/checksum, parsed dimensions, live single-slice staging | Mock staging is simulated; live staging is an unvalidated general model | A trained and evaluated imaging model |
 | Structured candidates, citations, trends; curated FTS retriever | Default retrieval uses synthetic fixtures; curated corpus is empty | Clinical review and ingestion of the seed corpus |
-| Sign-off and gated PDF generation | PDF snapshot lacks reviewer/time | Review details, amendment semantics and input-time consistency |
+| Sign-off and gated PDF generation, with reviewer and time in the PDF | Sign-off accepts only; no amendment | Amendment semantics |
 | Clinical frontend calls and finding/report UI | Browser journey not verified in this audit | Frontend checks and final-environment demo rehearsal |
-| 523 backend tests passing | SQLite/mocked paths, not full live PostgreSQL verification | Real database integration and model evaluation |
+| 545 backend and 31 frontend tests passing; clean Compose boot/restart verified | Tests use SQLite/mocked paths; the Compose check used mock AI | Live-provider rehearsal and model evaluation |
 
 ## Team sections and handoffs
 
@@ -74,7 +74,7 @@ Use a prepared **synthetic** environment. The seed script defines two clinicians
 | 5. Provenance | Read full pipeline note above findings | Reasoning, retrieval and staging can have different simulation status |
 | 6. Grace's newest visit | Run analysis on the deliberately unanalysed visit | This runs the actual API pipeline; “run now” does not mean a real imaging model |
 | 7. Review | Show download disabled, then sign off | Backend gate matters even if a frontend control were bypassed |
-| 8. PDF | Download and inspect report | It carries findings/citations/disclaimer; reviewer details are a recorded unfinished requirement |
+| 8. PDF | Download and inspect report | It carries findings, citations, the disclaimer, and who signed off and when |
 | 9. Queue refresh | Return to dashboard after the new analysis | Latest analysis can change priority. Signing alone does not close early-watch flags. |
 | Optional isolation | Sign in as clinician two, who owns Oliver | Patient visibility derives from clinician ownership |
 
@@ -92,7 +92,7 @@ A fresh patient with only demographics and a generic complaint can fail analysis
 6. Check each slide for unsupported “accuracy,” trained-model, PubMed, measured-region and completion claims.
 7. Agree which person handles limitations and the remaining-task list.
 
-Compose in this checkout needs Gmail settings for default email delivery (or explicit local console delivery), plus durable scan storage, before it can be relied on for clean boot/restart. See the audit rather than assuming the older “Compose runs” status is current.
+Compose defaults to console OTP delivery and keeps scans on a named volume. A clean boot and restart were verified on 15 October. Create the demo accounts and data with the [Docker cheat sheet](../DOCKER-CHEATSHEET.md#first-account-and-demo-data) commands before the talk.
 
 ### If something fails during the talk
 
@@ -130,10 +130,10 @@ Compose in this checkout needs Gmail settings for default email delivery (or exp
 | How is data protected? | Hashed passwords, JWT validation, server-side ownership and controlled errors exist. A full production security/privacy review remains. |
 | Can a clinician amend the analysis? | Sign-off exists. A structured amendment workflow is not implemented yet. |
 | What is stored for the PDF? | A JSON snapshot and metadata. Protected download renders bytes from the saved content. |
-| Does the PDF include reviewer details? | Not currently. Analysis stores them, but adding them to the report is an identified FR-07 gap. |
-| What does testing prove? | 523 backend tests passed under synthetic/mocked conditions. They check software behavior, not clinical efficacy or every live deployment path. |
+| Does the PDF include reviewer details? | Yes. It names who signed off and when, under the generation time. |
+| What does testing prove? | 545 backend and 31 frontend tests passed under synthetic/mocked conditions. They check software behavior, not clinical efficacy or every live deployment path. |
 | Is the frontend still a mockup? | The old status is stale: clinical calls and finding/report UI now exist. Full browser execution still needs final-environment verification. |
-| What remains before completion? | Get the corpus reviewed and ingested, add reviewer details to the report, complete input/retry handling, integrate and evaluate a real imaging model, and verify the full journey. |
+| What remains before completion? | Get the corpus reviewed and ingested, integrate and evaluate a real imaging model, decide on amendment at sign-off, and rehearse the full browser journey. |
 | How much is complete? | We can enumerate delivered modules and verified checks. We have not established a defensible overall percentage or remaining-effort estimate. |
 
 ## Existing presentation: slide-by-slide speaking guidance

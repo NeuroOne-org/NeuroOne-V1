@@ -259,7 +259,7 @@ Authorize visit and patient
 
 The service authorizes the requested visit through the patient ownership rule. The context builder carries age in years and sex, complaint, history, vitals, notes, symptoms and scan metadata. It omits separate name, email, phone, address and birthdate fields. Free-text notes can still contain identifying data, so this is minimization rather than a guarantee of anonymization.
 
-Current historical retrieval excludes the current visit id and requests the other records oldest-first. It does not filter them to dates strictly earlier than the target visit. An analysis run on an older visit can therefore include newer encounters. With more than ten other visits, the default selects the oldest ten. The current visit is appended to the trend sequence. This temporal assumption needs attention before claiming retrospective accuracy or a sophisticated longitudinal model.
+History is the newest `history_limit` visits (default ten) strictly before the target in (visit date, creation time) order, reversed to oldest-first, with the target visit appended to the trend sequence. Analysing an older visit therefore never sees encounters that happened after it (HB-11). This is still a simple window over visit order, not a sophisticated longitudinal model.
 
 The orchestrator stages prior scanned visits to compare ordinal stage labels. Under the mock those labels are simulated; under live vision each one is a general model's reading of one slice, stored once per scan. Either way it is a comparison of labels, not image registration or quantitative anatomical progression.
 
@@ -455,15 +455,15 @@ Sources: [security helpers](../../backend/app/core/security.py), [auth service](
 
 A report is a saved **content snapshot** rendered as PDF. It is not a filesystem path to a permanent PDF file.
 
-Report generation authorizes the analysis, checks sign-off, reads the visit and patient, builds a typed snapshot and proves the renderer can generate bytes before committing a report row. Download authorizes the report and rerenders its stored snapshot without rerunning AI.
+Report generation authorizes the analysis, checks sign-off, reads the patient's name, builds a typed snapshot and proves the renderer can generate bytes before committing a report row. Download authorizes the report and rerenders its stored snapshot without rerunning AI.
 
 This keeps later downloads stable after subsequent edits to the source records. Multiple reports can exist per analysis. The current UI reuses an existing report when available to avoid creating another on every download.
 
-There are two snapshot moments: the analysis stores the clinical context at analysis time; report generation builds patient/visit content from source records **at report-generation time**. Editing a visit between analysis and report can therefore combine earlier reasoning with later clinical inputs. The report becomes stable once saved, but that timing mismatch remains a design issue to resolve.
+The analysis stores the clinical context it reasoned over, and the report takes the visit, symptoms, age and sex **from that analysis snapshot**, not from the live rows. Editing a visit after its analysis therefore never changes what its report says. Only the patient's name is read live, because it identifies the patient and the AI context never carries it (HB-12).
 
-The report includes patient/visit information, clinical inputs, ranked findings, explanation, supporting/contradicting findings, patient-history traces, citations, passages, provenance and a disclaimer. The renderer escapes text markup and replaces unsupported base-font characters rather than crashing, which can lose some Unicode characters.
+The report includes patient/visit information, clinical inputs, who signed it off and when, ranked findings, explanation, supporting/contradicting findings, patient-history traces, citations, passages, provenance and a disclaimer. The renderer escapes text markup and replaces unsupported base-font characters rather than crashing, which can lose some Unicode characters.
 
-**Verified missing requirement:** reviewer id and review timestamp are stored on the analysis and shown in the API/UI, but `ReportSnapshot` contains no review fields. The PDF does not yet document who signed off or when. `generated_by_id` is the user who generated a report and is not a substitute for reviewer identity.
+The snapshot carries `reviewed_by_name` and `reviewed_at`, and the PDF prints "Signed off by … on … UTC" under the generation time (HB-05). Both fields are optional only so reports saved before that change still re-render. `generated_by_id` is the user who generated a report, which is a separate fact from who signed off.
 
 Sources: [ADR-004](../decisions/ADR-004-clinical-report-snapshot-and-rendering.md), [report service](../../backend/app/services/report_service.py), [snapshot schema](../../backend/app/schemas/report.py), [renderer](../../backend/app/reports/renderer.py), [download UI](../../frontend/src/app/dashboard/patients/[id]/page.tsx).
 
@@ -512,24 +512,24 @@ Report progress by observable deliverables, rather than an unsupported percentag
 | Review | Sign-off records id/time and gates report creation | Amendment workflow and explicit review-role policy |
 | Reports | Snapshot storage and PDF generation exist; reviewer and sign-off time in the PDF (HB-05); inputs taken from the analysis snapshot (HB-12) | Nothing open in the report itself |
 | Dashboard | Current clinical calls, server order, filters and error states | Full browser rehearsal and larger-panel pagination strategy |
-| Testing | 523 backend tests passed, 12 PostgreSQL tests skipped locally (run in CI); frontend tests and CI exist | Local frontend execution, PostgreSQL migration/integration verification and full UI journey |
-| Deployment | Compose runs Postgres, migrations, API and frontend; scans on a named volume; console OTP by default; AI settings passed through | Confirm a clean boot/restart; decide on object storage for scans |
-| Documentation | Requirements, eight accepted ADRs, Graphify context exist | Reconcile stale README/progress/checklists and graph freshness (APP-FLOW reconciled, HB-02) |
+| Testing | 545 backend tests passed, 12 PostgreSQL tests skipped locally (run in CI); 31 frontend tests, typecheck and lint pass locally; CI runs both | Full UI journey in a browser |
+| Deployment | Compose runs Postgres, migrations, API and frontend; scans on a named volume; console OTP by default; AI settings passed through. Clean boot and restart verified with the API journey (HB-10) | Decide on object storage for scans |
+| Documentation | Requirements, eight accepted ADRs, Graphify context exist | Graph freshness and the older REPORT-01D checklist (APP-FLOW, README and handbook refreshed 15 October) |
 
 The development sequence recorded in AGENTS.md is SEC-01, AUTH-01, PAT-01, CASE-01, AI-01, REPORT-01, AI-02a, SCAN-01, SCAN-02, REVIEW-01, DASH-01, then AI-02b. The inspected repository has artifacts across all those phases. AI-02b code is done and its content is pending review; live vision staging (ADR-008) came after it. Artifact presence does not mean every acceptance criterion in a phase is complete.
 
 Recommended next work, as an **audit recommendation rather than an approved implementation plan**:
 
 1. Name a clinical reviewer and get the five pending corpus drafts reviewed and ingested. This is the only thing between the code and live retrieval.
-2. Rehearse the full synthetic browser journey with all three seams live, and record it.
-3. Reviewer fields, temporal history, report input consistency and scan dimensions are done (HB-05, HB-11, HB-12, HB-15).
+2. Rehearse the full synthetic browser journey with all three seams live, and record it. The same journey through the API on a clean Compose stack already passes (HB-10).
+3. Decide whether sign-off needs the amendment workflow ADR-006 describes.
 4. Integrate and evaluate a real imaging model separately from software-contract tests.
 
 No schedule or remaining-effort estimate is established. The team should assign owners and dates after reviewing these tasks.
 
 ## 16. Tests and what they prove
 
-The AI pipeline refresh reran the full backend suite at `c336492` in a clean venv built from the pinned requirements: **523 passed, 12 skipped in 16 seconds**. The 12 skipped are the PostgreSQL-only corpus tests, which run in CI against a `postgres:16-alpine` service. Earlier, PR preparation reran the suite at `a01ae83`: 437 passed in 7.68 seconds, using a sandbox-permitted temporary directory. The original audit at `5d391b1` passed 414 tests in 30.33 seconds after recovering from five permission-related fixture setup errors. These were environment errors, not demonstrated product failures. Test settings use development mode, explicitly disable OTP where appropriate and use console delivery; dedicated tests cover enforced OTP and rate limits.
+The 15 October refresh reran the full backend suite: **545 passed, 12 skipped**, and the frontend suite: **31 passed**, with `tsc --noEmit` and ESLint clean. The AI pipeline refresh had run the backend suite at `c336492` in a clean venv built from the pinned requirements: 523 passed, 12 skipped in 16 seconds. The 12 skipped are the PostgreSQL-only corpus tests, which run in CI against a `postgres:16-alpine` service. Earlier, PR preparation reran the suite at `a01ae83`: 437 passed in 7.68 seconds, using a sandbox-permitted temporary directory. The original audit at `5d391b1` passed 414 tests in 30.33 seconds after recovering from five permission-related fixture setup errors. These were environment errors, not demonstrated product failures. Test settings use development mode, explicitly disable OTP where appropriate and use console delivery; dedicated tests cover enforced OTP and rate limits.
 
 Tests cover auth, authorization, repositories, visits, input validation, AI contracts, staging determinism, citation resolution, trend behavior, report generation, controlled failures and synthetic seed scenarios. Live LLM and live vision tests use `httpx.MockTransport`; they are not evidence of a current live endpoint's availability or clinical quality. AI test files: `test_ai_orchestrator`, `test_ai_mock_providers`, `test_ai_live_llm`, `test_ai_live_staging`, `test_ai_staging`, `test_ai_corpus_retriever`, plus `tests/postgres/` for real full-text search and ingestion.
 
@@ -591,9 +591,9 @@ Core configuration names to recognize:
 
 `AI_LLM_MAX_OUTPUT_TOKENS` (default 2048) caps both live calls. Public example files contain placeholders and development defaults, which should not be treated as production configuration. This handbook does not verify a configured hosted model id is currently available.
 
-Compose now defaults to `OTP_DELIVERY=console`, mounts scans on the `neuroone_scan_data` volume, runs the frontend, and passes every `AI_*` setting through from the host (mock by default). This resolves HB-10 on paper; a clean boot and restart was not re-run in this refresh.
+Compose defaults to `OTP_DELIVERY=console`, mounts scans on the `neuroone_scan_data` volume, runs the frontend, and passes every `AI_*` setting through from the host (mock by default). On 15 October a clean boot from empty volumes, a `down`/`up` restart and the API journey were run against it (HB-10). The first account and the demo data are created by running `scripts/` inside the API container; see the [Docker cheat sheet](../DOCKER-CHEATSHEET.md#first-account-and-demo-data).
 
-The seed script creates six synthetic patients across two clinician accounts. Rerunning it deletes and recreates data for those demo usernames and deletes their stored scan files. It is a reset tool, not a harmless read-only preview. This audit did not run it against a live database. `scripts/ingest_documents.py` is implemented (validate every file, then load in one transaction; `--dry-run` writes nothing). The embedding and backup scripts still contain only docstrings.
+The seed script creates six synthetic patients across two clinician accounts. Rerunning it deletes and recreates data for those demo usernames and deletes their stored scan files. It is a reset tool, not a harmless read-only preview. It ran cleanly against the Compose stack on 15 October. `scripts/ingest_documents.py` is implemented (validate every file, then load in one transaction; `--dry-run` writes nothing). The embedding and backup scripts still contain only docstrings.
 
 Sources: [config](../../backend/app/core/config.py), [Compose](../../docker-compose.yml), [Dockerfile](../../backend/Dockerfile), [seed](../../scripts/seed_demo_case.py), [ingestion CLI](../../scripts/ingest_documents.py), [embedding stub](../../scripts/build_embeddings.py), [backup stub](../../scripts/backup.py).
 
@@ -645,7 +645,7 @@ Practice without the document:
 4. Explain why a low confidence score does not automatically create `early_watch`.
 5. Explain why live LLM does not mean live RAG or validated MRI inference, and why `corpus` mode currently returns `rag_no_evidence`.
 6. Name one accepted design tradeoff and one implementation gap for each subsystem you present.
-7. Explain what 523 passing tests establish and what they do not establish.
+7. Explain what 545 passing backend tests establish and what they do not establish.
 9. Explain how a live stage result is stored, and one cost of storing it.
 10. Explain why the curated corpus uses full-text search rather than embeddings.
 8. Describe the next work without inventing owners, dates or results.

@@ -36,7 +36,7 @@ The agent should wait after asking a recall question. Learning happens when you 
 | Early watch | “Use Helen's seeded tremor and memory-loss history. Ask me why a worsening trend and low confidence together can create early_watch, and why low confidence alone cannot.” |
 | Citations | “Explain provider selects/system resolves. Quiz me on why evidence ids and history UUIDs should come from source records.” |
 | Safety and auth | “Ask me to distinguish diagnosis assistance, authentication, role authorization, per-record ownership and clinician sign-off.” |
-| Reports | “Quiz me on analysis snapshot versus report snapshot, sign-off gating, missing reviewer fields and what happens after a clinical-input edit.” |
+| Reports | “Quiz me on analysis snapshot versus report snapshot, sign-off gating, the reviewer line in the PDF and why a clinical-input edit after analysis does not change the report.” |
 | Progress | “Ask what is complete and what remains. Mark my answer against the dated audit. Do not let me give a completion percentage without a denominator.” |
 | Decisions | “Pick one accepted ADR, explain its problem/options/choice/cost, then ask me to defend it against the rejected alternative.” |
 | Demo | “Walk me verbally through the seeded demonstration. Stop at each point where I might overstate a simulated capability.” |

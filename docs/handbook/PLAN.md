@@ -104,6 +104,8 @@ Documentation tasks completed. Created the five linked learning/audit documents 
 
 **AI pipeline refresh, 12 October 2026 (`c336492`).** Updated the handbook, audit, presentation and study guides for the work since AI-02a: the curated FTS retriever (ADR-007), live vision staging and stored stages (ADR-008), and the stage pinned first. Reran the backend suite in a clean venv: 523 passed, 12 PostgreSQL tests skipped. Added findings HB-21 to HB-25 to the audit. Fixed stale comments only; no behaviour changed.
 
+**Fix pass and deployment check, 15 October 2026.** Recorded HB-02, 05, 06, 10, 11, 12, 15, 26 and 27 in the audit, and refreshed the README, handbook, presentation guide, study guide and Docker cheat sheet to match. Backend suite: 545 passed, 12 skipped. Frontend: 31 passed, typecheck and lint clean. A clean Compose boot and restart ran the API journey end to end.
+
 ## 23. Build Readiness
 
 The user's request explicitly authorizes authoring the handbook. No unresolved decision prevents this documentation work. Production fixes need their own plan.

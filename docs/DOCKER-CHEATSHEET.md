@@ -20,6 +20,25 @@ Once it's running:
 - Frontend: http://localhost:3000
 - API: http://localhost:8000 (health check at `/health`)
 
+## First account and demo data
+
+A fresh stack has no accounts, and there is no sign-up page. The scripts in `scripts/` aren't in the API image, so mount them into a one-off API container (it shares the stack's database and scan volume):
+
+```powershell
+# First administrator. Leave out the -e lines to be prompted instead.
+docker compose run --rm -v "${PWD}/scripts:/scripts:ro" -e PYTHONPATH=/app `
+  -e NEUROONE_ADMIN_EMAIL=admin@example.com -e NEUROONE_ADMIN_USERNAME=admin `
+  -e NEUROONE_ADMIN_PASSWORD="choose-a-password" `
+  -e NEUROONE_ADMIN_FIRST_NAME=Ada -e NEUROONE_ADMIN_LAST_NAME=Admin `
+  api python /scripts/bootstrap_admin.py
+
+# Synthetic demo clinicians and patients (synthetic data only).
+docker compose run --rm -v "${PWD}/scripts:/scripts:ro" -e PYTHONPATH=/app `
+  api python /scripts/seed_demo_case.py
+```
+
+The seed prints the logins (`demo-clinician` and `demo-clinician-2`, password `DemoClinician!2026` unless you add `-e DEMO_PASSWORD=...`). ⚠️ Re-running it **deletes and recreates** everything those two demo accounts own, including their scan files. In Git Bash, prefix each command with `MSYS_NO_PATHCONV=1` and put a `\` at the end of each continued line instead of a backtick.
+
 ## OTP codes
 
 OTP codes aren't emailed. By default (`OTP_DELIVERY=console`) they're printed to the API logs:

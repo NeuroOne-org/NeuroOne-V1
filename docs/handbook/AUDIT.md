@@ -4,6 +4,23 @@ MODE: TEST
 
 Audit date: **13 September 2026**. Checkout: **`5d391b1`** (`5d391b1` is the implementation baseline before these documentation additions). Purpose: produce an accurate professor-facing learning and progress reference. This is a focused code/documentation audit, not a clinical evaluation or full security assessment.
 
+## Fix pass and deployment check — `20f7c7c` + PR #79 (15 October 2026)
+
+Scope: the audit items fixed on 14 and 15 October (HB-02, 05, 06, 11, 12, 15, 26, 27) and the deployment check HB-10. Status rows for each item are in the table below.
+
+### Checks run
+
+| Check | Observation |
+|---|---|
+| Backend suite | **545 passed, 12 skipped.** The skips are the PostgreSQL-only `tests/postgres/` suite, which runs in CI |
+| Frontend | **31 passed** (`vitest run`), `tsc --noEmit` clean, ESLint clean on changed files |
+| OpenAPI / migrations | **36** `/api/v1` operations; **16** migration files, `alembic heads` = `a7c2e94b1d03`, which a fresh database reached |
+| Compose clean boot | Isolated project with empty volumes, built from `main` at `20f7c7c`: `db`, `migrate`, `api` and `frontend` all reached healthy/completed in ~7 min including image builds. `/health` 200; the frontend proxied `/api/v1/auth/me` to the API (401 without a session) |
+| First account | Not possible from the documentation alone: `scripts/` is not in the API image and nothing said how to run it. Running `bootstrap_admin.py` and `seed_demo_case.py` in a one-off API container with `scripts/` mounted worked; the cheat sheet now documents it |
+| API journey (through the frontend origin) | Password login → OTP read from `docker compose logs api` → `/auth/me` → triage (5 patients) → new follow-up visit with structured symptoms → `.nii.gz` upload stored `{width: 16, height: 16, slices: 8}` → analysis (3 findings, provenance "pipeline complete, evidence retrieval simulated, imaging staging simulated") → sign-off → report → 5.2 KB PDF |
+| Restart | `docker compose down` (volumes kept) then `up --wait`: healthy in 18 s, `migrate` re-ran as a no-op, row counts (patients/visits/scans/analyses/reports/users = 6/13/13/14/2/3) and the 13 scan files on disk unchanged. A pre-restart report re-rendered after logging in again, and the whole journey passed again |
+| Not checked | A browser walkthrough of the UI, live AI providers in Compose, and email OTP delivery |
+
 ## AI pipeline update — `c336492` (12 October 2026)
 
 Scope: the AI work after AI-02a. That covers the curated retriever (`9f3dfd3`, ADR-007), live vision staging (`ff33e40`, ADR-008) and persisted staging with the stage pinned first (`683258f`). Everything outside the AI pipeline keeps its `a01ae83` evidence below.
@@ -29,7 +46,7 @@ Scope: the AI work after AI-02a. That covers the curated retriever (`9f3dfd3`, A
 | HB-04 | **Resolved.** The stage is pinned first, retrieved on its own budget, and its absence fails as `ai_stage_missing` | `rank_candidates(pinned=…)`, `AnalysisOrchestrator._finalize` |
 | HB-08 | **Partly resolved.** The mock still hashes the checksum. An opt-in live stager now reads real pixels, but through a general vision model on one slice, not a validated classifier | `live_staging.py`, ADR-008 |
 | HB-09 | **Code resolved, content open.** Curated FTS retriever, ingestion CLI, review gate and PostgreSQL tests landed, and ADR-007 is accepted. No reviewed content exists, so `corpus` mode returns `rag_no_evidence` | `corpus/manifest.yaml` `files: []`; 5 drafts in `corpus/pending/` |
-| HB-10 | **Resolved on paper.** Compose defaults to console OTP, mounts a scan volume and runs the frontend. A clean boot/restart was not re-run | `docker-compose.yml` |
+| HB-10 | **Resolved.** Verified on 15 October 2026: clean boot from empty volumes, `down`/`up` restart with rows and scan files intact, and the API journey before and after. See the 15 October section above | `docker-compose.yml`, `DOCKER-CHEATSHEET.md` |
 | HB-20 | **Resolved.** `DiagnosisCandidate.confidence` is capped at `MAX_CONFIDENCE` in the schema | `schemas/analysis.py` |
 | HB-11 | **Resolved.** Analysis history is now the newest `history_limit` visits strictly before the target in (visit_date, created_at) order, reversed to oldest-first. Later encounters never enter the context. The public history endpoint is unchanged | `VisitRepository.get_history(before=…)`, `test_history_before_a_visit_keeps_only_earlier_visits` |
 | HB-12 | **Resolved.** The report takes the visit, symptoms, age and sex from the analysis's own `context_snapshot`, so edits after the analysis never reach its PDF. Only the patient's name is read live, because it identifies the patient and the AI context never carries it | `ReportService._build_snapshot`, `test_the_report_shows_the_case_as_the_analysis_saw_it` |

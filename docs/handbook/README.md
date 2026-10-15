@@ -27,7 +27,7 @@ The last sentence is part of your explanation, not something to hide until asked
 3. **Journey:** login, patient, visit with scan and symptoms, analysis, ranked differential and evidence, review/sign-off, PDF.
 4. **Backend layers:** client, API, service, repository, PostgreSQL. The AI orchestrator produces structured results; the service persists them.
 5. **AI has three components:** retrieval, reasoning and imaging staging. Each one is swapped independently by its own setting, so each can be mock or live, and every result says which.
-6. **Current evidence:** 36 versioned API operations, 16 migration files, 12 tables, 523 backend tests passed (12 PostgreSQL tests run only in CI). Frontend tests and CI exist, but this audit did not execute them locally.
+6. **Current evidence:** 36 versioned API operations, 16 migration files, 12 tables, 545 backend tests passed (12 PostgreSQL tests run only in CI), 31 frontend tests passed. A clean Compose boot and restart ran the API journey end to end.
 7. **Current limits:** the curated corpus has no reviewed content, so live retrieval returns nothing yet. Live staging is a general vision model reading one slice. The mock stager still uses checksums rather than anatomy. A full browser demo with live providers was not verified by this audit.
 
 ## Your learning route
