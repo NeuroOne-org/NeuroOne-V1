@@ -90,7 +90,15 @@ describe("New visit", () => {
       history: null,
       notes: null,
       status: "submitted",
-      symptoms: [{ symptom_name: "memory loss", severity: 4, onset: null }],
+      symptoms: [
+        {
+          symptom_name: "memory loss",
+          severity: 4,
+          onset: null,
+          duration_days: null,
+          observation: null,
+        },
+      ],
     });
     expect(runAnalysis).toHaveBeenCalledWith("v9");
   });
@@ -130,6 +138,43 @@ describe("New visit", () => {
 
     await waitFor(() => expect(push).toHaveBeenCalled());
     expect(calls).toEqual(["createVisit", "runAnalysis", "runAnalysis"]);
+  });
+
+  it("sends the duration and observation of each symptom (FR-03)", async () => {
+    render(<NewVisitPage />);
+    fillForm();
+    fireEvent.change(screen.getByLabelText("Duration (days)"), {
+      target: { value: "180" },
+    });
+    fireEvent.change(screen.getByLabelText("Observation"), {
+      target: { value: "  loses keys daily  " },
+    });
+    submit();
+
+    await waitFor(() => expect(createVisit).toHaveBeenCalled());
+    expect(createVisit.mock.calls[0][1].symptoms).toEqual([
+      {
+        symptom_name: "memory loss",
+        severity: 4,
+        onset: null,
+        duration_days: 180,
+        observation: "loses keys daily",
+      },
+    ]);
+  });
+
+  it("rejects a negative duration before calling the API", async () => {
+    render(<NewVisitPage />);
+    fillForm();
+    fireEvent.change(screen.getByLabelText("Duration (days)"), {
+      target: { value: "-3" },
+    });
+    submit();
+
+    await waitFor(() =>
+      expect(screen.getByText(/whole number of days/i)).toBeInTheDocument()
+    );
+    expect(calls).toEqual([]);
   });
 
   it("rejects a severity outside 1-10 before calling the API", async () => {

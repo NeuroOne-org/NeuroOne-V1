@@ -1,9 +1,18 @@
 "use client";
 
-import { CircleCheck, Loader } from "@/components/icons";
-import { FieldError, Label } from "@/components/ui/input";
+import { useFieldArray, useFormContext } from "react-hook-form";
+import { CircleCheck, Loader, Plus, X } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { FieldError, Input, Label } from "@/components/ui/input";
+import { Select, Textarea } from "@/components/ui/select";
 import { MriDropzone } from "@/components/mri-dropzone";
 import { cn } from "@/lib/utils";
+import {
+  EMPTY_SYMPTOM,
+  SYMPTOM_ONSETS,
+  type VisitWithSymptomsInput,
+} from "@/lib/validation";
 
 /**
  * Pieces shared by the two intake forms: New patient & visit, and a
@@ -84,6 +93,134 @@ export function StepProgress<K extends string>({
         })}
       </ul>
     </div>
+  );
+}
+
+/**
+ * The structured symptom rows FR-03 asks for: name, severity, onset,
+ * duration and observation. Reads the surrounding form from its
+ * FormProvider, which must hold a `symptoms` array.
+ */
+export function SymptomsCard({ eyebrow }: { eyebrow: string }) {
+  const {
+    control,
+    register,
+    formState: { errors },
+  } = useFormContext<Pick<VisitWithSymptomsInput, "symptoms">>();
+  const symptoms = useFieldArray({ control, name: "symptoms" });
+
+  return (
+    <Card className="mb-5">
+      <CardHeader
+        eyebrow={eyebrow}
+        title="Symptoms"
+        action={
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => symptoms.append({ ...EMPTY_SYMPTOM })}
+          >
+            <Plus className="h-4 w-4" />
+            Add symptom
+          </Button>
+        }
+      />
+      <CardBody className="space-y-5">
+        {symptoms.fields.length === 0 && (
+          <p className="text-[13px] text-text-muted">
+            No symptoms recorded. A trend needs the same symptom recorded on
+            more than one visit.
+          </p>
+        )}
+        {symptoms.fields.map((field, index) => {
+          const fieldErrors = errors.symptoms?.[index];
+          const id = `symptom-${index}`;
+          return (
+            <div key={field.id} className="space-y-3">
+              <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[1fr_6rem_8rem_7rem_auto]">
+                <Field
+                  label="Symptom"
+                  htmlFor={`${id}-name`}
+                  error={fieldErrors?.symptom_name?.message}
+                >
+                  <Input
+                    id={`${id}-name`}
+                    placeholder="memory loss"
+                    error={fieldErrors?.symptom_name?.message}
+                    {...register(`symptoms.${index}.symptom_name`)}
+                  />
+                </Field>
+                <Field
+                  label="Severity"
+                  htmlFor={`${id}-severity`}
+                  error={fieldErrors?.severity?.message}
+                >
+                  <Input
+                    id={`${id}-severity`}
+                    type="number"
+                    min={1}
+                    max={10}
+                    error={fieldErrors?.severity?.message}
+                    {...register(`symptoms.${index}.severity`, {
+                      valueAsNumber: true,
+                    })}
+                  />
+                </Field>
+                <Field label="Onset" htmlFor={`${id}-onset`} optional>
+                  <Select id={`${id}-onset`} {...register(`symptoms.${index}.onset`)}>
+                    <option value="">Not specified</option>
+                    {SYMPTOM_ONSETS.map((onset) => (
+                      <option key={onset} value={onset}>
+                        {onset}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field
+                  label="Duration (days)"
+                  htmlFor={`${id}-duration`}
+                  error={fieldErrors?.duration_days?.message}
+                  optional
+                >
+                  <Input
+                    id={`${id}-duration`}
+                    type="number"
+                    min={0}
+                    error={fieldErrors?.duration_days?.message}
+                    {...register(`symptoms.${index}.duration_days`, {
+                      setValueAs: (value) =>
+                        value === "" || value === null ? null : Number(value),
+                    })}
+                  />
+                </Field>
+                <button
+                  type="button"
+                  onClick={() => symptoms.remove(index)}
+                  aria-label={`Remove symptom ${index + 1}`}
+                  className="mt-7 flex h-10 w-10 items-center justify-center rounded border border-line text-text-faint transition-colors duration-150 hover:border-text-faint hover:text-text"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <Field
+                label="Observation"
+                htmlFor={`${id}-observation`}
+                error={fieldErrors?.observation?.message}
+                optional
+              >
+                <Textarea
+                  id={`${id}-observation`}
+                  rows={2}
+                  placeholder="What was seen or reported"
+                  {...register(`symptoms.${index}.observation`)}
+                />
+              </Field>
+            </div>
+          );
+        })}
+      </CardBody>
+    </Card>
   );
 }
 

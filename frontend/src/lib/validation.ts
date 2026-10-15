@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SymptomCreate } from "@/lib/types";
 
 const DISPOSABLE_DOMAINS = new Set([
   "mailinator.com",
@@ -99,7 +100,10 @@ export const SYMPTOM_ONSETS = [
   "sudden", "subacute", "gradual", "insidious", "unknown",
 ] as const;
 
-/** Mirrors `SymptomCreate`: severity is an integer from 1 to 10. */
+/**
+ * Mirrors `SymptomCreate` (FR-03): severity is an integer from 1 to 10,
+ * duration is whole days from 0, and the observation is free text.
+ */
 export const symptomEntrySchema = z.object({
   symptom_name: z.string().trim().min(1, "Name the symptom").max(100),
   severity: z
@@ -108,17 +112,43 @@ export const symptomEntrySchema = z.object({
     .min(1, "Enter a severity from 1 to 10")
     .max(10, "Enter a severity from 1 to 10"),
   onset: z.enum(SYMPTOM_ONSETS).or(z.literal("")),
+  // Blank is null (see SymptomFields' setValueAs), not 0 days.
+  duration_days: z
+    .number({ invalid_type_error: "Enter a whole number of days" })
+    .int("Enter a whole number of days")
+    .min(0, "Enter a whole number of days")
+    .nullable(),
+  observation: z.string().max(2000).optional().or(z.literal("")),
 });
+export type SymptomEntryInput = z.infer<typeof symptomEntrySchema>;
+
+export const EMPTY_SYMPTOM: SymptomEntryInput = {
+  symptom_name: "",
+  severity: 5,
+  onset: "",
+  duration_days: null,
+  observation: "",
+};
+
+/** A form row as the `SymptomCreate` payload the API expects. */
+export function toSymptomCreate(entry: SymptomEntryInput): SymptomCreate {
+  return {
+    symptom_name: entry.symptom_name.trim(),
+    severity: entry.severity,
+    onset: entry.onset || null,
+    duration_days: entry.duration_days,
+    observation: entry.observation?.trim() || null,
+  };
+}
 
 /**
- * A follow-up visit for an existing patient: `VisitCreate` with its symptoms
- * inline, so the visit and the severities a trend is built from land in one
- * request.
+ * Both intakes send `VisitCreate` with its symptoms inline, so the visit and
+ * the severities a trend is built from land in one request.
  */
-export const followUpVisitSchema = visitIntakeSchema.extend({
+export const visitWithSymptomsSchema = visitIntakeSchema.extend({
   symptoms: z.array(symptomEntrySchema),
 });
-export type FollowUpVisitInput = z.infer<typeof followUpVisitSchema>;
+export type VisitWithSymptomsInput = z.infer<typeof visitWithSymptomsSchema>;
 
 export const BLOOD_GROUPS = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-",

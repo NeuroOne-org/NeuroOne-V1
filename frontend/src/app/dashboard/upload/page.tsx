@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "@/components/icons";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -13,20 +13,22 @@ import {
   Field,
   ScanUploadField,
   StepProgress,
+  SymptomsCard,
 } from "@/components/intake-fields";
 import { extractApiError } from "@/lib/api";
 import { patients as patientsApi, visits as visitsApi } from "@/lib/endpoints";
 import {
   BLOOD_GROUPS,
   patientIntakeSchema,
-  visitIntakeSchema,
+  toSymptomCreate,
+  visitWithSymptomsSchema,
   type PatientIntakeInput,
-  type VisitIntakeInput,
+  type VisitWithSymptomsInput,
 } from "@/lib/validation";
 import { z } from "zod";
 
-const intakeSchema = patientIntakeSchema.and(visitIntakeSchema);
-type IntakeInput = PatientIntakeInput & VisitIntakeInput;
+const intakeSchema = patientIntakeSchema.and(visitWithSymptomsSchema);
+type IntakeInput = PatientIntakeInput & VisitWithSymptomsInput;
 
 /** The steps the submit actually performs, in order, so progress can be shown. */
 const STEPS = [
@@ -57,13 +59,16 @@ export default function UploadPage() {
   const [createdVisitId, setCreatedVisitId] = useState<string | null>(null);
   const [scanUploaded, setScanUploaded] = useState(false);
 
+  const form = useForm<IntakeInput>({
+    resolver: zodResolver(intakeSchema as unknown as z.ZodType<IntakeInput>),
+    // Symptoms are optional on a first visit, as they are in VisitCreate.
+    defaultValues: { symptoms: [] },
+  });
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<IntakeInput>({
-    resolver: zodResolver(intakeSchema as unknown as z.ZodType<IntakeInput>),
-  });
+  } = form;
 
   const isSubmitting = activeStep !== null;
   const isPatientLocked = createdPatientId !== null;
@@ -105,6 +110,7 @@ export default function UploadPage() {
           history: values.history || null,
           notes: values.notes || null,
           status: "submitted",
+          symptoms: values.symptoms.map(toSymptomCreate),
         });
         visitId = visit.id;
         setCreatedVisitId(visitId);
@@ -141,11 +147,12 @@ export default function UploadPage() {
           New patient &amp; visit
         </h1>
         <p className="mt-1 text-sm text-text-muted">
-          Creates the patient record, opens a visit, attaches the scan, and runs
-          the analysis pipeline.
+          Creates the patient record, opens a visit with its symptoms, attaches
+          the scan, and runs the analysis pipeline.
         </p>
       </header>
 
+      <FormProvider {...form}>
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <fieldset disabled={isSubmitting || isPatientLocked} className="contents">
         <Card className="mb-5">
@@ -302,10 +309,12 @@ export default function UploadPage() {
             </Field>
           </CardBody>
         </Card>
+
+        <SymptomsCard eyebrow="Step 3" />
         </fieldset>
 
         <Card className="mb-5">
-          <CardHeader eyebrow="Step 3" title="MRI scan" />
+          <CardHeader eyebrow="Step 4" title="MRI scan" />
           <CardBody>
             <ScanUploadField
               file={mriFile}
@@ -342,6 +351,7 @@ export default function UploadPage() {
           </Button>
         </div>
       </form>
+      </FormProvider>
     </div>
   );
 }

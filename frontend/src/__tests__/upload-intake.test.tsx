@@ -96,6 +96,33 @@ describe("Upload intake", () => {
     expect(calls).toEqual(["createPatient", "createVisit", "runAnalysis"]);
   });
 
+  it("records structured symptoms with the first visit (FR-03)", async () => {
+    const { container } = render(<UploadPage />);
+    fillForm(container);
+    fireEvent.click(screen.getByRole("button", { name: /add symptom/i }));
+    fireEvent.change(screen.getByLabelText("Symptom"), {
+      target: { value: "memory loss" },
+    });
+    fireEvent.change(screen.getByLabelText("Severity"), {
+      target: { value: "6" },
+    });
+    fireEvent.change(screen.getByLabelText("Duration (days)"), {
+      target: { value: "90" },
+    });
+    submit();
+
+    await waitFor(() => expect(createVisit).toHaveBeenCalled());
+    expect(createVisit.mock.calls[0][1].symptoms).toEqual([
+      {
+        symptom_name: "memory loss",
+        severity: 6,
+        onset: null,
+        duration_days: 90,
+        observation: null,
+      },
+    ]);
+  });
+
   it("sends gender as the single-letter code the backend stores", async () => {
     const { container } = render(<UploadPage />);
     fillForm(container);

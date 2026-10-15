@@ -46,7 +46,7 @@ Sources: [PRD §1–§4 and §7](../PRD.md), [MVP purpose and early-detection de
 |---|---|---|
 | FR-01 Authentication | Secure login, hashed passwords, JWTs and protected access | Password login, backend-enforced OTP by default, reset and admin provisioning exist. OTP and rate-limit state remain process-local. |
 | FR-02 Patient management | Create, retrieve and update patients, associated with cases | Authorized CRUD, search and soft deletion exist. Frontend consumers exist. |
-| FR-03 Clinical input | Symptoms, duration, severity, observations, history and additional case information | Backend schemas support these fields. Follow-up UI captures symptom name, severity and onset; duration and observations are not exposed there. New-patient intake does not submit structured symptoms. |
+| FR-03 Clinical input | Symptoms, duration, severity, observations, history and additional case information | Both intakes capture every `SymptomCreate` field (name, severity, onset, duration, observation) through one shared symptom card, and send symptoms inline with the visit (HB-06). |
 | FR-04 Differential diagnosis | Ranked possibilities with uncertainty and reasoning | Enforced structured output and likelihood bands. A scanned visit's stage estimate is pinned first, and an analysis that loses it fails with `ai_stage_missing`. |
 | FR-05 Literature retrieval | Trusted literature with preserved metadata | Two retrievers: the simulated fixture corpus (default) and a curated PostgreSQL full-text retriever (`AI_RETRIEVAL_PROVIDER=corpus`). The curated corpus holds no reviewed content yet, so it cannot return evidence. |
 | FR-06 Explainability | Patient findings, reasoning, evidence and citations | Backend returns them and current UI renders them. Mock imaging region values are not scientific attributions. |
@@ -83,7 +83,7 @@ The dashboard adds a triage queue before patient selection. The older APP-FLOW u
 
 The scan is a primary product input but optional in the current backend. Symptoms-only analysis is supported when there is matching evidence. A visit with no scan and no useful structured or complaint input can return `rag_no_evidence`.
 
-The frontend new-patient intake performs multiple requests: patient, visit, optional scan, analysis. These do not form one database transaction. An analysis failure preserves previously saved records, but the form currently has no resume tracking for patient/visit creation. Retrying can create another patient. The follow-up form retains a created visit id in memory so an analysis retry can resume. A refresh loses that state.
+The frontend new-patient intake performs multiple requests: patient, visit with its symptoms, optional scan, analysis. These do not form one database transaction. An analysis failure preserves previously saved records. Both intake forms remember which steps landed, so a retry continues from the failed step without creating a second patient, visit or scan. That memory is in the page, so a browser refresh loses it (HB-07).
 
 **Recall:** Why is “saved successfully” different from “analysis succeeded”? Because patient and visit persistence happens before a separate analysis request.
 
@@ -503,7 +503,7 @@ Report progress by observable deliverables, rather than an unsupported percentag
 |---|---|---|
 | Foundation/security housekeeping | Config, health, centralized errors, hashing and server auth exist | Full security review, production configuration and session hardening |
 | Accounts | Password, default-enforced OTP, purpose isolation, auth rate limits, reset and admin create-account API exist | Multi-process OTP storage, leftover public signup cleanup, admin UI if required |
-| Patients/visits | CRUD, search, structured symptoms and history exist | Complete symptom fields in UI; temporal history filtering; new-intake resume behavior |
+| Patients/visits | CRUD, search, structured symptoms and history exist | Intake resume state survives only until a page refresh (HB-07) |
 | Scan intake | One scan per visit, local bytes, checksum, header-parsed dimensions and format check (HB-15); failed inserts delete the stored file | Durable storage; MIME type is still client-supplied |
 | Analysis contract | Typed differential, citations, trends and controlled failure paths; schema-enforced 0.92 ceiling; stage pinned first with its own citation budget; `ai_stage_missing` guard | Content coverage for every stage label in the curated corpus |
 | Live LLM | Configurable transport and validated mapping; stage and scan trend in the prompt (resolves HB-03) | Record a rehearsed run against a real model; no automated live check exists |

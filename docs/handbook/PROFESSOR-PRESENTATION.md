@@ -39,7 +39,7 @@ Use these labels in your report. Do not add a completion percentage unless your 
 | Implemented and inspected | Implemented with qualification | Remaining / not established |
 |---|---|---|
 | Password login and admin account creation | OTP is enforced by default; codes and auth rate limits are process-local | Production OTP/session review |
-| Authorized patient/visit CRUD and symptoms | Clinical input UI exposes only part of FR-03 | Full symptom duration/observation input and retry recovery |
+| Authorized patient/visit CRUD and symptoms | Both intakes capture every FR-03 symptom field; retries resume without duplicates | Resume state that survives a page refresh |
 | Scan attachment, retained bytes/checksum, live single-slice staging | Mock staging is simulated; live staging is an unvalidated general model | Dimensions, a trained and evaluated imaging model |
 | Structured candidates, citations, trends; curated FTS retriever | Default retrieval uses synthetic fixtures; curated corpus is empty | Clinical review and ingestion of the seed corpus |
 | Sign-off and gated PDF generation | PDF snapshot lacks reviewer/time | Review details, amendment semantics and input-time consistency |

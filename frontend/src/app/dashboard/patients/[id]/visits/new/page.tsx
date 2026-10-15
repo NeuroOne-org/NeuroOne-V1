@@ -3,17 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useFieldArray, useForm } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, CircleAlert, Plus, X } from "@/components/icons";
+import { ChevronLeft, CircleAlert } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, Textarea } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/select";
 import {
   Field,
   ScanUploadField,
   StepProgress,
+  SymptomsCard,
   type IntakeStep,
 } from "@/components/intake-fields";
 import { usePatient } from "@/hooks/use-patients";
@@ -21,9 +22,10 @@ import { extractApiError } from "@/lib/api";
 import { patients as patientsApi, visits as visitsApi } from "@/lib/endpoints";
 import { fullName } from "@/lib/utils";
 import {
-  SYMPTOM_ONSETS,
-  followUpVisitSchema,
-  type FollowUpVisitInput,
+  EMPTY_SYMPTOM,
+  toSymptomCreate,
+  visitWithSymptomsSchema,
+  type VisitWithSymptomsInput,
 } from "@/lib/validation";
 
 type StepKey = "visit" | "scan" | "analysis";
@@ -33,8 +35,6 @@ const STEPS: readonly IntakeStep<StepKey>[] = [
   { key: "scan", label: "Uploading MRI scan" },
   { key: "analysis", label: "Running analysis" },
 ];
-
-const EMPTY_SYMPTOM = { symptom_name: "", severity: 5, onset: "" } as const;
 
 /**
  * A follow-up visit for a patient already on file (ADR-006 decision 8).
@@ -59,13 +59,8 @@ export default function NewVisitPage() {
   // retry, so each completed step is remembered and skipped next time.
   const [createdVisitId, setCreatedVisitId] = useState<string | null>(null);
 
-  const {
-    control,
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FollowUpVisitInput>({
-    resolver: zodResolver(followUpVisitSchema),
+  const form = useForm<VisitWithSymptomsInput>({
+    resolver: zodResolver(visitWithSymptomsSchema),
     defaultValues: {
       chief_complaint: "",
       history: "",
@@ -73,13 +68,17 @@ export default function NewVisitPage() {
       symptoms: [{ ...EMPTY_SYMPTOM }],
     },
   });
-  const symptoms = useFieldArray({ control, name: "symptoms" });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = form;
 
   const isSubmitting = activeStep !== null;
   const isResuming = createdVisitId !== null;
   const markDone = (step: StepKey) => setDoneSteps((s) => [...s, step]);
 
-  async function onSubmit(values: FollowUpVisitInput) {
+  async function onSubmit(values: VisitWithSymptomsInput) {
     setServerError(null);
 
     try {
@@ -91,11 +90,7 @@ export default function NewVisitPage() {
           history: values.history || null,
           notes: values.notes || null,
           status: "submitted",
-          symptoms: values.symptoms.map((symptom) => ({
-            symptom_name: symptom.symptom_name.trim(),
-            severity: symptom.severity,
-            onset: symptom.onset || null,
-          })),
+          symptoms: values.symptoms.map(toSymptomCreate),
         });
         visitId = visit.id;
         setCreatedVisitId(visit.id);
@@ -143,6 +138,7 @@ export default function NewVisitPage() {
         </p>
       </header>
 
+      <FormProvider {...form}>
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <fieldset disabled={isSubmitting || isResuming} className="contents">
           <Card className="mb-5">
@@ -171,90 +167,7 @@ export default function NewVisitPage() {
             </CardBody>
           </Card>
 
-          <Card className="mb-5">
-            <CardHeader
-              eyebrow="Step 2"
-              title="Symptoms"
-              action={
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => symptoms.append({ ...EMPTY_SYMPTOM })}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add symptom
-                </Button>
-              }
-            />
-            <CardBody className="space-y-3">
-              {symptoms.fields.length === 0 && (
-                <p className="text-[13px] text-text-muted">
-                  No symptoms recorded. A trend needs the same symptom recorded
-                  on more than one visit.
-                </p>
-              )}
-              {symptoms.fields.map((field, index) => {
-                const fieldErrors = errors.symptoms?.[index];
-                return (
-                  <div
-                    key={field.id}
-                    className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[1fr_7rem_9rem_auto]"
-                  >
-                    <Field
-                      label="Symptom"
-                      htmlFor={`symptom-${index}-name`}
-                      error={fieldErrors?.symptom_name?.message}
-                    >
-                      <Input
-                        id={`symptom-${index}-name`}
-                        placeholder="memory loss"
-                        error={fieldErrors?.symptom_name?.message}
-                        {...register(`symptoms.${index}.symptom_name`)}
-                      />
-                    </Field>
-                    <Field
-                      label="Severity"
-                      htmlFor={`symptom-${index}-severity`}
-                      error={fieldErrors?.severity?.message}
-                    >
-                      <Input
-                        id={`symptom-${index}-severity`}
-                        type="number"
-                        min={1}
-                        max={10}
-                        error={fieldErrors?.severity?.message}
-                        {...register(`symptoms.${index}.severity`, {
-                          valueAsNumber: true,
-                        })}
-                      />
-                    </Field>
-                    <Field label="Onset" htmlFor={`symptom-${index}-onset`} optional>
-                      <Select
-                        id={`symptom-${index}-onset`}
-                        {...register(`symptoms.${index}.onset`)}
-                      >
-                        <option value="">Not specified</option>
-                        {SYMPTOM_ONSETS.map((onset) => (
-                          <option key={onset} value={onset}>
-                            {onset}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                    <button
-                      type="button"
-                      onClick={() => symptoms.remove(index)}
-                      aria-label={`Remove symptom ${index + 1}`}
-                      className="mt-7 flex h-10 w-10 items-center justify-center rounded border border-line text-text-faint transition-colors duration-150 hover:border-text-faint hover:text-text"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                );
-              })}
-            </CardBody>
-          </Card>
+          <SymptomsCard eyebrow="Step 2" />
 
           <Card className="mb-5">
             <CardHeader eyebrow="Step 3" title="MRI scan" />
@@ -297,6 +210,7 @@ export default function NewVisitPage() {
           </Button>
         </div>
       </form>
+      </FormProvider>
     </div>
   );
 }
