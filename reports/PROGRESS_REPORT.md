@@ -1,5 +1,8 @@
 # NeuroONE Progress Report
 
+> **Historical snapshot (12 September 2026).** For current status see the
+> [handbook](../docs/handbook/README.md) and its [audit](../docs/handbook/AUDIT.md).
+
 **Report date:** September 12, 2026
 **Supersedes:** the July 23, 2026 edition of this report, which described a
 repository with no endpoints, no models and no tests. That description is now
